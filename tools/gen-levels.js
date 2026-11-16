@@ -85,4 +85,5 @@ function assignColours(rows) {
 }
 const levels = out.map(c => ({ id: c.id, N: c.N, label: c.label, regions: c.rows, solution: c.solution, colors: assignColours(c.rows), seed: c.seed, maxTech: c.maxTech, steps: c.steps, score: adj(c), used: c.used, firstTech: firstTech(c), starter: c.singles }));
 for (const l of levels) console.log(`L${String(l.id).padStart(2)} ${l.N}x${l.N} score ${String(l.score).padStart(2)} first ${l.firstTech} techs ${JSON.stringify(l.used)} starter ${l.starter} ${l.label}`);
-fs.writeFileSync(__dirname + '/../src/levels.json', JSON.stringify(levels, null, 1));
+// levels 1–3 are the hand-made tutorial (tools/tutorial-levels.js); it replaces the 3 easiest generated levels
+fs.writeFileSync(__dirname + '/../src/levels.json', JSON.stringify(require('./tutorial-levels.js').applyTutorial(levels), null, 1));

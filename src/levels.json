@@ -1,113 +1,91 @@
 [
  {
   "id": 1,
-  "N": 5,
-  "label": "Sehr leicht",
+  "N": 4,
+  "label": "Tutorial",
   "regions": [
-   "aaabb",
-   "cabbb",
-   "cbbbb",
-   "cdbbb",
-   "cddeb"
+   "cccc",
+   "addd",
+   "addd",
+   "abdd"
   ],
   "solution": [
    2,
    0,
-   4,
-   1,
-   3
+   3,
+   1
   ],
+  "tutorial": 1,
+  "starter": 1,
   "colors": [
    1,
    2,
    3,
-   5,
-   8
+   5
   ],
-  "seed": 3,
-  "maxTech": 1,
-  "steps": 5,
-  "score": 5,
-  "used": {
-   "1": 5,
-   "2": 4
-  },
-  "firstTech": 1,
-  "starter": 1
+  "score": 0
  },
  {
   "id": 2,
-  "N": 5,
-  "label": "Sehr leicht",
+  "N": 4,
+  "label": "Tutorial",
   "regions": [
-   "aaaaa",
-   "bbaaa",
-   "bbbcc",
-   "ddbcc",
-   "dddec"
+   "bbdd",
+   "bbdd",
+   "dddc",
+   "aadd"
   ],
   "solution": [
    2,
    0,
-   4,
-   1,
-   3
+   3,
+   1
   ],
+  "prePopped": [
+   [
+    1,
+    1
+   ],
+   [
+    1,
+    2
+   ]
+  ],
+  "tutorial": 2,
+  "starter": 1,
   "colors": [
    1,
-   2,
    3,
-   5,
+   2,
    8
   ],
-  "seed": 25,
-  "maxTech": 3,
-  "steps": 6,
-  "score": 8,
-  "used": {
-   "1": 5,
-   "2": 4,
-   "3": 1
-  },
-  "firstTech": 1,
-  "starter": 1
+  "score": 0
  },
  {
   "id": 3,
-  "N": 5,
-  "label": "Sehr leicht",
+  "N": 4,
+  "label": "Tutorial",
   "regions": [
-   "aaabb",
-   "aaaaa",
-   "aacdd",
-   "aeedd",
-   "eeedd"
+   "ccbb",
+   "ccdb",
+   "addd",
+   "dddd"
   ],
   "solution": [
+   1,
    3,
    0,
-   2,
-   4,
-   1
+   2
   ],
+  "tutorial": 3,
+  "starter": 1,
   "colors": [
    3,
-   7,
-   2,
-   5,
-   8
+   8,
+   1,
+   5
   ],
-  "seed": 32,
-  "maxTech": 3,
-  "steps": 6,
-  "score": 8,
-  "used": {
-   "1": 5,
-   "2": 3,
-   "3": 1
-  },
-  "firstTech": 1,
-  "starter": 1
+  "score": 0
  },
  {
   "id": 4,

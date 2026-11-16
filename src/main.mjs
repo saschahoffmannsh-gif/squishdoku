@@ -7,6 +7,7 @@ import {installBackdrop} from '../vendor/squish-attack/game/home-menu.mjs?v=laun
 import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=launch-26';
 import {createAdPacing} from '../vendor/squish-attack/game/ad-pacing.mjs';
 import {createAdUI,AD_ICON_SVG} from './ad-ui.mjs';
+import {createRulesBar,createTutorial} from './tutorial-ui.mjs';
 
 const $=id=>document.getElementById(id);
 let HOLD_MS=400; const TAP_MS=200, HEARTS=3;
@@ -15,7 +16,7 @@ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
 // ---------- Speicher ----------
-function load(){try{return {unlocked:1,stars:{},seenRules:false,revealed:{},...JSON.parse(localStorage.getItem(STORE)||'{}')};}catch{return {unlocked:1,stars:{},seenRules:false,revealed:{}};}}
+function load(){try{return {unlocked:1,stars:{},seenRules:false,revealed:{},rulesCollapsed:false,...JSON.parse(localStorage.getItem(STORE)||'{}')};}catch{return {unlocked:1,stars:{},seenRules:false,revealed:{}};}}
 let store=load();
 function save(){try{localStorage.setItem(STORE,JSON.stringify(store));}catch{}}
 const totalStars=()=>Object.values(store.stars).reduce((a,b)=>a+b,0);
@@ -49,7 +50,7 @@ const HINTS=[
 ];
 // Meilenstein-Tipps für die 50er-Rampe; dazwischen wechseln die Grundregeln
 const MILESTONES={
-  6:'Jedes Level hat einen <b>Einzel-Squish</b> – eine Farbe aus nur einem Feld. Fang dort an!',
+  4:'Jetzt allein: Jedes Level hier hat einen <b>Einzel-Squish</b> – eine Farbe aus nur einem Feld. Fang dort an!',
   11:'Ab jetzt gibt es <b>kein Einzelfeld</b> mehr: Such eine kleine Farbe, die nur in <b>einer Reihe</b> liegt.',
   15:'Neu: <b>6×6</b>! Liegt eine Farbe nur in einer Spalte, gehört diese Spalte ihr.',
   21:'Prüf auch: Würde ein Squish hier eine Farbe <b>komplett blockieren</b>? Dann kann er nicht leuchten.',
@@ -74,7 +75,7 @@ function setItems(items){screenEl.replaceChildren(...items);items.forEach((el,i)
 function renderStars(){$('home-stars').querySelector('b').textContent=`${totalStars()}/${levels.length*3}`;}
 const nextLevel=()=>Math.min(levels.length,Math.max(1,...levels.filter(l=>store.stars[l.id]).map(l=>l.id+1),1));
 function showHome(screen='home'){
-  closeDialog();
+  closeDialog();tut?.stop();
   $('game').hidden=true;home.hidden=false;document.documentElement.classList.add('home-open');
   home.dataset.screen=screen;renderStars();
   if(screen==='home'){
@@ -83,6 +84,7 @@ function showHome(screen='home'){
       button({label:played?`Level ${n} spielen`:'Spielen',icon:'play',color:'aw-green',size:'aw-big',id:'btn-play',action:()=>startLevel(n)}),
       button({label:'Levels',icon:'grid',color:'aw-blue',id:'btn-levels',action:()=>showHome('levels')}),
       button({label:'Regeln',icon:'cap',color:'aw-purple',id:'btn-rules',action:()=>showHome('rules')}),
+      button({label:'Tutorial',icon:'flag',color:'aw-orange',size:'aw-small',id:'btn-tutorial',action:()=>startLevel(1)}),
     ]);
   }else if(screen==='levels'){
     const grid=document.createElement('div');grid.className='sd-levels';
@@ -104,7 +106,7 @@ function showHome(screen='home'){
     requestAnimationFrame(()=>{const cur=grid.querySelector(`[data-level="${nextLevel()}"]`);if(cur)scroller.scrollTop=Math.max(0,cur.offsetTop-scroller.clientHeight/2+cur.offsetHeight/2);});
     setItems([ribbon('Levels','aw-r-blue'),card,button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',id:'btn-home',action:()=>showHome('home')})]);
   }else if(screen==='rules'){
-    setItems([ribbon('So geht’s','aw-r-purple'),rulesCard(),button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',action:()=>showHome('home')})]);
+    setItems([ribbon('So geht’s','aw-r-purple'),rulesCard(),button({label:'Tutorial spielen',icon:'flag',color:'aw-orange',id:'btn-rules-tutorial',action:()=>startLevel(1)}),button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',action:()=>showHome('home')})]);
   }
 }
 function rulesCard(){
@@ -127,7 +129,13 @@ $('home-stars').querySelector('i').innerHTML=starIcon();
 const game=$('game'),stage=$('stage'),fx=$('fx');
 $('btn-back').innerHTML=ICONS.back;$('btn-reset').innerHTML=ICONS.retry;
 let board=null,S=null;
-function ensureBoard(){if(!board){board=createBoard3D($('host'));bindInput();window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
+let tut=null,rulesBar=null,tipTimer=0;
+// Regel-Chip antippen: Mini-Animation + Erklärung kurz unten statt des Tipps
+function ruleTip(rule){clearTimeout(tipTimer);if(!S)return;if(!rule){$('hint').innerHTML=hintFor(S.id);return;}
+  $('hint').innerHTML=rule.tip;tipTimer=setTimeout(()=>{if(S)$('hint').innerHTML=hintFor(S.id);},3800);}
+function ensureBoard(){if(!board){board=createBoard3D($('host'));bindInput();
+  tut=createTutorial({stage,board,getS:()=>S});tut.stop();
+  rulesBar=createRulesBar($('rulesbar'),{store,save:()=>save(),onTip:ruleTip});window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
 function placePlate(){if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
 
 // ---------- Werbung (wie Squish Attack: ad-pacing + native-ads; im Browser Dummy) ----------
@@ -137,7 +145,8 @@ let starting=false;
 // Zwischenwerbung nur zwischen zwei Leveln: fällig nach jedem 5. Sieg, gezeigt beim Start des nächsten Levels.
 async function startLevel(id){
   if(starting)return;
-  if(adPacing.takeInterstitial()){starting=true;closeDialog();try{await adUI.interstitial();}catch{}finally{starting=false;}}
+  // Im Tutorial (Level 1–3) gibt es keine Werbung
+  if(!levels[id-1]?.tutorial&&adPacing.takeInterstitial()){starting=true;closeDialog();try{await adUI.interstitial();}catch{}finally{starting=false;}}
   beginLevel(id);
 }
 function beginLevel(id){
@@ -146,12 +155,15 @@ function beginLevel(id){
   ensureBoard();
   S={L,id,N:L.N,state:Array.from({length:L.N},()=>Array(L.N).fill('normal')),hearts:HEARTS,glow:0,done:false,locked:false};
   board.build(L,g=>L.colors[g]);
+  for(const [r,c] of L.prePopped||[]){S.state[r][c]='popped';board.vanish(r,c);} // Tutorial 2: schon leeres Glas
+  S.fixed=new Set((L.prePopped||[]).map(([r,c])=>r*L.N+c));
   $('lvl-num').textContent=id;$('lvl-name').textContent=L.label;
   $('glow-total').textContent=L.N;
-  $('hint').innerHTML=hintFor(id);
+  $('hint').innerHTML=hintFor(id);clearTimeout(tipTimer);
+  rulesBar.setLevel(L);
   renderHearts();renderProgress();renderAdTip();
+  if(L.tutorial)tut.start(S);else tut.stop();
   requestAnimationFrame(()=>requestAnimationFrame(placePlate));setTimeout(placePlate,120);
-  if(id===1&&!store.seenRules){store.seenRules=true;save();showRulesDialog();}
 }
 function renderHearts(){
   const h=$('hearts');h.replaceChildren();for(let i=0;i<HEARTS;i++){const d=document.createElement('span');d.className='sd-heart'+(i>=S.hearts?' is-lost':'');d.innerHTML=HEART;h.append(d);}
@@ -161,9 +173,9 @@ function renderProgress(){$('glow-count').textContent=S.glow;renderAdTip();}
 // Tipp per Werbung: beliebig oft je Level, jeder Clip enthüllt einen weiteren richtigen Squish,
 // bis alle leuchten. Gemerkt wird je Level, wie viele Tipps genutzt wurden.
 const adTip=$('btn-adtip');adTip.innerHTML=`<i>${AD_ICON_SVG}</i><span>Tipp per Werbung</span>`;
-function renderAdTip(){if(!S)return;const off=S.locked||S.glow>=S.N;adTip.disabled=off;adTip.setAttribute('aria-disabled',String(off));}
+function renderAdTip(){if(!S)return;const off=S.locked||S.glow>=S.N||!!S.L.tutorial;adTip.disabled=off;adTip.setAttribute('aria-disabled',String(off));}
 async function useAdTip(){
-  if(!S||S.locked||S.glow>=S.N||adUI.isOpen)return;
+  if(!S||S.locked||S.glow>=S.N||adUI.isOpen||S.L.tutorial)return;
   tap();const s0=S,left=S.N-S.glow;
   const ok=await adUI.offerReveal({left});
   if(!ok||S!==s0||S.locked||S.glow>=S.N)return;
@@ -192,15 +204,16 @@ function loseHeart(r,c){
   buzz('big');
   if(S.hearts===0){S.locked=true;setTimeout(showLose,900);}
 }
-function wrongAt(r,c){board.wrong(r,c);sfx('land',2);sfx('squish');loseHeart(r,c);}
+function wrongAt(r,c){board.wrong(r,c);sfx('land',2);sfx('squish');loseHeart(r,c);if(tut.active)tut.ouch();}
 function popAt(r,c,opts){if(S.state[r][c]!=='normal')return false;S.state[r][c]='popped';board.pop(r,c,opts);return true;}
 function glowAt(r,c){
   S.state[r][c]='glow';S.glow++;board.glow(r,c,true);renderProgress();sfx('magic');buzz('merge');
   // Nichts ploppt automatisch: nur der Spieler wischt Squishs weg.
   if(S.glow===S.N){S.done=true;S.locked=true;setTimeout(win,700);}
+  tut.changed();
 }
-function unglowAt(r,c){S.state[r][c]='normal';S.glow--;board.glow(r,c,false);renderProgress();sfx('tap');buzz('tap');}
-function restoreAt(r,c){S.state[r][c]='normal';board.restore(r,c);sfx('tap');buzz('tap');}
+function unglowAt(r,c){S.state[r][c]='normal';S.glow--;board.glow(r,c,false);renderProgress();sfx('tap');buzz('tap');tut.changed();}
+function restoreAt(r,c){if(S.fixed?.has(r*S.N+c))return;S.state[r][c]='normal';tut.changed();board.restore(r,c);sfx('tap');buzz('tap');}
 
 // Wischen über einen Squish
 function swipeCell(r,c,stroke){
@@ -208,7 +221,7 @@ function swipeCell(r,c,stroke){
   if(st!=='normal')return;
   if(isSol(r,c)){if(!stroke.wrong.has(r*S.N+c)){stroke.wrong.add(r*S.N+c);wrongAt(r,c);}return;}
   // wobble -> swell -> pop (the pop sound and buzz land on the actual burst)
-  if(S.state[r][c]!=='normal')return;S.state[r][c]='popped';
+  if(S.state[r][c]!=='normal')return;S.state[r][c]='popped';tut.changed();
   sfx('squish');buzz('tap');
   board.popSequence(r,c,{onPop:i=>{sfx('pop',1,{detune:POP_DETUNE[i%POP_DETUNE.length]});buzz('move');}});
 }
@@ -225,7 +238,7 @@ const showRing=()=>{},hideRing=()=>{};
 function bindInput(){
   const host=$('host');let g=null;
   host.addEventListener('pointerdown',e=>{
-    if(!S||S.locked||g)return;
+    if(!S||S.locked||g||tut?.blocking)return;
     const hit=board.pick(e.clientX,e.clientY);if(!hit)return;
     e.preventDefault();host.setPointerCapture?.(e.pointerId);
     try{sound.unlock?.();}catch{}
@@ -281,21 +294,32 @@ function bindInput(){
 // ---------- Sieg / Niederlage ----------
 async function win(){
   const id=S.id,stars=S.hearts;
-  adPacing.levelWon(); // Werbe-Takt wie Squish Attack: jede 5. gewonnene Runde
+  if(!S.L.tutorial)adPacing.levelWon(); // Werbe-Takt wie Squish Attack: jede 5. gewonnene Runde (Tutorial zählt nicht)
   store.stars[id]=Math.max(store.stars[id]||0,stars);store.unlocked=Math.max(store.unlocked,Math.min(levels.length,id+1));save();
   sfx('record');buzz('big');
   // Jubel-Welle über die leuchtenden Squishs
   for(let r=0;r<S.N;r++){const c=S.L.solution[r];setTimeout(()=>board.wobble(r,c,.8),r*70);}
   const rect=board.boardRect();confetti.burst(rect,{reduced:reduceMotion.matches});
   await wait(1100);
+  if(id===3&&S.L.tutorial){showTutorialDone(stars);return;}
   const last=id===levels.length;
   const items=[ribbon(last?'Alles geschafft!':'Geschafft!','aw-r-green')];
   const st=document.createElement('div');st.className='sd-stars';st.innerHTML=[0,1,2].map(()=>`<i>${starIcon()}</i>`).join('');items.push(st);
-  const p=document.createElement('p');p.textContent=last?`Alle ${levels.length} Level gelöst – du bist ein Squish-Profi!`:`Level ${id} gelöst${stars===3?' – ohne Fehler!':'.'}`;items.push(p);
+  const p=document.createElement('p');p.textContent=S.L.tutorial?`Tutorial ${id}/3 geschafft – weiter zur nächsten Regel!`:last?`Alle ${levels.length} Level gelöst – du bist ein Squish-Profi!`:`Level ${id} gelöst${stars===3?' – ohne Fehler!':'.'}`;items.push(p);
   if(!last)items.push(button({label:'Weiter',icon:'play',color:'aw-green',size:'aw-big',id:'btn-next',action:()=>startLevel(id+1)}));
   items.push(button({label:'Nochmal',icon:'retry',color:'aw-orange',id:'btn-again',action:()=>startLevel(id)}));
   items.push(button({label:'Levels',icon:'grid',color:'aw-slate',size:'aw-small',id:'btn-to-levels',action:()=>showHome('levels')}));
   openDialog(items,'win');
+  [...st.children].forEach((s,i)=>{if(i<stars)setTimeout(()=>{s.classList.add('on');sfx('star',i+1);buzz(i===2?'big':'merge');},380+i*280);});
+}
+// Nach Tutorial 3: kurzer „Du kannst's!“-Bildschirm, dann geht es mit Level 4 allein weiter
+function showTutorialDone(stars){
+  const st=document.createElement('div');st.className='sd-stars';st.innerHTML=[0,1,2].map(()=>`<i>${starIcon()}</i>`).join('');
+  const p=document.createElement('p');p.innerHTML='Du kennst jetzt alle drei Regeln. Ab jetzt knobelst du <b>allein</b> – die Regeln stehen immer <b>über dem Brett</b>.';
+  const chips=document.createElement('div');chips.className='sd-done-rules';chips.innerHTML=['1 Leuchter pro Farbe','1 pro Reihe &amp; Spalte','Leuchter berühren sich nie'].map(t=>`<span>${t}</span>`).join('');
+  openDialog([ribbon('Du kannst’s!','aw-r-green'),st,p,chips,
+    button({label:'Los geht’s',icon:'play',color:'aw-green',size:'aw-big',id:'btn-tut-done',action:()=>startLevel(4)}),
+    button({label:'Levels',icon:'grid',color:'aw-slate',size:'aw-small',action:()=>showHome('levels')})],'tutorial-done');
   [...st.children].forEach((s,i)=>{if(i<stars)setTimeout(()=>{s.classList.add('on');sfx('star',i+1);buzz(i===2?'big':'merge');},380+i*280);});
 }
 function showLose(){
@@ -309,11 +333,11 @@ function showRulesDialog(){
 function openDialog(items,kind){const v=$('veil'),d=$('dialog');d.replaceChildren(...items);d.dataset.kind=kind;v.hidden=false;}
 function closeDialog(){$('veil').hidden=true;$('dialog').replaceChildren();}
 
-$('btn-back').addEventListener('click',()=>{tap();showHome('levels');});
+$('btn-back').addEventListener('click',()=>{tap();tut?.stop();showHome('levels');});
 $('btn-reset').addEventListener('click',()=>{tap();if(S)startLevel(S.id);});
 
 // ---------- Test-/Debug-Zugriff ----------
-window.SquishDoku={adUI,adPacing,get state(){return S;},get board(){return board;},levels,startLevel,showHome,get store(){return store;},get holdMs(){return HOLD_MS;},set holdMs(v){HOLD_MS=v;},TAP_MS,
+window.SquishDoku={adUI,adPacing,get tutorial(){return tut;},get rulesBar(){return rulesBar;},get state(){return S;},get board(){return board;},levels,startLevel,showHome,get store(){return store;},get holdMs(){return HOLD_MS;},set holdMs(v){HOLD_MS=v;},TAP_MS,
   reset(){localStorage.removeItem(STORE);store=load();}};
 showHome('home');
 document.documentElement.dataset.ready='1';

@@ -211,6 +211,8 @@ export function createBoard3D(host){
       });
       return true;
     },
+    // start state "already popped" (tutorial): empty glass without the burst
+    vanish(r,c){const cl=cellAt(r,c);cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;setting.removeHudShadow(cl.s);cl.anim=null;cl.s.group.visible=false;setScale(cl,.25,.25);requestFrame({shadows:true});},
     restore(r,c){
       const cl=cellAt(r,c);
       if(cl.state==='popping'){cl.anim=null;cl.state='normal';setScale(cl,1,1);wobble(cl.s,.4);requestFrame();return;}
