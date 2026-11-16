@@ -24,3 +24,4 @@ GlowDoku prototype `/workspace/glowdoku/engine.js` → `src/engine.js`.
 
 `sound.mjs`: optionale `detune`-Option für `play('pop',…)` (jeder Pop eines Wischers klingt leicht anders).
 Kein Ladering; geplatzte Squishs hinterlassen nichts (leeres Glas); Glas-Reflexe folgen dem aktuellen Zustand (Leuchten = Gold).
+`comic-style.mjs`: zusätzliche weiße Gel-Farbe (Wert 9) für 8 Farben auf 8×8.

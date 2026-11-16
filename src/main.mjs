@@ -38,7 +38,6 @@ const starIcon=()=>{const id='sd-star-'+(++starN);return STAR_SVG.replace(/ti-st
 
 // ---------- Level ----------
 const levels=await (await fetch('src/levels.json')).json();
-const NAMES=['Sehr leicht','Leicht','Mittel','Knifflig','Schwer'];
 const HINTS=[
   'Halte einen Squish kurz <b>gedrückt</b> – richtig gewählt, <b>leuchtet</b> er!',
   '<b>Wische</b> über Squishs, die nicht leuchten können – sie <b>ploppen</b>.',
@@ -46,6 +45,18 @@ const HINTS=[
   'Leuchtende Squishs berühren sich nie – auch nicht <b>schräg</b>.',
   'Kein Raten nötig: Alles lässt sich <b>logisch</b> lösen.',
 ];
+// Meilenstein-Tipps für die 50er-Rampe; dazwischen wechseln die Grundregeln
+const MILESTONES={
+  6:'Jedes Level hat einen <b>Einzel-Squish</b> – eine Farbe aus nur einem Feld. Fang dort an!',
+  11:'Ab jetzt gibt es <b>kein Einzelfeld</b> mehr: Such eine kleine Farbe, die nur in <b>einer Reihe</b> liegt.',
+  15:'Neu: <b>6×6</b>! Liegt eine Farbe nur in einer Spalte, gehört diese Spalte ihr.',
+  21:'Prüf auch: Würde ein Squish hier eine Farbe <b>komplett blockieren</b>? Dann kann er nicht leuchten.',
+  28:'Neu: <b>7×7</b> – und der <b>weiße</b> Squish ist eine eigene Farbe.',
+  35:'Knifflig: Teilen sich <b>zwei Farben zwei Reihen</b>, gehören die Reihen nur ihnen.',
+  41:'Neu: <b>8×8</b> mit acht Farben. Du schaffst das – Schritt für Schritt!',
+  50:'Das letzte Level – zeig, was du gelernt hast!',
+};
+const hintFor=id=>MILESTONES[id]||HINTS[id-1]||HINTS[2+(id%3)];
 
 // ---------- Menüs ----------
 const home=$('home'),screenEl=$('home-screen');
@@ -73,7 +84,9 @@ function showHome(screen='home'){
     ]);
   }else if(screen==='levels'){
     const grid=document.createElement('div');grid.className='sd-levels';
+    let band=null;
     for(const l of levels){
+      if(l.label!==band){band=l.label;const h=document.createElement('div');h.className='sd-lv-band';h.textContent=band;grid.append(h);}
       const locked=l.id>store.unlocked,stars=store.stars[l.id]||0;
       const t=document.createElement('button');t.type='button';t.className='aw-tile'+(locked?' is-locked':'')+(l.id===nextLevel()&&!stars?' is-current':'');t.dataset.level=l.id;
       t.innerHTML=`<span class="sd-lv-num">${l.id}</span><span class="sd-lv-size">${l.N}×${l.N}</span><span class="sd-lv-stars">${[1,2,3].map(i=>`<span class="${i<=stars?'':'off'}">${starIcon()}</span>`).join('')}</span>${locked?`<span class="sd-lock">${ICONS.lock}</span>`:''}`;
@@ -81,7 +94,12 @@ function showHome(screen='home'){
       t.addEventListener('click',()=>{tap();if(locked){t.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:260});return;}startLevel(l.id);});
       grid.append(t);
     }
-    const card=document.createElement('div');card.className='aw-card';card.append(grid);
+    const solved=levels.filter(l=>store.stars[l.id]).length;
+    const prog=document.createElement('div');prog.className='sd-lv-progress';prog.textContent=`${solved} / ${levels.length} gelöst`;
+    const scroller=document.createElement('div');scroller.className='sd-levels-scroll';scroller.append(grid);
+    const card=document.createElement('div');card.className='aw-card sd-levels-card';card.append(prog,scroller);
+    // jump to the level you are on (the list is long now)
+    requestAnimationFrame(()=>{const cur=grid.querySelector(`[data-level="${nextLevel()}"]`);if(cur)scroller.scrollTop=Math.max(0,cur.offsetTop-scroller.clientHeight/2+cur.offsetHeight/2);});
     setItems([ribbon('Levels','aw-r-blue'),card,button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',id:'btn-home',action:()=>showHome('home')})]);
   }else if(screen==='rules'){
     setItems([ribbon('So geht’s','aw-r-purple'),rulesCard(),button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',action:()=>showHome('home')})]);
@@ -116,9 +134,9 @@ function startLevel(id){
   ensureBoard();
   S={L,id,N:L.N,state:Array.from({length:L.N},()=>Array(L.N).fill('normal')),hearts:HEARTS,glow:0,done:false,locked:false};
   board.build(L,g=>L.colors[g]);
-  $('lvl-num').textContent=id;$('lvl-name').textContent=NAMES[id-1]||L.label;
+  $('lvl-num').textContent=id;$('lvl-name').textContent=L.label;
   $('glow-total').textContent=L.N;
-  $('hint').innerHTML=HINTS[id-1]||'';
+  $('hint').innerHTML=hintFor(id);
   renderHearts();renderProgress();
   requestAnimationFrame(()=>requestAnimationFrame(placePlate));setTimeout(placePlate,120);
   if(id===1&&!store.seenRules){store.seenRules=true;save();showRulesDialog();}

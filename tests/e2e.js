@@ -48,9 +48,11 @@ async function run(vp, dpr) {
   ok(await p.isVisible('#btn-play') && await p.isVisible('#btn-levels'), 'home: menu buttons visible');
   ok((await p.title()) === 'SquishDoku', 'title is SquishDoku');
   await p.click('#btn-levels'); await sleep(700); await shot('02-levels');
-  ok(await p.locator('.sd-levels .aw-tile').count() === 5, 'level select: 5 levels');
-  ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 4, 'level select: levels 2-5 locked');
-  ok(await noScroll(), 'levels: no scrolling');
+  ok(await p.locator('.sd-levels .aw-tile').count() === 50, 'level select: 50 levels');
+  ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 49, 'level select: levels 2-50 locked');
+  ok(await noScroll(), 'levels: page itself does not scroll');
+  ok(await p.evaluate(() => { const sc = document.querySelector('.sd-levels-scroll'), r = sc.getBoundingClientRect(); return sc.scrollHeight > sc.clientHeight && r.bottom <= innerHeight && r.top >= 0; }), 'levels: list scrolls inside its card, card fits the screen');
+  ok(await p.evaluate(() => { const b = document.querySelector('#btn-home').getBoundingClientRect(); return b.bottom <= innerHeight && b.top > 0; }), 'levels: back button visible');
   await p.click('[data-level="1"]');
   await p.waitForFunction(() => SquishDoku.board && SquishDoku.board.stats.frames > 1, null, { timeout: 30000 });
   ok(await dialog() === 'rules', 'L1: first-time rules dialog');
@@ -121,12 +123,28 @@ async function run(vp, dpr) {
     await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 });
     await sleep(1600);
     ok(await dialog() === 'win' && (await st()).hearts === 3, `level ${lvl} won with 3 hearts`);
-    if (lvl === 5) { await shot('09-win-final'); ok(await p.locator('#btn-next').count() === 0 && (await p.textContent('#dialog')).includes('Alles geschafft'), 'final level shows "Alles geschafft!"'); }
-    else await p.click('#btn-next'), await sleep(1500);
+    if (lvl < 5) await p.click('#btn-next'), await sleep(1500);
+  }
+  // 7b) unlock everything, pick an 8x8 (L41) and the final level (L50) from the scrolling list and win them
+  await p.click('#btn-to-levels'); await sleep(700);
+  await p.evaluate(() => { SquishDoku.store.unlocked = 50; SquishDoku.showHome('levels'); }); await sleep(700);
+  for (const lvl of [41, 50]) {
+    await p.locator(`[data-level="${lvl}"]`).scrollIntoViewIfNeeded(); await sleep(200); await shot(`08-levels-${lvl}`);
+    await p.click(`[data-level="${lvl}"]`); await sleep(1800);
+    s = await st(); ok(s.id === lvl && s.N === 8, `level ${lvl} started (${s.N}x${s.N})`);
+    ok(await noScroll(), `L${lvl} 8x8: no scrolling`);
+    ok(await p.evaluate(() => { const b = SquishDoku.board, a = b.screenOf(0, 0), z = b.screenOf(b.N - 1, b.N - 1); return a.x - a.size / 2 >= 0 && z.x + z.size / 2 <= innerWidth && a.y > 0 && z.y < innerHeight; }), `L${lvl} 8x8 board fits the screen`);
+    for (let r = 0; r < s.N; r++) { await hold(r, s.sol[r]); await sleep(200); }
+    await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 });
+    await sleep(1600);
+    ok(await dialog() === 'win' && (await st()).hearts === 3, `level ${lvl} (8x8) won with 3 hearts`);
+    if (lvl === 50) { await shot('09-win-final'); ok(await p.locator('#btn-next').count() === 0 && (await p.textContent('#dialog')).includes('Alles geschafft'), 'final level shows "Alles geschafft!"'); }
+    else { await p.click('#btn-to-levels'); await sleep(700); }
   }
   // 8) lose flow
   await p.click('#btn-to-levels'); await sleep(700);
-  ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 0, 'all levels unlocked after winning');
+  ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 0, 'all levels unlocked');
+  ok((await p.textContent('.sd-lv-progress')).startsWith('7 / 50'), 'level select shows solved count');
   await p.click('[data-level="2"]'); await sleep(1500);
   s = await st(); let n = 0;
   for (let r = 0; r < s.N && n < 3; r++) for (let c = 0; c < s.N && n < 3; c++) if (s.sol[r] !== c && Math.abs(s.sol[r] - c) > 0) { await hold(r, c); n++; await sleep(150); break; }

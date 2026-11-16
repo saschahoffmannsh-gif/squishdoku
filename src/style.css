@@ -37,8 +37,20 @@ button{font:inherit;}
 .aw-stat-ico svg{display:block;width:100%;height:100%;}
 
 /* Levelauswahl */
-.sd-levels{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 12px;justify-items:center;padding:6px 4px;}
-.sd-levels .aw-tile{width:100%;max-width:100px;height:104px;gap:3px;}
+.sd-levels-card{padding:8px 6px!important;}
+.sd-levels-scroll{max-height:calc(100svh - var(--safe-t) - var(--safe-b) - 370px);min-height:200px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:4px 4px 8px;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 10px,#000 calc(100% - 14px),transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 10px,#000 calc(100% - 14px),transparent 100%);}
+.sd-levels-scroll::-webkit-scrollbar{display:none;}
+.sd-levels{display:grid;grid-template-columns:repeat(5,1fr);gap:9px 7px;justify-items:center;padding:6px 2px;}
+.sd-levels .aw-tile{width:100%;max-width:62px;height:70px;gap:1px;padding:0;border-radius:14px;}
+.sd-levels .aw-tile .sd-lv-num{font-size:24px;}
+.sd-levels .aw-tile .sd-lv-size{font-size:10px;}
+.sd-levels .aw-tile .sd-lv-stars{height:11px;}
+.sd-levels .aw-tile .sd-lv-stars svg{width:11px;height:11px;}
+.sd-levels .aw-tile .sd-lock{right:3px;top:3px;width:14px;height:14px;}
+.sd-lv-band{grid-column:1/-1;justify-self:stretch;font:700 12px/1 var(--aw-comic);letter-spacing:.08em;text-transform:uppercase;color:#ffdca3;text-align:left;padding:6px 4px 0;opacity:.9;}
+.sd-lv-band:first-child{padding-top:0;}
+.sd-lv-progress{font:700 14px/1 var(--aw-comic);color:#ffdca3;text-align:center;margin:2px 0 6px;}
 .sd-levels .aw-tile.is-current{background:linear-gradient(180deg,#5a74ff 0%,#2c3aa8 100%);box-shadow:inset 0 2px 0 #d2dcff99,inset 0 0 0 2px #7f95ff,inset 0 -5px 0 #1b2270,0 0 18px #ffd25a88,0 6px 10px #0008;}
 .sd-levels .aw-tile.is-locked{filter:saturate(.25) brightness(.65);}
 .sd-lv-num{font:400 34px/1 "Lilita One","AW Comic",sans-serif;color:#fff;}
@@ -127,3 +139,4 @@ button{font:inherit;}
   .sd-logo{margin-top:4px;}
   .aw-btn.aw-big{min-height:64px;font-size:27px;}
 }
+.sd-home[data-screen="levels"] .sd-chips{display:none;}

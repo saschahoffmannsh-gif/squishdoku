@@ -10,12 +10,13 @@ const PALETTE={
   1:['#5cc2ff','#1f7ff0','#0d3f9e'],2:['#ff7a66','#e8291f','#a3101a'],3:['#9df25a','#38b81c','#1b7a10'],
   4:['#ffb04a','#ff7a0c','#b8460a'],5:['#b57cff','#8a3cf0','#5418a8'],6:['#ffe36b','#ffc21f','#c98a06'],
   7:['#ff8cc6','#f0459e','#a8186a'],8:['#6ff0e2','#1fc9bd','#0e8a84'],
+  9:['#ffffff','#e9edf5','#8e97ad'], // SquishDoku: extra white gel for 8 regions on 8x8
 };
 const col=hex=>new THREE.Color(hex);
 const cache=new Map();
 // Licht- und Schattenton (wie Stil C im Labor), plus Akzent für Effekte.
 export function comicColors(value){
-  const key=((Math.max(1,value|0)-1)%8)+1;let c=cache.get(key);
+  const key=PALETTE[value|0]?value|0:((Math.max(1,value|0)-1)%8)+1;let c=cache.get(key);
   if(!c){const [hi,mid,lo]=PALETTE[key];c={light:col(mid).lerp(col(hi),.12),shade:col(lo).lerp(col(mid),.35),hi:col(hi),mid:col(mid),lo:col(lo),hex:{hi,mid,lo}};cache.set(key,c);}
   return c;
 }

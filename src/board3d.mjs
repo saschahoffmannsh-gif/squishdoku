@@ -43,7 +43,7 @@ export function createBoard3D(host){
   const scene=graphics.scene,camera=graphics.camera;
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const jobs=[];
-  function ensureColor(v){if(v>8)P.colors[v]=HUD_PARAMETERS.colors[v]=P.colors[(v-1)%8+1];}
+  function ensureColor(v){if(v===9){P.colors[9]=HUD_PARAMETERS.colors[9]='#e9edf5';return;} /* white gel (8 regions) */if(v>8)P.colors[v]=HUD_PARAMETERS.colors[v]=P.colors[(v-1)%8+1];}
   const internals={THREE,PARAMETERS:P,HUD_PARAMETERS,setting,requestFrame,ensureColor,get onLand(){return null;},
     createHudMaterial:(value,stretch,options={})=>comicBodyMaterial(value,null,options),buildSquishy,createLabel,initializeMotion,bindGelOptics,softWobblePower,
     get paused(){return false;},get time(){return clock;},

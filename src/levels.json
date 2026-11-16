@@ -4,106 +4,87 @@
   "N": 5,
   "label": "Sehr leicht",
   "regions": [
-   "aabbb",
-   "aabcb",
-   "deebb",
-   "ddeeb",
-   "eeeee"
+   "aaabb",
+   "cabbb",
+   "cbbbb",
+   "cdbbb",
+   "cddeb"
   ],
   "solution": [
-   1,
-   3,
+   2,
    0,
    4,
-   2
+   1,
+   3
   ],
   "colors": [
+   1,
+   2,
    3,
    5,
-   8,
-   1,
-   2
+   8
   ],
-  "seed": 1002,
-  "maxTech": 2,
-  "steps": 9
+  "seed": 3,
+  "maxTech": 1,
+  "steps": 5,
+  "score": 5,
+  "used": {
+   "1": 5,
+   "2": 4
+  },
+  "firstTech": 1,
+  "starter": 1
  },
  {
   "id": 2,
   "N": 5,
-  "label": "Leicht",
+  "label": "Sehr leicht",
   "regions": [
    "aaaaa",
-   "bbbaa",
-   "bbbbc",
+   "bbaaa",
+   "bbbcc",
    "ddbcc",
-   "eeecc"
+   "dddec"
   ],
   "solution": [
-   3,
-   1,
-   4,
+   2,
    0,
-   2
+   4,
+   1,
+   3
   ],
   "colors": [
    1,
    2,
    3,
-   8,
-   5
+   5,
+   8
   ],
-  "seed": 2013,
+  "seed": 25,
   "maxTech": 3,
-  "steps": 11
+  "steps": 6,
+  "score": 8,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 1
+  },
+  "firstTech": 1,
+  "starter": 1
  },
  {
   "id": 3,
-  "N": 6,
-  "label": "Mittel",
+  "N": 5,
+  "label": "Sehr leicht",
   "regions": [
-   "aaaabc",
-   "aaaabc",
-   "daaccc",
-   "dadecc",
-   "dddeef",
-   "deeeff"
-  ],
-  "solution": [
-   4,
-   1,
-   3,
-   0,
-   5,
-   2
-  ],
-  "colors": [
-   2,
-   1,
-   3,
-   5,
-   8,
-   7
-  ],
-  "seed": 3005,
-  "maxTech": 3,
-  "steps": 14
- },
- {
-  "id": 4,
-  "N": 6,
-  "label": "Knifflig",
-  "regions": [
-   "aaabbc",
-   "ddaaac",
-   "ddaeae",
-   "fdaeee",
-   "ffeeee",
-   "fffffe"
+   "aaabb",
+   "aaaaa",
+   "aacdd",
+   "aeedd",
+   "eeedd"
   ],
   "solution": [
    3,
-   5,
    0,
    2,
    4,
@@ -111,33 +92,525 @@
   ],
   "colors": [
    3,
+   7,
+   2,
+   5,
+   8
+  ],
+  "seed": 32,
+  "maxTech": 3,
+  "steps": 6,
+  "score": 8,
+  "used": {
+   "1": 5,
+   "2": 3,
+   "3": 1
+  },
+  "firstTech": 1,
+  "starter": 1
+ },
+ {
+  "id": 4,
+  "N": 5,
+  "label": "Sehr leicht",
+  "regions": [
+   "aaabb",
+   "aaaab",
+   "aacab",
+   "ddddd",
+   "eeddd"
+  ],
+  "solution": [
+   3,
+   0,
+   2,
+   4,
+   1
+  ],
+  "colors": [
+   2,
+   1,
+   5,
+   3,
+   7
+  ],
+  "seed": 37,
+  "maxTech": 3,
+  "steps": 6,
+  "score": 8,
+  "used": {
+   "1": 5,
+   "2": 3,
+   "3": 1
+  },
+  "firstTech": 1,
+  "starter": 1
+ },
+ {
+  "id": 5,
+  "N": 5,
+  "label": "Sehr leicht",
+  "regions": [
+   "aaaaa",
+   "baaac",
+   "bbddd",
+   "bdddd",
+   "beedd"
+  ],
+  "solution": [
+   2,
+   4,
+   0,
+   3,
+   1
+  ],
+  "colors": [
+   3,
+   5,
+   1,
+   2,
+   8
+  ],
+  "seed": 59,
+  "maxTech": 3,
+  "steps": 6,
+  "score": 8,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 1
+  },
+  "firstTech": 1,
+  "starter": 1
+ },
+ {
+  "id": 6,
+  "N": 5,
+  "label": "Sehr leicht",
+  "regions": [
+   "aaaaa",
+   "aabbc",
+   "addbc",
+   "abbbb",
+   "ebbbb"
+  ],
+  "solution": [
+   2,
+   4,
+   1,
+   3,
+   0
+  ],
+  "colors": [
+   2,
+   3,
+   1,
+   5,
+   8
+  ],
+  "seed": 19,
+  "maxTech": 3,
+  "steps": 7,
+  "score": 11,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 2
+  },
+  "firstTech": 1,
+  "starter": 1
+ },
+ {
+  "id": 7,
+  "N": 5,
+  "label": "Sehr leicht",
+  "regions": [
+   "aabbb",
+   "aaaab",
+   "aacdb",
+   "eaccc",
+   "eeccc"
+  ],
+  "solution": [
+   4,
+   1,
+   3,
+   0,
+   2
+  ],
+  "colors": [
+   2,
+   5,
+   3,
+   8,
+   1
+  ],
+  "seed": 45,
+  "maxTech": 3,
+  "steps": 7,
+  "score": 11,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 2
+  },
+  "firstTech": 1,
+  "starter": 1
+ },
+ {
+  "id": 8,
+  "N": 5,
+  "label": "Sehr leicht",
+  "regions": [
+   "aaabc",
+   "aaddc",
+   "eddcc",
+   "eddcc",
+   "ddddd"
+  ],
+  "solution": [
+   3,
+   1,
+   4,
+   0,
+   2
+  ],
+  "colors": [
+   3,
+   5,
+   8,
+   2,
+   1
+  ],
+  "seed": 99,
+  "maxTech": 3,
+  "steps": 7,
+  "score": 11,
+  "used": {
+   "1": 5,
+   "2": 3,
+   "3": 2
+  },
+  "firstTech": 1,
+  "starter": 1
+ },
+ {
+  "id": 9,
+  "N": 5,
+  "label": "Sehr leicht",
+  "regions": [
+   "abbbb",
+   "abcbb",
+   "ccccd",
+   "cceee",
+   "eeeee"
+  ],
+  "solution": [
+   2,
+   0,
+   4,
+   1,
+   3
+  ],
+  "colors": [
+   1,
+   3,
+   2,
+   5,
+   8
+  ],
+  "seed": 139,
+  "maxTech": 3,
+  "steps": 7,
+  "score": 11,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 2
+  },
+  "firstTech": 1,
+  "starter": 1
+ },
+ {
+  "id": 10,
+  "N": 5,
+  "label": "Sehr leicht",
+  "regions": [
+   "abccc",
+   "aaccc",
+   "aaccd",
+   "aaadd",
+   "aeeee"
+  ],
+  "solution": [
+   1,
+   3,
+   0,
+   4,
+   2
+  ],
+  "colors": [
+   2,
+   1,
+   3,
+   5,
+   8
+  ],
+  "seed": 9,
+  "maxTech": 3,
+  "steps": 8,
+  "score": 14,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 3
+  },
+  "firstTech": 1,
+  "starter": 1
+ },
+ {
+  "id": 11,
+  "N": 5,
+  "label": "Leicht",
+  "regions": [
+   "aaabb",
+   "aaaac",
+   "ddddc",
+   "ddddd",
+   "eeddd"
+  ],
+  "solution": [
+   3,
+   1,
+   4,
+   2,
+   0
+  ],
+  "colors": [
+   2,
+   1,
+   3,
+   5,
+   8
+  ],
+  "seed": 6,
+  "maxTech": 3,
+  "steps": 8,
+  "score": 14,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 12,
+  "N": 5,
+  "label": "Leicht",
+  "regions": [
+   "aaabb",
+   "aaaab",
+   "caddb",
+   "caadb",
+   "ccaee"
+  ],
+  "solution": [
+   1,
+   4,
+   2,
+   0,
+   3
+  ],
+  "colors": [
+   3,
+   2,
+   7,
+   5,
+   8
+  ],
+  "seed": 64,
+  "maxTech": 3,
+  "steps": 8,
+  "score": 14,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 13,
+  "N": 5,
+  "label": "Leicht",
+  "regions": [
+   "aabbb",
+   "accbb",
+   "ccccb",
+   "ccccd",
+   "eeddd"
+  ],
+  "solution": [
+   3,
+   0,
+   2,
+   4,
+   1
+  ],
+  "colors": [
+   1,
+   3,
+   2,
+   5,
+   8
+  ],
+  "seed": 74,
+  "maxTech": 3,
+  "steps": 8,
+  "score": 14,
+  "used": {
+   "1": 5,
+   "2": 4,
+   "3": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 14,
+  "N": 5,
+  "label": "Leicht",
+  "regions": [
+   "aabbb",
+   "acccb",
+   "aaccd",
+   "aaaad",
+   "aaeee"
+  ],
+  "solution": [
+   3,
+   1,
+   4,
+   0,
+   2
+  ],
+  "colors": [
+   2,
+   5,
+   8,
+   3,
+   1
+  ],
+  "seed": 336,
+  "maxTech": 3,
+  "steps": 9,
+  "score": 17,
+  "used": {
+   "1": 5,
+   "2": 3,
+   "3": 4
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 15,
+  "N": 6,
+  "label": "Leicht",
+  "regions": [
+   "aabbbb",
+   "caabdb",
+   "cabbdb",
+   "caaadb",
+   "ceaadd",
+   "eeeffd"
+  ],
+  "solution": [
+   5,
+   2,
+   0,
+   4,
+   1,
+   3
+  ],
+  "colors": [
+   3,
    1,
    7,
    2,
    8,
    5
   ],
-  "seed": 4011,
-  "maxTech": 4,
-  "steps": 15
+  "seed": 53,
+  "maxTech": 3,
+  "steps": 9,
+  "score": 17,
+  "used": {
+   "1": 6,
+   "2": 5,
+   "3": 3
+  },
+  "firstTech": 3,
+  "starter": 0
  },
  {
-  "id": 5,
-  "N": 7,
-  "label": "Schwer",
+  "id": 16,
+  "N": 6,
+  "label": "Leicht",
   "regions": [
-   "aaaabcc",
-   "adbabce",
-   "ddbbbee",
-   "dbbeeef",
-   "dbbgggf",
-   "dddffff",
-   "ddddfff"
+   "abbbcc",
+   "addccc",
+   "dddcce",
+   "ddccee",
+   "ddfeee",
+   "fffeee"
   ],
   "solution": [
-   6,
+   3,
    0,
+   4,
+   1,
+   5,
+   2
+  ],
+  "colors": [
+   7,
+   1,
    2,
+   3,
+   8,
+   5
+  ],
+  "seed": 88,
+  "maxTech": 3,
+  "steps": 9,
+  "score": 17,
+  "used": {
+   "1": 6,
+   "2": 4,
+   "3": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 17,
+  "N": 6,
+  "label": "Leicht",
+  "regions": [
+   "abbbbb",
+   "aaaabb",
+   "aaabbc",
+   "aadddc",
+   "aeddcc",
+   "aeddff"
+  ],
+  "solution": [
+   2,
+   0,
    5,
    3,
    1,
@@ -145,15 +618,1476 @@
   ],
   "colors": [
    2,
+   5,
+   8,
+   3,
+   1,
+   7
+  ],
+  "seed": 248,
+  "maxTech": 3,
+  "steps": 9,
+  "score": 17,
+  "used": {
+   "1": 6,
+   "2": 5,
+   "3": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 18,
+  "N": 6,
+  "label": "Leicht",
+  "regions": [
+   "aaaaab",
+   "ccaddb",
+   "eaadfb",
+   "edddfb",
+   "edbddb",
+   "ddbbbb"
+  ],
+  "solution": [
+   3,
+   1,
+   4,
+   2,
+   0,
+   5
+  ],
+  "colors": [
+   2,
+   1,
+   8,
+   3,
+   5,
+   7
+  ],
+  "seed": 161,
+  "maxTech": 3,
+  "steps": 10,
+  "score": 20,
+  "used": {
+   "1": 6,
+   "2": 5,
+   "3": 4
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 19,
+  "N": 6,
+  "label": "Leicht",
+  "regions": [
+   "abbbbb",
+   "aaaacb",
+   "aaaacb",
+   "decccc",
+   "decffc",
+   "ddddcc"
+  ],
+  "solution": [
+   5,
+   2,
+   4,
+   1,
+   3,
+   0
+  ],
+  "colors": [
+   2,
+   1,
+   3,
+   8,
+   5,
+   7
+  ],
+  "seed": 473,
+  "maxTech": 3,
+  "steps": 10,
+  "score": 20,
+  "used": {
+   "1": 6,
+   "2": 5,
+   "3": 4
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 20,
+  "N": 6,
+  "label": "Leicht",
+  "regions": [
+   "abbbcc",
+   "aacccc",
+   "cccccc",
+   "cccddc",
+   "eeddfc",
+   "edddfc"
+  ],
+  "solution": [
+   2,
+   0,
+   5,
+   3,
+   1,
+   4
+  ],
+  "colors": [
+   1,
+   2,
+   3,
+   8,
+   5,
+   7
+  ],
+  "seed": 654,
+  "maxTech": 3,
+  "steps": 10,
+  "score": 20,
+  "used": {
+   "1": 6,
+   "2": 4,
+   "3": 4
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 21,
+  "N": 6,
+  "label": "Mittel",
+  "regions": [
+   "aaaabb",
+   "caadde",
+   "caadde",
+   "ccafde",
+   "aaafde",
+   "aaffff"
+  ],
+  "solution": [
+   4,
+   1,
+   3,
+   0,
+   5,
+   2
+  ],
+  "colors": [
+   3,
+   1,
+   7,
+   2,
+   8,
+   5
+  ],
+  "seed": 154,
+  "maxTech": 4,
+  "steps": 9,
+  "score": 20,
+  "used": {
+   "1": 6,
+   "2": 4,
+   "3": 2,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 22,
+  "N": 6,
+  "label": "Mittel",
+  "regions": [
+   "aabbbb",
+   "cabbbb",
+   "cabbbb",
+   "cadbbe",
+   "dddeee",
+   "dfffee"
+  ],
+  "solution": [
+   1,
+   4,
+   0,
+   2,
+   5,
+   3
+  ],
+  "colors": [
+   2,
+   5,
+   1,
+   3,
+   8,
+   7
+  ],
+  "seed": 75,
+  "maxTech": 4,
+  "steps": 10,
+  "score": 23,
+  "used": {
+   "1": 6,
+   "2": 5,
+   "3": 3,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 23,
+  "N": 6,
+  "label": "Mittel",
+  "regions": [
+   "abbcdd",
+   "accccd",
+   "acccce",
+   "aafffe",
+   "fffffe",
+   "ffffee"
+  ],
+  "solution": [
+   1,
+   5,
+   3,
+   0,
+   2,
+   4
+  ],
+  "colors": [
+   2,
+   1,
+   3,
+   7,
+   8,
+   5
+  ],
+  "seed": 112,
+  "maxTech": 4,
+  "steps": 10,
+  "score": 23,
+  "used": {
+   "1": 6,
+   "2": 4,
+   "3": 3,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 24,
+  "N": 6,
+  "label": "Mittel",
+  "regions": [
+   "aaabbc",
+   "addecc",
+   "dddecc",
+   "dddeff",
+   "ddeeef",
+   "ddeeff"
+  ],
+  "solution": [
+   3,
+   0,
+   4,
+   1,
+   5,
+   2
+  ],
+  "colors": [
+   5,
+   2,
+   1,
+   8,
+   3,
+   7
+  ],
+  "seed": 35,
+  "maxTech": 4,
+  "steps": 11,
+  "score": 26,
+  "used": {
+   "1": 6,
+   "2": 5,
+   "3": 4,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 25,
+  "N": 6,
+  "label": "Mittel",
+  "regions": [
+   "aaaabb",
+   "bbbbbb",
+   "cccbbb",
+   "dccccb",
+   "ddefff",
+   "ddeeef"
+  ],
+  "solution": [
+   1,
+   4,
+   2,
+   0,
+   5,
+   3
+  ],
+  "colors": [
+   7,
+   8,
+   2,
+   1,
+   3,
+   5
+  ],
+  "seed": 46,
+  "maxTech": 4,
+  "steps": 11,
+  "score": 26,
+  "used": {
+   "1": 6,
+   "2": 4,
+   "3": 4,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 26,
+  "N": 6,
+  "label": "Mittel",
+  "regions": [
+   "aaabbc",
+   "ddaabc",
+   "daaaec",
+   "dddaec",
+   "ffffee",
+   "ffffff"
+  ],
+  "solution": [
+   3,
+   5,
+   2,
+   0,
+   4,
+   1
+  ],
+  "colors": [
+   2,
+   1,
+   7,
+   8,
+   3,
+   5
+  ],
+  "seed": 96,
+  "maxTech": 4,
+  "steps": 11,
+  "score": 26,
+  "used": {
+   "1": 6,
+   "2": 5,
+   "3": 4,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 27,
+  "N": 6,
+  "label": "Mittel",
+  "regions": [
+   "abbbbb",
+   "aaaabb",
+   "ccadbb",
+   "cddddb",
+   "cddeeb",
+   "cdffee"
+  ],
+  "solution": [
+   5,
+   1,
+   3,
+   0,
+   4,
+   2
+  ],
+  "colors": [
+   2,
+   5,
+   1,
+   3,
+   8,
+   7
+  ],
+  "seed": 23,
+  "maxTech": 4,
+  "steps": 11,
+  "score": 29,
+  "used": {
+   "1": 6,
+   "2": 5,
+   "3": 3,
+   "4": 2
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 28,
+  "N": 7,
+  "label": "Mittel",
+  "regions": [
+   "aaaaaaa",
+   "aaaabbb",
+   "caaabdd",
+   "caebbff",
+   "ceebfff",
+   "cceeeef",
+   "gggefff"
+  ],
+  "solution": [
+   2,
+   4,
+   6,
+   0,
+   5,
+   3,
+   1
+  ],
+  "colors": [
+   5,
+   2,
+   9,
+   8,
+   3,
+   1,
+   7
+  ],
+  "seed": 127,
+  "maxTech": 4,
+  "steps": 12,
+  "score": 29,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 4,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 29,
+  "N": 7,
+  "label": "Mittel",
+  "regions": [
+   "abbbccc",
+   "aabcccc",
+   "aaacccc",
+   "aaaccdd",
+   "aaeccfd",
+   "aeeggfd",
+   "eeeefff"
+  ],
+  "solution": [
+   1,
+   3,
+   0,
+   5,
+   2,
+   4,
+   6
+  ],
+  "colors": [
+   8,
+   7,
+   3,
+   1,
+   5,
+   2,
+   9
+  ],
+  "seed": 137,
+  "maxTech": 4,
+  "steps": 12,
+  "score": 29,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 4,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 30,
+  "N": 7,
+  "label": "Mittel",
+  "regions": [
+   "aaabbbb",
+   "accbbdd",
+   "aacbbbd",
+   "aacccdd",
+   "aefffdd",
+   "aegfddf",
+   "aggffff"
+  ],
+  "solution": [
+   3,
+   5,
+   0,
+   4,
+   1,
+   6,
+   2
+  ],
+  "colors": [
+   2,
+   8,
+   1,
+   7,
+   9,
+   3,
+   5
+  ],
+  "seed": 70,
+  "maxTech": 4,
+  "steps": 12,
+  "score": 32,
+  "used": {
+   "1": 7,
+   "2": 5,
+   "3": 3,
+   "4": 2
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 31,
+  "N": 7,
+  "label": "Mittel",
+  "regions": [
+   "aaaaaaa",
+   "abaaaaa",
+   "cbaaddd",
+   "cbaddee",
+   "cfffddf",
+   "cggfdff",
+   "cgfffff"
+  ],
+  "solution": [
+   3,
+   1,
+   4,
+   6,
+   0,
+   2,
+   5
+  ],
+  "colors": [
+   5,
+   9,
+   2,
+   8,
+   7,
+   3,
+   1
+  ],
+  "seed": 71,
+  "maxTech": 4,
+  "steps": 13,
+  "score": 32,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 5,
+   "4": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 32,
+  "N": 7,
+  "label": "Mittel",
+  "regions": [
+   "abbccde",
+   "aabccde",
+   "abbbcee",
+   "accccef",
+   "aaacfff",
+   "aagcfff",
+   "aggccff"
+  ],
+  "solution": [
+   5,
+   2,
+   6,
+   3,
+   0,
+   4,
+   1
+  ],
+  "colors": [
+   2,
+   9,
+   3,
+   5,
+   8,
+   7,
+   1
+  ],
+  "seed": 11,
+  "maxTech": 4,
+  "steps": 13,
+  "score": 35,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 4,
+   "4": 2
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 33,
+  "N": 7,
+  "label": "Mittel",
+  "regions": [
+   "aaaaaaa",
+   "baaaaaa",
+   "bbbcadd",
+   "ebbccfd",
+   "eeecffd",
+   "eecccff",
+   "eeeccgg"
+  ],
+  "solution": [
+   2,
+   0,
+   3,
+   6,
+   4,
+   1,
+   5
+  ],
+  "colors": [
+   5,
+   8,
+   3,
+   9,
+   7,
+   2,
+   1
+  ],
+  "seed": 243,
+  "maxTech": 4,
+  "steps": 13,
+  "score": 35,
+  "used": {
+   "1": 7,
+   "2": 5,
+   "3": 4,
+   "4": 2
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 34,
+  "N": 7,
+  "label": "Mittel",
+  "regions": [
+   "aaaabbb",
+   "aabaabc",
+   "abbbabc",
+   "adbbbbc",
+   "dddddee",
+   "ffdeeeg",
+   "ffggggg"
+  ],
+  "solution": [
+   2,
+   6,
+   3,
+   1,
+   5,
+   0,
+   4
+  ],
+  "colors": [
+   1,
+   2,
+   8,
+   3,
+   5,
+   7,
+   9
+  ],
+  "seed": 434,
+  "maxTech": 4,
+  "steps": 13,
+  "score": 35,
+  "used": {
+   "1": 7,
+   "2": 5,
+   "3": 4,
+   "4": 2
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 35,
+  "N": 7,
+  "label": "Knifflig",
+  "regions": [
+   "aaaabbb",
+   "aaaacbb",
+   "aaadcee",
+   "aaadeee",
+   "aaddeee",
+   "ffggggg",
+   "ffffggg"
+  ],
+  "solution": [
+   6,
+   4,
+   1,
+   3,
+   5,
+   2,
+   0
+  ],
+  "colors": [
    3,
    7,
    1,
+   2,
    8,
-   4,
+   9,
    5
   ],
-  "seed": 5007,
+  "seed": 809,
   "maxTech": 5,
-  "steps": 25
+  "steps": 11,
+  "score": 36,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 1,
+   "4": 2,
+   "5": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 36,
+  "N": 7,
+  "label": "Knifflig",
+  "regions": [
+   "aaabbcd",
+   "aaaaccd",
+   "aaaeedd",
+   "aaeeeed",
+   "ffegeee",
+   "fgeggee",
+   "ggggeee"
+  ],
+  "solution": [
+   3,
+   5,
+   1,
+   6,
+   4,
+   0,
+   2
+  ],
+  "colors": [
+   5,
+   8,
+   2,
+   1,
+   3,
+   9,
+   7
+  ],
+  "seed": 63,
+  "maxTech": 4,
+  "steps": 13,
+  "score": 38,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 3,
+   "4": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 37,
+  "N": 7,
+  "label": "Knifflig",
+  "regions": [
+   "aabbbbb",
+   "caabbbb",
+   "ccaaabb",
+   "ccdaaaa",
+   "eedaffa",
+   "egggfff",
+   "eeegggg"
+  ],
+  "solution": [
+   6,
+   0,
+   4,
+   2,
+   5,
+   3,
+   1
+  ],
+  "colors": [
+   3,
+   7,
+   1,
+   2,
+   8,
+   9,
+   5
+  ],
+  "seed": 228,
+  "maxTech": 5,
+  "steps": 12,
+  "score": 39,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 2,
+   "4": 2,
+   "5": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 38,
+  "N": 7,
+  "label": "Knifflig",
+  "regions": [
+   "aabbccc",
+   "dabccee",
+   "dabbcff",
+   "dggbbff",
+   "dggggff",
+   "ggggfff",
+   "ggfffff"
+  ],
+  "solution": [
+   4,
+   6,
+   1,
+   3,
+   0,
+   2,
+   5
+  ],
+  "colors": [
+   8,
+   5,
+   9,
+   1,
+   7,
+   3,
+   2
+  ],
+  "seed": 3,
+  "maxTech": 4,
+  "steps": 15,
+  "score": 41,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 6,
+   "4": 2
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 39,
+  "N": 7,
+  "label": "Knifflig",
+  "regions": [
+   "aaabbcc",
+   "aaaabcd",
+   "aeaabdd",
+   "aeeabdd",
+   "aeeeffd",
+   "ggeeefd",
+   "ggggeff"
+  ],
+  "solution": [
+   3,
+   5,
+   0,
+   2,
+   4,
+   6,
+   1
+  ],
+  "colors": [
+   3,
+   2,
+   1,
+   8,
+   9,
+   5,
+   7
+  ],
+  "seed": 373,
+  "maxTech": 5,
+  "steps": 12,
+  "score": 42,
+  "used": {
+   "1": 7,
+   "2": 5,
+   "3": 1,
+   "4": 3,
+   "5": 1
+  },
+  "firstTech": 4,
+  "starter": 0
+ },
+ {
+  "id": 40,
+  "N": 7,
+  "label": "Knifflig",
+  "regions": [
+   "abbbccd",
+   "aaabded",
+   "fbbbded",
+   "ffbdded",
+   "ffbdddd",
+   "fggggdg",
+   "ggggggg"
+  ],
+  "solution": [
+   4,
+   1,
+   5,
+   2,
+   6,
+   0,
+   3
+  ],
+  "colors": [
+   7,
+   3,
+   1,
+   2,
+   8,
+   9,
+   5
+  ],
+  "seed": 180,
+  "maxTech": 4,
+  "steps": 15,
+  "score": 44,
+  "used": {
+   "1": 7,
+   "2": 6,
+   "3": 5,
+   "4": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 41,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "abbccccd",
+   "accceedd",
+   "aceeeddd",
+   "aaefeeed",
+   "faefeedd",
+   "ffffffgd",
+   "hfgggfgd",
+   "hhhggggd"
+  ],
+  "solution": [
+   1,
+   3,
+   0,
+   5,
+   7,
+   4,
+   6,
+   2
+  ],
+  "colors": [
+   8,
+   7,
+   4,
+   9,
+   5,
+   2,
+   3,
+   1
+  ],
+  "seed": 161,
+  "maxTech": 4,
+  "steps": 15,
+  "score": 44,
+  "used": {
+   "1": 8,
+   "2": 7,
+   "3": 4,
+   "4": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 42,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "aabbbbbb",
+   "cdddddbb",
+   "cdeeeddb",
+   "fdddeeee",
+   "fdfffeee",
+   "fffggggg",
+   "fgggghhg",
+   "ffffghgg"
+  ],
+  "solution": [
+   1,
+   7,
+   0,
+   3,
+   5,
+   2,
+   6,
+   4
+  ],
+  "colors": [
+   2,
+   1,
+   9,
+   3,
+   4,
+   5,
+   8,
+   7
+  ],
+  "seed": 955,
+  "maxTech": 4,
+  "steps": 16,
+  "score": 44,
+  "used": {
+   "1": 8,
+   "2": 7,
+   "3": 6,
+   "4": 2
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 43,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "aaaabbbb",
+   "ccabbdee",
+   "ccabbddf",
+   "caabbfff",
+   "ccafffgf",
+   "chahgfgg",
+   "hhahgfgg",
+   "hhhhgggg"
+  ],
+  "solution": [
+   4,
+   7,
+   5,
+   1,
+   3,
+   0,
+   6,
+   2
+  ],
+  "colors": [
+   1,
+   2,
+   8,
+   5,
+   9,
+   3,
+   7,
+   4
+  ],
+  "seed": 722,
+  "maxTech": 4,
+  "steps": 16,
+  "score": 47,
+  "used": {
+   "1": 8,
+   "2": 7,
+   "3": 5,
+   "4": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 44,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "aabbbbcc",
+   "aabdbecc",
+   "aadddeee",
+   "aaddddee",
+   "addfddee",
+   "aafffggh",
+   "fafffggh",
+   "fffggggg"
+  ],
+  "solution": [
+   6,
+   2,
+   5,
+   1,
+   4,
+   7,
+   0,
+   3
+  ],
+  "colors": [
+   2,
+   8,
+   7,
+   5,
+   4,
+   9,
+   3,
+   1
+  ],
+  "seed": 1120,
+  "maxTech": 4,
+  "steps": 16,
+  "score": 47,
+  "used": {
+   "1": 8,
+   "2": 6,
+   "3": 5,
+   "4": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 45,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "aaabbbbb",
+   "ababccdb",
+   "abbbccdd",
+   "aacccced",
+   "aacccced",
+   "afffceed",
+   "aggfeedd",
+   "ggghheee"
+  ],
+  "solution": [
+   5,
+   0,
+   7,
+   2,
+   6,
+   3,
+   1,
+   4
+  ],
+  "colors": [
+   1,
+   2,
+   3,
+   5,
+   9,
+   4,
+   8,
+   7
+  ],
+  "seed": 685,
+  "maxTech": 4,
+  "steps": 17,
+  "score": 50,
+  "used": {
+   "1": 8,
+   "2": 7,
+   "3": 6,
+   "4": 3
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 46,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "abcccdde",
+   "abcacdde",
+   "aaaaddee",
+   "fafadeee",
+   "ffffdgee",
+   "fgggdghe",
+   "fffggghe",
+   "fffgggge"
+  ],
+  "solution": [
+   4,
+   1,
+   5,
+   3,
+   7,
+   2,
+   6,
+   0
+  ],
+  "colors": [
+   2,
+   9,
+   5,
+   3,
+   7,
+   1,
+   4,
+   8
+  ],
+  "seed": 165,
+  "maxTech": 4,
+  "steps": 17,
+  "score": 53,
+  "used": {
+   "1": 8,
+   "2": 7,
+   "3": 5,
+   "4": 4
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 47,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "aaaabbbc",
+   "aadabbbc",
+   "eedbbbcc",
+   "effbbbgg",
+   "efffgggg",
+   "efhggggg",
+   "hhhhhhgg",
+   "hhhhhhhg"
+  ],
+  "solution": [
+   1,
+   7,
+   2,
+   5,
+   3,
+   0,
+   6,
+   4
+  ],
+  "colors": [
+   1,
+   4,
+   7,
+   8,
+   2,
+   5,
+   3,
+   9
+  ],
+  "seed": 667,
+  "maxTech": 4,
+  "steps": 17,
+  "score": 53,
+  "used": {
+   "1": 8,
+   "2": 6,
+   "3": 5,
+   "4": 4
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 48,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "aabbbbbb",
+   "ccbdddee",
+   "cfbdddee",
+   "cfffeeee",
+   "cgfffhee",
+   "ggfgghhe",
+   "ggffghee",
+   "ggggghhh"
+  ],
+  "solution": [
+   1,
+   5,
+   2,
+   0,
+   3,
+   7,
+   4,
+   6
+  ],
+  "colors": [
+   8,
+   2,
+   1,
+   5,
+   9,
+   3,
+   4,
+   7
+  ],
+  "seed": 1261,
+  "maxTech": 4,
+  "steps": 18,
+  "score": 56,
+  "used": {
+   "1": 8,
+   "2": 5,
+   "3": 6,
+   "4": 4
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 49,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "aaaaaabb",
+   "aaaccbbc",
+   "aadccccc",
+   "eedddfcc",
+   "egdddfcc",
+   "ggdddfcf",
+   "hgddffff",
+   "hgggffff"
+  ],
+  "solution": [
+   6,
+   2,
+   5,
+   1,
+   4,
+   7,
+   0,
+   3
+  ],
+  "colors": [
+   2,
+   1,
+   3,
+   5,
+   8,
+   9,
+   4,
+   7
+  ],
+  "seed": 21,
+  "maxTech": 5,
+  "steps": 16,
+  "score": 57,
+  "used": {
+   "1": 8,
+   "2": 7,
+   "3": 3,
+   "4": 4,
+   "5": 1
+  },
+  "firstTech": 3,
+  "starter": 0
+ },
+ {
+  "id": 50,
+  "N": 8,
+  "label": "Mittelschwer",
+  "regions": [
+   "aaabbbcc",
+   "aaabbbcd",
+   "aabbbccd",
+   "aabbbbdd",
+   "eaaeebdf",
+   "eeaeffff",
+   "geeeehff",
+   "gggghhhf"
+  ],
+  "solution": [
+   1,
+   6,
+   2,
+   7,
+   3,
+   5,
+   0,
+   4
+  ],
+  "colors": [
+   1,
+   3,
+   9,
+   2,
+   4,
+   5,
+   7,
+   8
+  ],
+  "seed": 114,
+  "maxTech": 5,
+  "steps": 15,
+  "score": 58,
+  "used": {
+   "1": 8,
+   "2": 7,
+   "3": 2,
+   "4": 3,
+   "5": 2
+  },
+  "firstTech": 4,
+  "starter": 0
  }
 ]
