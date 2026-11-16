@@ -8,7 +8,7 @@ Live auf GitHub Pages: https://saschahoffmannsh-gif.github.io/squishdoku/
 * **Halten** (~0,4 s, Ladering) → Squish leuchtet; nochmal halten → aus.
 * **Wischen** / kurz **antippen** → Squish ploppt (bleibt platt liegen); antippen holt ihn zurück.
 * Falsch halten / einen Squish wegwischen, der leuchten muss → Wackeln + 1 Herz weg (3 pro Level).
-* Richtig leuchtend → Reihe, Spalte, Farbe und Nachbarn ploppen automatisch.
+* Richtig leuchtend → nur dieser Squish leuchtet; weggeploppt wird ausschließlich per Wischen.
 
 ## Starten
     python3 -m http.server 8792     # im Projektordner

@@ -143,20 +143,8 @@ function wrongAt(r,c){board.wrong(r,c);sfx('land',2);sfx('squish');loseHeart(r,c
 function popAt(r,c,opts){if(S.state[r][c]!=='normal')return false;S.state[r][c]='popped';board.pop(r,c,opts);return true;}
 function glowAt(r,c){
   S.state[r][c]='glow';S.glow++;board.glow(r,c,true);renderProgress();sfx('magic');buzz('merge');
-  // Reihe, Spalte, Farbe und die 8 Nachbarn ploppen automatisch (gestaffelt nach Abstand)
-  const g=regionOf(r,c),rings=new Map();
-  for(let rr=0;rr<S.N;rr++)for(let cc=0;cc<S.N;cc++){
-    if(rr===r&&cc===c||S.state[rr][cc]!=='normal')continue;
-    const near=Math.abs(rr-r)<=1&&Math.abs(cc-c)<=1;
-    if(rr===r||cc===c||regionOf(rr,cc)===g||near){const d=Math.max(Math.abs(rr-r),Math.abs(cc-c));if(!rings.has(d))rings.set(d,[]);rings.get(d).push([rr,cc]);}
-  }
-  const order=[...rings.keys()].sort((a,b)=>a-b);
-  order.forEach((d,i)=>setTimeout(()=>{
-    if(!S||S.state[r][c]!=='glow')return;
-    let any=false;for(const [rr,cc] of rings.get(d))any=popAt(rr,cc,{power:1.6,amount:.55})||any;
-    if(any)sfx('pop',1);
-  },160+i*(reduceMotion.matches?40:90)));
-  if(S.glow===S.N){S.done=true;S.locked=true;setTimeout(win,260+order.length*90+500);}
+  // Nichts ploppt automatisch: nur der Spieler wischt Squishs weg.
+  if(S.glow===S.N){S.done=true;S.locked=true;setTimeout(win,700);}
 }
 function unglowAt(r,c){S.state[r][c]='normal';S.glow--;board.glow(r,c,false);renderProgress();sfx('tap');buzz('tap');}
 function restoreAt(r,c){S.state[r][c]='normal';board.restore(r,c);sfx('tap');buzz('tap');}

@@ -1,20 +1,23 @@
-// SquishDoku 3D board: Squish Attack's current comic gel squishes on the
-// Squish Attack glass table, seen from directly above. All rendering pieces
-// are the unmodified Squish Attack modules in /vendor/squish-attack (copied
-// from saschahoffmannsh-gif/squish-attack @ 9a61cc9, worktree launch-26);
-// this file only arranges them for an N x N grid (modelled on the game's
-// game/graphics-adapter.mjs).
+// SquishDoku 3D board: Squish Attack's ORIGINAL translucent gel squishes
+// (the look before the comic restyle, squish-attack @ 281e8da / launch-5:
+// ray-marched gel optics + diffuse glow + neon bands + HDR glass composite)
+// on the Squish Attack glass table, seen from directly above. The rendering
+// pieces are unmodified Squish Attack modules in /vendor/squish-attack
+// (launch-26 copies, plus the launch-5 files neon-bands.mjs, fusion-gel.mjs
+// and render-quality-gel.mjs); this file only arranges them for an N x N grid
+// (modelled on launch-5's game/graphics-adapter.mjs).
 // NOTE: import specifiers must match the vendor files' own specifiers
 // (including ?v=…), otherwise ES modules would load twice.
 import {createSquishGraphics,THREE,PARAMETERS} from '../vendor/squish-attack/squish/squish-graphics.js?v=play-sharp-1';
-import {buildSquishy,createLabel,bindGelOptics,initializeMotion,updateSquishy,PARAMETERS as HUD_PARAMETERS} from '../vendor/squish-attack/game/original-gel-models.js?v=menu-1';
-import {applyComic,comicBodyMaterial,comicColors,comicSparkTexture,INK} from '../vendor/squish-attack/game/comic-style.mjs?v=launch-26';
-import {applyNeonGlassLighting} from '../vendor/squish-attack/game/gel-lighting.mjs?v=launch-26';
+import {buildSquishy,createLabel,createGelMaterial,installGelOptics,bindGelOptics,initializeMotion,updateSquishy,PARAMETERS as HUD_PARAMETERS} from '../vendor/squish-attack/game/original-gel-models.js?v=menu-1';
+import {comicSparkTexture} from '../vendor/squish-attack/game/comic-style.mjs?v=launch-26';
+import {installNeonBands} from '../vendor/squish-attack/game/neon-bands.mjs?v=gel-clarity-c-1';
+import {applyNeonGlassLighting,applyDiffuseGelGlow} from '../vendor/squish-attack/game/gel-lighting.mjs?v=launch-26';
 import {applyGelSoftness,softWobblePower} from '../vendor/squish-attack/game/gel-softness.mjs?v=launch-26';
 import {createContactSolver} from '../vendor/squish-attack/game/dense-contacts.mjs?v=dense-board-1';
-import {configureRenderQuality} from '../vendor/squish-attack/game/render-quality.mjs?v=launch-26';
+import {configureRenderQuality} from '../vendor/squish-attack/game/render-quality-gel.mjs?v=foley-5';
 import {installCleanScreen} from '../vendor/squish-attack/game/clean-screen.mjs?v=launch-26';
-import {createFusion} from '../vendor/squish-attack/game/fusion.mjs?v=launch-26';
+import {createFusion} from '../vendor/squish-attack/game/fusion-gel.mjs?v=fuse-6';
 
 const P=PARAMETERS;
 // Same press/drag/release/wobble springs as squish-graphics.js (Vh/Gh/Wh/bl),
@@ -36,23 +39,35 @@ export function createBoard3D(host){
     lightingApplied=true;
   }
   const graphics=createSquishGraphics(host,{tiles:[],bindPointer:false,autoStart:false,alpha:true});
-  graphics.bloom.enabled=false;
   graphics.camera.up.set(0,0,-1); // screen-up = far side of the table
   let dirty=true;
   function requestFrame({shadows=false}={}){dirty=true;if(shadows){if(graphics.quality?.invalidateShadows)graphics.quality.invalidateShadows();else graphics.renderer.shadowMap.needsUpdate=true;}}
   configureRenderQuality(graphics);
   const setSize=graphics.renderer.setSize.bind(graphics.renderer);
   graphics.renderer.setSize=(...a)=>{setSize(...a);requestFrame({shadows:true});};
-  const setting=installCleanScreen(graphics,host,{direct:true});
+  const setting=installCleanScreen(graphics,host); // HDR glass composite, as in launch-5
   const scene=graphics.scene,camera=graphics.camera;
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const jobs=[];
   function ensureColor(v){if(v>8)P.colors[v]=HUD_PARAMETERS.colors[v]=P.colors[(v-1)%8+1];}
   const internals={THREE,PARAMETERS:P,HUD_PARAMETERS,setting,requestFrame,ensureColor,get onLand(){return null;},
-    createHudMaterial:(value,stretch,options={})=>comicBodyMaterial(value,null,options),buildSquishy,createLabel,initializeMotion,bindGelOptics,softWobblePower,
+    createHudMaterial,buildSquishy,createLabel,initializeMotion,bindGelOptics,softWobblePower,
     get paused(){return false;},get time(){return clock;},
     disposeGel,job(job){jobs.push(job);requestFrame();return job;},cancelJobs(){jobs.splice(0).forEach(j=>j.cancel?.());}};
   const fusion=createFusion({internals,graphics});
+  // launch-5 graphics-adapter createHudMaterial: the original gel (optics + diffuse glow + neon bands + env map)
+  function createHudMaterial(value,stretch=0){
+    const optics=installGelOptics(createGelMaterial(value));
+    if(stretch>0){
+      const base=optics.onBeforeCompile,key=optics.customProgramCacheKey.bind(optics),tag=stretch.toFixed(4);
+      optics.onBeforeCompile=function(shader,renderer){base.call(this,shader,renderer);
+        shader.fragmentShader=shader.fragmentShader.replace('vec3 gelRest(vec3 p){','vec3 gelRest(vec3 p){p.x=sign(p.x)*max(abs(p.x)-'+tag+',0.0);');};
+      optics.customProgramCacheKey=()=>key()+'|wide-'+tag;
+    }
+    const material=installNeonBands(applyDiffuseGelGlow(optics),value);
+    material.envMap=scene.environment;material.envMapIntensity=P.gel.envMapIntensity;
+    return material;
+  }
 
   // ---------- board layout ----------
   let N=5,pitch=P.board.pitch,k=1,cells=[];
@@ -62,7 +77,7 @@ export function createBoard3D(host){
 
   // glow halo on the glass under a glowing squish (soft additive disc)
   const haloTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);
-    g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.46,'rgba(255,255,255,.04)');g.addColorStop(.6,'rgba(255,255,255,1)');g.addColorStop(.74,'rgba(255,255,255,.42)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);
+    g.addColorStop(0,'rgba(255,255,255,.62)');g.addColorStop(.46,'rgba(255,255,255,.5)');g.addColorStop(.6,'rgba(255,255,255,1)');g.addColorStop(.74,'rgba(255,255,255,.42)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);
     const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
   const sparkTex=comicSparkTexture();
   // splat decal left on the glass by a popped squish (white, tinted per cell)
@@ -73,25 +88,25 @@ export function createBoard3D(host){
     const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
   const NAVY=new THREE.Color('#2a3156');
   const dull=(col,f)=>{const g=col.r*.3+col.g*.59+col.b*.11;return new THREE.Color(g,g,g).lerp(col,.35).lerp(NAVY,f);};
+  const regionColor=v=>new THREE.Color(P.colors[v]||P.colors[(v-1)%8+1]);
 
-  const GOLD=new THREE.Color('#ffd23f'),WARM_HI=new THREE.Color('#ff9800'),WARM_LO=new THREE.Color('#c24a06');
-  function setBodyTone(cell,mode){
-    const s=cell.s,u=s.body.material.uniforms,c=comicColors(cell.value);
-    const outline=s.body.children.find(o=>o.name==='Comic_outline');
-    if(mode==='glow'){u.uLight.value.copy(WARM_HI);u.uShade.value.copy(WARM_LO);outline?.material.uniforms.uC.value.set('#ffd23f');}
-    else if(mode==='popped'){u.uLight.value.copy(dull(c.mid,.35));u.uShade.value.copy(dull(c.lo,.55));outline?.material.uniforms.uC.value.set(INK);}
-    else if(mode==='wrong'){u.uLight.value.copy(c.light);u.uShade.value.copy(c.shade);outline?.material.uniforms.uC.value.set('#ff2a2a');}
-    else{u.uLight.value.copy(c.light);u.uShade.value.copy(c.shade);outline?.material.uniforms.uC.value.set(INK);}
-    requestFrame();
+  // A glowing squish becomes a gold gel cube (the yellow gel, value 6, which no region uses),
+  // so it also lights the glass gold; the region colour comes back when it is switched off.
+  const GLOW_VALUE=6;
+  function setGel(cell,value){
+    const s=cell.s;if(s.value===value&&s.body.material.userData.sdValue===value)return;
+    const old=s.body.material;s.body.material=createHudMaterial(value);s.body.material.userData.sdValue=value;s.value=value;
+    // glowing: the gold gel also shines from inside (emissive), so it reads as lit on the dark glass
+    if(value===GLOW_VALUE){s.body.material.emissive.set('#ffb21a');s.body.material.emissiveIntensity=1.15;}
+    bindGelOptics(s);s.label.visible=false;s.forceUpdate=true;old.dispose();requestFrame({shadows:true});
   }
-
   function build(level,colorOf){
     clear();
     N=level.N;pitch=P.board.pitch*5/N*SPACING;k=5/N*BODY/.96;
     for(let r=0;r<N;r++)for(let c=0;c<N;c++){
       const value=colorOf(level.regions[r].charCodeAt(c)-97);ensureColor(value);
-      const s=buildSquishy(value,comicBodyMaterial(value,null));initializeMotion(s);bindGelOptics(s);applyComic(s,value);
-      s.label.visible=false; // SquishDoku squishes carry no digits
+      const s=buildSquishy(value,createHudMaterial(value));s.body.material.userData.sdValue=value;initializeMotion(s);bindGelOptics(s);
+      s.label.visible=false; // SquishDoku squishes carry no digits (Sascha: cubes without numbers)
       s.group.name=`HUD_cell_${r}_${c}`;
       s.group.position.copy(cellPos(r,c));
       s.base=new THREE.Vector3(1.02*k,1.02*k/.92,1.02*k);s.group.scale.copy(s.base);
@@ -101,7 +116,7 @@ export function createBoard3D(host){
       halo.material.depthTest=false;halo.rotation.x=-Math.PI/2;halo.position.copy(cellPos(r,c));halo.position.y=P.board.floor+P.gel.height*1.6*k;halo.scale.setScalar(pitch*1.55);halo.renderOrder=8;halo.visible=false;scene.add(halo);
       const spark=new THREE.Sprite(new THREE.SpriteMaterial({map:sparkTex,color:0xffffff,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));
       spark.visible=false;spark.renderOrder=9;scene.add(spark);
-      const splat=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:splatTex,color:dull(comicColors(value).mid,.15),transparent:true,depthWrite:false,toneMapped:false,opacity:0}));
+      const splat=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:splatTex,color:dull(regionColor(value),.1),transparent:true,depthWrite:false,toneMapped:false,opacity:0}));
       splat.rotation.x=-Math.PI/2;splat.rotation.z=Math.random()*Math.PI*2;splat.position.copy(cellPos(r,c));splat.position.y=P.board.top+.015;splat.scale.setScalar(pitch*.98);splat.renderOrder=2;splat.visible=false;scene.add(splat);
       cells.push({r,c,value,s,halo,spark,splat,state:'normal',anim:null});
     }
@@ -154,31 +169,36 @@ export function createBoard3D(host){
     wobble(r,c,p=.5){const cl=cellAt(r,c);wobble(cl.s,p);requestFrame();},
     // finger brushes over a squish: the game's swipe reaction (press, lean along the stroke, spring back)
     brush(r,c,dx,dz){const cl=cellAt(r,c);if(cl.state==='popped')return;press(cl.s);drag(cl.s,dx,dz);setTimeout(()=>release(cl.s),90);requestFrame();},
-    wrong(r,c){const cl=cellAt(r,c);setBodyTone(cl,'wrong');wobble(cl.s,.85);cl.s.press.held=false;setTimeout(()=>{if(cl.state!=='popped')setBodyTone(cl,cl.state==='glow'?'glow':'normal');},650);requestFrame();},
+    // wrong move: hard wobble plus a red flash ring around the cube
+    wrong(r,c){const cl=cellAt(r,c);wobble(cl.s,.85);cl.s.press.held=false;
+      const wasGlow=cl.state==='glow';cl.halo.material.color.set('#ff2a2a');cl.halo.visible=true;
+      animate(cl,.65,t=>{cl.halo.material.opacity=.95*Math.sin(Math.min(1,t*1.2)*Math.PI);},()=>{cl.halo.material.color.set('#ffae2b');cl.halo.visible=cl.state==='glow';cl.halo.material.opacity=cl.state==='glow'?.95:0;});
+      requestFrame();},
     // the game's comic balloon pop (fusion.popBody: torn skin, gel drops, burst flash), then a flat popped squish stays
     pop(r,c,{power=2.4,amount=1}={}){
       const cl=cellAt(r,c);if(cl.state==='popped')return false;
       cl.state='popped';cl.s.press.held=false;cl.s.press.releaseQueued=false;
       try{fusion.popBody(cl.s,{value:cl.value,power,amount});}catch(e){console.warn('pop',e);}
-      setBodyTone(cl,'popped');
+      // the gel bursts (debris from the body); what stays is a flat, dull splat on the glass
+      cl.s.group.visible=false;setting.removeHudShadow(cl.s);
       cl.halo.visible=false;cl.spark.visible=false;
       cl.splat.visible=true;
-      animate(cl,.32,t=>{const e=ease(t);setScale(cl,.25+.53*e,.03+.15*e);cl.splat.material.opacity=.8*e;cl.splat.scale.setScalar(pitch*(.6+.38*e));},()=>{setScale(cl,.78,.18);cl.splat.material.opacity=.8;});
-      setScale(cl,.25,.03);
+      animate(cl,.32,t=>{const e=ease(t);cl.splat.material.opacity=.85*e;cl.splat.scale.setScalar(pitch*(.6+.38*e));},()=>{cl.splat.material.opacity=.85;});
+      requestFrame({shadows:true});
       return true;
     },
     restore(r,c){
       const cl=cellAt(r,c);if(cl.state!=='popped')return;
-      cl.state='normal';setBodyTone(cl,'normal');
-      animate(cl,.28,t=>{const e=ease(t);setScale(cl,.78+.22*e,.18+.82*e);cl.splat.material.opacity=.8*(1-e);},()=>{setScale(cl,1,1);cl.splat.visible=false;wobble(cl.s,.6);});
+      cl.state='normal';setGel(cl,cl.value);cl.s.group.visible=true;setting.addHudShadow(cl.s);setScale(cl,.3,.1);
+      animate(cl,.28,t=>{const e=ease(t);setScale(cl,.3+.7*e,.1+.9*e);cl.splat.material.opacity=.85*(1-e);},()=>{setScale(cl,1,1);cl.splat.visible=false;wobble(cl.s,.6);});
     },
     glow(r,c,on){
       const cl=cellAt(r,c);
-      if(on){cl.state='glow';setBodyTone(cl,'glow');cl.halo.visible=true;cl.spark.visible=true;
+      if(on){cl.state='glow';setGel(cl,GLOW_VALUE);cl.halo.visible=true;cl.spark.visible=true;
         const top=cellPos(r,c);top.y=P.board.floor+P.gel.height*1.45*k;cl.spark.position.copy(top).add(new THREE.Vector3(-pitch*.22,0,-pitch*.22));
         animate(cl,.5,t=>{const e=ease(t);cl.halo.material.opacity=.95*e;const s=1+.18*Math.sin(t*Math.PI);setScale(cl,s,s);cl.spark.scale.setScalar(pitch*.55*(t<.5?t*2:1+.2*Math.sin((t-.5)*Math.PI*2)));cl.spark.material.rotation=t*2;},()=>{setScale(cl,1,1);cl.halo.material.opacity=.95;});
         wobble(cl.s,.5);
-      }else{cl.state='normal';setBodyTone(cl,'normal');cl.halo.visible=false;cl.spark.visible=false;cl.halo.material.opacity=0;wobble(cl.s,.4);}
+      }else{cl.state='normal';setGel(cl,cl.value);cl.halo.visible=false;cl.spark.visible=false;cl.halo.material.opacity=0;wobble(cl.s,.4);}
     },
     dispose(){clear();cancelAnimationFrame(raf);setting.dispose?.();graphics.dispose();},
     get stats(){return {frames,cells:cells.length,popped:cells.filter(c=>c.state==='popped').length};},

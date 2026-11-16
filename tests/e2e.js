@@ -71,12 +71,9 @@ async function run(vp, dpr) {
   s = await st();
   ok(s.grid[r0][c0] === 'glow' && s.glow === 1, 'hold on correct squish -> glows');
   const reg = (r, c) => s.regions[r][c];
-  let autoOk = true;
-  for (let r = 0; r < s.N; r++) for (let c = 0; c < s.N; c++) {
-    if (r === r0 && c === c0) continue;
-    if (r === r0 || c === c0 || reg(r, c) === reg(r0, c0) || (Math.abs(r - r0) <= 1 && Math.abs(c - c0) <= 1)) autoOk = autoOk && s.grid[r][c] === 'popped';
-  }
-  ok(autoOk, 'auto-pop: row, column, region and neighbours popped');
+  let untouched = true;
+  for (let r = 0; r < s.N; r++) for (let c = 0; c < s.N; c++) if (!(r === r0 && c === c0)) untouched = untouched && s.grid[r][c] === 'normal';
+  ok(untouched, 'no auto-pop: every other squish stays untouched after a glow');
   await shot('05-L1-glow');
   // 2) swipe over non-solution squishes -> pop ; across a solution squish -> wobble + heart
   const row = 2, sc = s.sol[row];

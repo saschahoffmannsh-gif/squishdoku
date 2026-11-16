@@ -11,8 +11,8 @@ const plan = [
   { N: 7, maxTech: 5, minTech: 4, label: 'Schwer' },
 ];
 function regionSizes(rows) { const m = {}; rows.join('').split('').forEach(ch => m[ch] = (m[ch] || 0) + 1); return Object.values(m); }
-// Region colours = Squish Attack comic palette values 1..8 (comic-style.mjs PALETTE mid tones).
-const PAL = {1:'#1f7ff0',2:'#e8291f',3:'#38b81c',4:'#ff7a0c',5:'#8a3cf0',6:'#ffc21f',7:'#f0459e',8:'#1fc9bd'};
+// Region colours = Squish Attack gel palette values 1..8 (squish-graphics.js PARAMETERS.colors).
+const PAL = {1:'#00b5ff',2:'#f31954',3:'#00dc45',4:'#ff850c',5:'#9239ff',6:'#ffc829',7:'#f44ebd',8:'#20d8ce'};
 const rgb = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16));
 function lab(h) { // sRGB -> CIELAB (D65)
   let [r, g, b] = rgb(h).map(v => { v /= 255; return v > .04045 ? ((v + .055) / 1.055) ** 2.4 : v / 12.92; });
@@ -28,7 +28,9 @@ function assignColours(rows) {
     const a = rows[r].charCodeAt(c) - 97, b = rows[rr].charCodeAt(cc) - 97; if (a !== b) adj.add(Math.min(a, b) + ',' + Math.max(a, b));
   }
   const edges = [...adj].map(e => e.split(',').map(Number));
-  const vals = N <= 7 ? [1,2,3,4,5,6,7] : [1,2,3,4,5,6,7,8]; let best = null, bestScore = -1;
+  // yellow (6) is reserved: a glowing squish turns into the gold/yellow gel
+  // the orange gel renders close to the red one, so boards with up to 6 regions leave orange out
+  const vals = N <= 6 ? [1,2,3,5,7,8] : [1,2,3,4,5,7,8]; let best = null, bestScore = -1;
   (function rec(pick, used) {
     if (pick.length === N) {
       let mn = Infinity, sum = 0; for (const [a, b] of edges) { const d = dist(pick[a], pick[b]); mn = Math.min(mn, d); sum += d; }
