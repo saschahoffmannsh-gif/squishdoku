@@ -140,3 +140,21 @@ button{font:inherit;}
   .aw-btn.aw-big{min-height:64px;font-size:27px;}
 }
 .sd-home[data-screen="levels"] .sd-chips{display:none;}
+
+/* ---------- Tipp per Werbung + Enthüllen ---------- */
+.sd-adtip{position:absolute;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b) + 66px);display:flex;align-items:center;gap:7px;height:40px;padding:0 15px 0 9px;
+  border:2.5px solid #14163e;border-radius:99px;cursor:pointer;color:#fff;font:700 15px/1 var(--aw-comic);white-space:nowrap;
+  background:linear-gradient(180deg,#ffd25a,#f0a21a 60%,#c97a06);box-shadow:inset 0 2px 0 #fff8,inset 0 -3px 0 #0003,0 4px 0 #14163e,0 0 14px #ffd25a55;text-shadow:0 1.5px 0 #6a3304;touch-action:manipulation;}
+.sd-adtip i{display:grid;place-items:center;width:26px;height:26px;}
+.sd-adtip i svg{width:24px;height:24px;display:block;}
+.sd-adtip:active{transform:translateX(-50%) translateY(3px);box-shadow:inset 0 2px 0 #fff8,0 1px 0 #14163e;}
+.sd-adtip:disabled{filter:saturate(.2) brightness(.6);cursor:default;box-shadow:inset 0 2px 0 #fff4,0 3px 0 #14163e;}
+@media (max-height:700px){.sd-adtip{bottom:calc(var(--safe-b) + 50px);height:34px;font-size:13.5px;padding:0 12px 0 7px;}.sd-adtip i,.sd-adtip i svg{width:21px;height:21px;}}
+.sd-reveal{position:absolute;width:var(--s);height:var(--s);transform:translate(-50%,-50%);pointer-events:none;z-index:5;}
+.sd-reveal i{position:absolute;inset:0;border-radius:50%;border:5px solid #ffd23f;box-shadow:0 0 22px #ffd23f,inset 0 0 18px #ffd23f88;animation:sd-reveal-ring 1s cubic-bezier(.2,.8,.3,1) both;}
+.sd-reveal i+i{animation-delay:.18s;border-width:3px;}
+.sd-reveal b{position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle,#fff8c4 0,#ffd23f88 35%,transparent 70%);animation:sd-reveal-flash .9s ease-out both;}
+@keyframes sd-reveal-ring{from{transform:scale(.15);opacity:1}to{transform:scale(1);opacity:0}}
+@keyframes sd-reveal-flash{0%{transform:scale(.3);opacity:0}25%{opacity:1}100%{transform:scale(1.5);opacity:0}}
+.sd-inter-count{position:absolute;right:12px;bottom:8px;font:700 22px/1 var(--aw-comic);color:#ffd25a;text-shadow:0 2px 0 #0008;}
+.ad-watch:disabled{filter:saturate(.3) brightness(.75);cursor:default;}

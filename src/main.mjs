@@ -5,6 +5,8 @@ import {createHaptics} from '../vendor/squish-attack/game/haptics.mjs?v=launch-2
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
 import {installBackdrop} from '../vendor/squish-attack/game/home-menu.mjs?v=launch-26';
 import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=launch-26';
+import {createAdPacing} from '../vendor/squish-attack/game/ad-pacing.mjs';
+import {createAdUI,AD_ICON_SVG} from './ad-ui.mjs';
 
 const $=id=>document.getElementById(id);
 let HOLD_MS=400; const TAP_MS=200, HEARTS=3;
@@ -13,7 +15,7 @@ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
 // ---------- Speicher ----------
-function load(){try{return {unlocked:1,stars:{},seenRules:false,...JSON.parse(localStorage.getItem(STORE)||'{}')};}catch{return {unlocked:1,stars:{},seenRules:false};}}
+function load(){try{return {unlocked:1,stars:{},seenRules:false,revealed:{},...JSON.parse(localStorage.getItem(STORE)||'{}')};}catch{return {unlocked:1,stars:{},seenRules:false,revealed:{}};}}
 let store=load();
 function save(){try{localStorage.setItem(STORE,JSON.stringify(store));}catch{}}
 const totalStars=()=>Object.values(store.stars).reduce((a,b)=>a+b,0);
@@ -128,7 +130,17 @@ let board=null,S=null;
 function ensureBoard(){if(!board){board=createBoard3D($('host'));bindInput();window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
 function placePlate(){if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
 
-function startLevel(id){
+// ---------- Werbung (wie Squish Attack: ad-pacing + native-ads; im Browser Dummy) ----------
+const adPacing=createAdPacing();
+const adUI=createAdUI({sound,haptics,onAdStart:()=>{try{sound.pause();}catch{}},onAdEnd:()=>{try{sound.resume();}catch{}}});
+let starting=false;
+// Zwischenwerbung nur zwischen zwei Leveln: fällig nach jedem 5. Sieg, gezeigt beim Start des nächsten Levels.
+async function startLevel(id){
+  if(starting)return;
+  if(adPacing.takeInterstitial()){starting=true;closeDialog();try{await adUI.interstitial();}catch{}finally{starting=false;}}
+  beginLevel(id);
+}
+function beginLevel(id){
   const L=levels[id-1];
   home.hidden=true;document.documentElement.classList.remove('home-open');game.hidden=false;closeDialog();
   ensureBoard();
@@ -137,7 +149,7 @@ function startLevel(id){
   $('lvl-num').textContent=id;$('lvl-name').textContent=L.label;
   $('glow-total').textContent=L.N;
   $('hint').innerHTML=hintFor(id);
-  renderHearts();renderProgress();
+  renderHearts();renderProgress();renderAdTip();
   requestAnimationFrame(()=>requestAnimationFrame(placePlate));setTimeout(placePlate,120);
   if(id===1&&!store.seenRules){store.seenRules=true;save();showRulesDialog();}
 }
@@ -145,7 +157,29 @@ function renderHearts(){
   const h=$('hearts');h.replaceChildren();for(let i=0;i<HEARTS;i++){const d=document.createElement('span');d.className='sd-heart'+(i>=S.hearts?' is-lost':'');d.innerHTML=HEART;h.append(d);}
   h.setAttribute('aria-label',`${S.hearts} Herzen`);
 }
-function renderProgress(){$('glow-count').textContent=S.glow;}
+function renderProgress(){$('glow-count').textContent=S.glow;renderAdTip();}
+// Tipp per Werbung: beliebig oft je Level, jeder Clip enthüllt einen weiteren richtigen Squish,
+// bis alle leuchten. Gemerkt wird je Level, wie viele Tipps genutzt wurden.
+const adTip=$('btn-adtip');adTip.innerHTML=`<i>${AD_ICON_SVG}</i><span>Tipp per Werbung</span>`;
+function renderAdTip(){if(!S)return;const off=S.locked||S.glow>=S.N;adTip.disabled=off;adTip.setAttribute('aria-disabled',String(off));}
+async function useAdTip(){
+  if(!S||S.locked||S.glow>=S.N||adUI.isOpen)return;
+  tap();const s0=S,left=S.N-S.glow;
+  const ok=await adUI.offerReveal({left});
+  if(!ok||S!==s0||S.locked||S.glow>=S.N)return;
+  const rows=[];for(let r=0;r<S.N;r++)if(S.state[r][S.L.solution[r]]!=='glow')rows.push(r);
+  const r=rows[Math.floor(Math.random()*rows.length)],c=S.L.solution[r];
+  store.revealed[S.id]=(store.revealed[S.id]||0)+1;save();
+  revealAt(r,c);
+}
+adTip.addEventListener('click',()=>void useAdTip());
+function revealAt(r,c){
+  if(S.state[r][c]==='popped')S.state[r][c]='normal',board.restore(r,c);
+  const p=board.screenOf(r,c),f=document.createElement('div');f.className='sd-reveal';
+  f.style.cssText=`left:${p.x}px;top:${p.y}px;--s:${p.size*2.6}px`;f.innerHTML='<i></i><i></i><b></b>';fx.append(f);setTimeout(()=>f.remove(),1300);
+  board.wobble(r,c,1);sfx('star',3);
+  setTimeout(()=>{if(S&&S.state[r][c]!=='glow')glowAt(r,c);},260);
+}
 const isSol=(r,c)=>S.L.solution[r]===c;
 const regionOf=(r,c)=>S.L.regions[r].charCodeAt(c)-97;
 
@@ -247,6 +281,7 @@ function bindInput(){
 // ---------- Sieg / Niederlage ----------
 async function win(){
   const id=S.id,stars=S.hearts;
+  adPacing.levelWon(); // Werbe-Takt wie Squish Attack: jede 5. gewonnene Runde
   store.stars[id]=Math.max(store.stars[id]||0,stars);store.unlocked=Math.max(store.unlocked,Math.min(levels.length,id+1));save();
   sfx('record');buzz('big');
   // Jubel-Welle über die leuchtenden Squishs
@@ -278,7 +313,7 @@ $('btn-back').addEventListener('click',()=>{tap();showHome('levels');});
 $('btn-reset').addEventListener('click',()=>{tap();if(S)startLevel(S.id);});
 
 // ---------- Test-/Debug-Zugriff ----------
-window.SquishDoku={get state(){return S;},get board(){return board;},levels,startLevel,showHome,get store(){return store;},get holdMs(){return HOLD_MS;},set holdMs(v){HOLD_MS=v;},TAP_MS,
+window.SquishDoku={adUI,adPacing,get state(){return S;},get board(){return board;},levels,startLevel,showHome,get store(){return store;},get holdMs(){return HOLD_MS;},set holdMs(v){HOLD_MS=v;},TAP_MS,
   reset(){localStorage.removeItem(STORE);store=load();}};
 showHome('home');
 document.documentElement.dataset.ready='1';

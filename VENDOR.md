@@ -25,3 +25,11 @@ GlowDoku prototype `/workspace/glowdoku/engine.js` → `src/engine.js`.
 `sound.mjs`: optionale `detune`-Option für `play('pop',…)` (jeder Pop eines Wischers klingt leicht anders).
 Kein Ladering; geplatzte Squishs hinterlassen nichts (leeres Glas); Glas-Reflexe folgen dem aktuellen Zustand (Leuchten = Gold).
 `comic-style.mjs`: zusätzliche weiße Gel-Farbe (Wert 9) für 8 Farben auf 8×8.
+
+## Werbung (aus Squish Attack, squish-appshell / launch-27)
+- `vendor/squish-attack/game/native-ads.mjs` – unverändert (Adapter-Registry `registerNativeAds`, `showRewarded`, `showInterstitial`).
+- `vendor/squish-attack/game/ad-pacing.mjs` – unverändert bis auf den localStorage-Schlüssel (`squishdoku-ad-pacing-v1`), Takt `interstitialEvery: 5`.
+- `vendor/squish-attack/game/ads.css` – der Werbedialog-Teil aus `game/ads.css` (+ die zwei Keyframes aus `store.css`).
+- `src/ad-ui.mjs` – angepasste Kopie von `game/ad-ui.mjs` (deutsche Texte, Tipp-Squish als Belohnung, Dummy-Interstitial mit Countdown im Browser).
+- `native/admob-adapter.mjs` – unverändert aus `app/src/admob-adapter.mjs`; `native/app-config.mjs` gleicher Aufbau wie `app/src/app-config.mjs`
+  (Google-TEST-IDs, Platzhalter `TODO-SQUISHDOKU-…` für die echten IDs). Siehe `native/README.md`.

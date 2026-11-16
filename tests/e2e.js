@@ -128,9 +128,19 @@ async function run(vp, dpr) {
   // 7b) unlock everything, pick an 8x8 (L41) and the final level (L50) from the scrolling list and win them
   await p.click('#btn-to-levels'); await sleep(700);
   await p.evaluate(() => { SquishDoku.store.unlocked = 50; SquishDoku.showHome('levels'); }); await sleep(700);
+  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 5 && SquishDoku.adPacing.interstitialDue), 'ads: 5 wins -> interstitial due');
+  ok(await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-ad-pacing-v1')).wins === 5), 'ads: interstitial counter saved in localStorage');
   for (const lvl of [41, 50]) {
     await p.locator(`[data-level="${lvl}"]`).scrollIntoViewIfNeeded(); await sleep(200); await shot(`08-levels-${lvl}`);
-    await p.click(`[data-level="${lvl}"]`); await sleep(1800);
+    await p.click(`[data-level="${lvl}"]`); await sleep(400);
+    if (lvl === 41) {
+      ok(await p.isVisible('#ad-interstitial') && await p.isDisabled('#ad-continue'), 'ads: interstitial shown between levels, "Weiter" waits for the countdown');
+      await shot('08-interstitial');
+      ok(await p.evaluate(() => !SquishDoku.state || SquishDoku.state.id !== 41), 'ads: next level starts only after the ad');
+      await p.waitForFunction(() => !document.getElementById('ad-continue').disabled, null, { timeout: 8000 });
+      await p.click('#ad-continue');
+    } else ok(!(await p.isVisible('#ad-interstitial')), 'ads: no interstitial on the 6th win');
+    await sleep(1800);
     s = await st(); ok(s.id === lvl && s.N === 8, `level ${lvl} started (${s.N}x${s.N})`);
     ok(await noScroll(), `L${lvl} 8x8: no scrolling`);
     ok(await p.evaluate(() => { const b = SquishDoku.board, a = b.screenOf(0, 0), z = b.screenOf(b.N - 1, b.N - 1); return a.x - a.size / 2 >= 0 && z.x + z.size / 2 <= innerWidth && a.y > 0 && z.y < innerHeight; }), `L${lvl} 8x8 board fits the screen`);
@@ -159,6 +169,36 @@ async function run(vp, dpr) {
   ok((await st()).glow === 0, 'reset button restarts level');
   await p.click('#btn-back'); await sleep(600);
   ok(await p.isVisible('.sd-levels'), 'back button -> level select');
+  // 10) Tipp per Werbung: each watched (dummy) ad reveals one more solution squish, as often as wanted
+  await p.evaluate(() => SquishDoku.startLevel(3)); await sleep(1600);
+  s = await st();
+  ok(await p.isVisible('#btn-adtip') && !(await p.isDisabled('#btn-adtip')), 'reveal: "Tipp per Werbung" button visible and enabled');
+  ok(await p.evaluate(() => { const a = document.getElementById('btn-adtip').getBoundingClientRect(), h = document.getElementById('hint').getBoundingClientRect(), z = SquishDoku.board.boardRect(); return a.bottom <= h.top + 1 && a.top >= z.top + z.height && a.bottom <= innerHeight; }), 'reveal: button sits between board and hint, on screen');
+  await p.click('#btn-adtip'); await sleep(400);
+  ok(await p.isVisible('#ad-dialog'), 'reveal: ad dialog opens');
+  await p.click('.ad-later'); await sleep(300);
+  ok((await st()).glow === 0, 'reveal: "Nein danke" reveals nothing');
+  for (let i = 1; i <= s.N; i++) {
+    await p.click('#btn-adtip'); await sleep(300); await p.click('#ad-watch'); await sleep(900);
+    const t = await st();
+    if (i < s.N) ok(t.glow === i && t.sol.every((c, r) => t.grid[r][c] === 'glow' || t.grid[r][c] === 'normal'), `reveal ${i}: one more correct squish glows (${t.glow}/${t.N})`);
+    if (i === 1) await shot('11-reveal');
+  }
+  await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 15000 }); await sleep(1200);
+  ok(await dialog() === 'win', 'reveal: all squishes revealed -> level won');
+  ok(await p.evaluate(() => document.getElementById('btn-adtip').disabled), 'reveal: button disabled once all squishes glow');
+  ok(await p.evaluate(n => JSON.parse(localStorage.getItem('squishdoku-v1')).revealed[3] === n, s.N), 'reveal: used reveals saved per level in localStorage');
+  // 11) cadence: wins 9 and 10 -> next start shows the interstitial again
+  for (const lvl of [4, 5]) {
+    await p.evaluate(l => SquishDoku.startLevel(l), lvl); await sleep(1500);
+    const t = await st(); for (let r = 0; r < t.N; r++) { await hold(r, t.sol[r]); await sleep(200); }
+    await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 }); await sleep(1200);
+  }
+  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 10 && SquishDoku.adPacing.interstitialDue), 'ads: 10 wins -> interstitial due again');
+  await p.click('#btn-again'); await sleep(400);
+  ok(await p.isVisible('#ad-interstitial'), 'ads: interstitial after every 5th win');
+  await p.waitForFunction(() => !document.getElementById('ad-continue').disabled, null, { timeout: 8000 }); await p.click('#ad-continue'); await sleep(1500);
+  ok((await st()).id === 5 && !(await p.evaluate(() => SquishDoku.adPacing.interstitialDue)), 'ads: level starts after the interstitial, counter cleared');
   ok(errors.length === 0, 'no console errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   if (warnings.length) console.log('  (warnings: ' + [...new Set(warnings)].join(' | ') + ')');
   await b.close();

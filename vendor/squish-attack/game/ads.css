@@ -1,0 +1,37 @@
+/* launch-13 (Testphase): Dummy-Werbung + Werkzeug-Statistik. Comic-Stil wie der Shop (store.css). */
+.ad-veil {position:fixed;inset:0;z-index:1350;display:grid;place-items:center;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));
+  background:#050612b8;animation:shop-fade .18s ease-out;}
+.ad-panel {position:relative;width:min(100%,360px);max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  box-sizing:border-box;display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:16px 14px 12px;
+  border:3px solid #0b0a16;border-radius:26px;background:linear-gradient(180deg,#2e2d58,#1c1b3a);
+  box-shadow:inset 0 0 0 2.5px #ffd25a,inset 0 4px 0 #ffffff2e,0 14px 30px #000b;color:#fff;font-family:var(--aw-comic);
+  animation:shop-pop .26s cubic-bezier(.2,1.4,.4,1);}
+.ad-close {position:absolute;top:-10px;right:-8px;width:42px;height:42px;border:3px solid #0b0a16;border-radius:50%;cursor:pointer;color:#fff;
+  background:linear-gradient(180deg,#ff6b5c,#e0372a 60%,#b0221a);box-shadow:inset 0 2px 0 #ffffff80,0 3px 0 #0b0a16;display:grid;place-items:center;padding:0;}
+.ad-close svg {width:20px;height:20px;}
+.ad-title {margin:0 30px;text-align:center;font:700 26px/1.05 var(--aw-comic);color:#ffd25a;
+  text-shadow:1.5px 0 0 #6a3304,-1.5px 0 0 #6a3304,0 1.5px 0 #6a3304,0 -1.5px 0 #6a3304,0 3px 0 #6a3304;}
+.ad-screen {position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;aspect-ratio:16/9;border-radius:18px;border:3px solid #0b0a16;
+  background:repeating-linear-gradient(135deg,#3f3e7a 0 14px,#35346a 14px 28px);box-shadow:inset 0 3px 0 #ffffff22,0 3px 0 #0b0a16;}
+.ad-badge {position:absolute;top:8px;left:8px;padding:3px 10px 4px;border-radius:99px;border:2px solid #0b0a16;background:#ffe36a;color:#3a2405;font:700 12.5px/1.1 var(--aw-comic);box-shadow:0 2px 0 #0b0a16;}
+.ad-play svg {width:64px;height:64px;display:block;filter:drop-shadow(0 3px 0 #0008);}
+.ad-hint {font:600 12px/1.2 var(--aw-text,system-ui);color:#ffffffb0;}
+.ad-reward {display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:18px;border:2px solid #0b0a16;background:linear-gradient(180deg,#3b3a70,#2a2952);box-shadow:inset 0 0 0 2px #7be24a,inset 0 2px 0 #ffffff22;}
+.ad-reward-ico {flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:13px;border:2px solid #0b0a16;background:linear-gradient(180deg,#5a5c95,#3a3b6c);box-shadow:inset 0 2px 0 #ffffff40;}
+.ad-reward-ico svg {width:36px;height:36px;display:block;}
+.ad-reward-text {display:flex;flex-direction:column;gap:2px;min-width:0;}
+.ad-reward-text b {font:700 19px/1.1 var(--aw-comic);color:#9df25a;text-shadow:0 1.5px 0 #14400a;}
+.ad-reward-text small {font:600 13px/1.2 var(--aw-text,system-ui);color:#ffffffc0;}
+.ad-watch {min-height:52px;border:3px solid #0b0a16;border-radius:99px;cursor:pointer;color:#fff;
+  background:linear-gradient(180deg,#9df25a,#4cc02a 60%,#2f8f1a);box-shadow:inset 0 2px 0 #ffffffa0,inset 0 -4px 0 #00000030,0 4px 0 #0b0a16;
+  font:700 22px/1 var(--aw-comic);text-shadow:0 2px 0 #14400a;}
+.ad-watch:active {transform:translateY(3px);box-shadow:inset 0 2px 0 #ffffffa0,0 1px 0 #0b0a16;}
+.ad-later {min-height:42px;border:2.5px solid #0b0a16;border-radius:99px;cursor:pointer;color:#fff;background:linear-gradient(180deg,#6a6ca8,#45467c);
+  box-shadow:inset 0 2px 0 #ffffff50,0 3px 0 #0b0a16;font:700 16px/1 var(--aw-comic);text-shadow:0 1.5px 0 #1a1a40;}
+.ad-watch:focus-visible,.ad-later:focus-visible,.ad-close:focus-visible {outline:3px solid #ffd25a;outline-offset:2px;}
+.ad-foot {margin:0;text-align:center;font:600 11.5px/1.2 var(--aw-text,system-ui);color:#ffffff80;}
+
+@media (max-height:700px) {.ad-screen {aspect-ratio:auto;height:110px;} .ad-title {font-size:23px;} .ad-panel {gap:8px;padding-top:12px;}}
+@media (prefers-reduced-motion:reduce) {.ad-veil,.ad-panel {animation:none;}}
+@keyframes shop-fade {from {opacity:0;}}
+@keyframes shop-pop {from {transform:scale(.88);opacity:0;}}
