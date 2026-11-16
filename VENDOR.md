@@ -21,3 +21,8 @@ Only change in the copies: `glass-reflections.mjs` / `glass-shadows.mjs` default
 
 Engine (solver, unique-puzzle generator, human-style logic step solver) comes from the
 GlowDoku prototype `/workspace/glowdoku/engine.js` → `src/engine.js`.
+
+## Wasser (OceanMerge)
+`vendor/ocean-merge/ocean/` ist unverändert aus Saschas OceanMerge_Bootfahrt_Wasser.zip übernommen (WaterSurface, Höhenfeld-Simulation, BOAT_VOYAGE_PRESET, Finger-Regeln).
+`src/water.mjs` bindet es nur ein: Meeresboden = einfarbig fast schwarz (deckend, nichts darunter sichtbar), eigener WebGL2-Canvas unter dem three.js-Canvas,
+per CSS-Homografie (matrix3d) auf das Tisch-Innere der gekippten SA-Kamera gelegt. Finger → disturb() am exakten Berührpunkt, Squash/Pop → kleine Wellen.

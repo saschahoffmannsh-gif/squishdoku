@@ -1,5 +1,7 @@
 // SquishDoku – App: Menüs (Squish-Attack-Design), Levelauswahl, Spiel, Sieg.
 import {createBoard3D} from './board3d.mjs';
+import {createWater} from './water.mjs';
+let water=null; // OceanMerge water under the squishes (created with the board)
 import {createGameSound} from '../vendor/squish-attack/game/sound.mjs?v=launch-26';
 import {createHaptics} from '../vendor/squish-attack/game/haptics.mjs?v=launch-26';
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
@@ -39,7 +41,7 @@ const starIcon=()=>{const id='sd-star-'+(++starN);return STAR_SVG.replace(/ti-st
 const levels=await (await fetch('src/levels.json')).json();
 const NAMES=['Sehr leicht','Leicht','Mittel','Knifflig','Schwer'];
 const HINTS=[
-  'Halte einen Squish gedrückt, bis der <b>Ring voll</b> ist – richtig gewählt, <b>leuchtet</b> er!',
+  'Halte einen Squish kurz <b>gedrückt</b> – richtig gewählt, <b>leuchtet</b> er!',
   '<b>Wische</b> über Squishs, die nicht leuchten können – sie <b>ploppen</b>.',
   'Pro <b>Reihe</b>, <b>Spalte</b> und <b>Farbe</b> leuchtet genau ein Squish.',
   'Leuchtende Squishs berühren sich nie – auch nicht <b>schräg</b>.',
@@ -61,6 +63,7 @@ function renderStars(){$('home-stars').querySelector('b').textContent=`${totalSt
 const nextLevel=()=>Math.min(levels.length,Math.max(1,...levels.filter(l=>store.stars[l.id]).map(l=>l.id+1),1));
 function showHome(screen='home'){
   closeDialog();
+  water?.stop();
   $('game').hidden=true;home.hidden=false;document.documentElement.classList.add('home-open');
   home.dataset.screen=screen;renderStars();
   if(screen==='home'){
@@ -90,7 +93,7 @@ function rulesCard(){
   const c=document.createElement('div');c.className='aw-card sd-rules';
   const rows=[['✦','In jeder <b>Reihe</b>, jeder <b>Spalte</b> und jeder <b>Farbe</b> leuchtet genau <b>ein</b> Squish.'],
     ['✦','Leuchtende Squishs berühren sich <b>nie</b> – auch nicht schräg.'],
-    ['●','<b>Gedrückt halten</b>, bis der Ring voll ist: Der Squish leuchtet.'],
+    ['●','Kurz <b>gedrückt halten</b>: Der Squish leuchtet.'],
     ['≋','<b>Wischen</b> (oder kurz antippen) lässt Squishs <b>ploppen</b>, die nicht leuchten können. Antippen holt sie zurück.'],
     ['♥','Falsch gehalten oder falsch geploppt kostet ein <b>Herz</b>. Ohne Herzen: nochmal!']];
   c.innerHTML=rows.map(([i,t])=>`<p><span class="sd-rule-ico">${i}</span><span>${t}</span></p>`).join('');
@@ -106,15 +109,16 @@ $('home-stars').querySelector('i').innerHTML=starIcon();
 const game=$('game'),stage=$('stage'),fx=$('fx');
 $('btn-back').innerHTML=ICONS.back;$('btn-reset').innerHTML=ICONS.retry;
 let board=null,S=null;
-function ensureBoard(){if(!board){board=createBoard3D($('host'));bindInput();window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
-function placePlate(){if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
+function ensureBoard(){if(!board){board=createBoard3D($('host'));try{water=createWater(stage);board.water=water;}catch(e){console.warn('water',e);}bindInput();window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
+function placeWater(){if(!water||!board||game.hidden)return;const q=board.waterQuad(),sr=stage.getBoundingClientRect();water.place(q.map(([x,y])=>[x-sr.left,y-sr.top]));}
+function placePlate(){placeWater();if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
 
 function startLevel(id){
   const L=levels[id-1];
   home.hidden=true;document.documentElement.classList.remove('home-open');game.hidden=false;closeDialog();
   ensureBoard();
   S={L,id,N:L.N,state:Array.from({length:L.N},()=>Array(L.N).fill('normal')),hearts:HEARTS,glow:0,done:false,locked:false};
-  board.build(L,g=>L.colors[g]);
+  board.build(L,g=>L.colors[g]);water?.start();
   $('lvl-num').textContent=id;$('lvl-name').textContent=NAMES[id-1]||L.label;
   $('glow-total').textContent=L.N;
   $('hint').innerHTML=HINTS[id-1]||'';
@@ -167,14 +171,8 @@ function holdFire(r,c){
 }
 
 // ---------- Eingabe: Halten = Leuchten, Wischen = Ploppen ----------
-let ring=null;
-function showRing(r,c){
-  hideRing(false);const p=board.screenOf(r,c),size=p.size*1.5,R=44,len=2*Math.PI*R;
-  ring=document.createElement('div');ring.className='sd-ring';ring.style.cssText=`left:${p.x}px;top:${p.y}px;width:${size}px;height:${size}px;--hold:${HOLD_MS-40}ms;--len:${len}`;
-  ring.innerHTML=`<svg viewBox="0 0 100 100"><circle class="r-bg" cx="50" cy="50" r="${R}"/><circle class="r-ink" cx="50" cy="50" r="${R}"/><circle class="r-fill" cx="50" cy="50" r="${R}"/></svg>`;
-  fx.append(ring);
-}
-function hideRing(done){if(!ring)return;const el=ring;ring=null;el.classList.add(done?'is-done':'is-cancel');setTimeout(()=>el.remove(),380);}
+// Kein Ladering: Rückmeldung beim Halten gibt nur der Squish selbst (er wird eingedrückt).
+const showRing=()=>{},hideRing=()=>{};
 function bindInput(){
   const host=$('host');let g=null;
   host.addEventListener('pointerdown',e=>{
@@ -184,6 +182,7 @@ function bindInput(){
     try{sound.unlock?.();}catch{}
     const {r,c}=hit;
     g={id:e.pointerId,r,c,x:e.clientX,y:e.clientY,t:e.timeStamp,mode:'pending',last:{r,c},lx:e.clientX,ly:e.clientY,stroke:{wrong:new Set(),seen:new Set([r*S.N+c])}};
+    {const w=board.waterUV(e.clientX,e.clientY);if(w)water?.touchStart(w.u,w.v);}
     if(S.state[r][c]!=='popped'){board.press(r,c);showRing(r,c);sfx('squish');}
     g.timer=setTimeout(()=>{
       if(!g||g.mode!=='pending')return;
@@ -192,6 +191,7 @@ function bindInput(){
   });
   host.addEventListener('pointermove',e=>{
     if(!g||e.pointerId!==g.id||!S)return;
+    {const w=board.waterUV(e.clientX,e.clientY);if(w)water?.touchMove(w.u,w.v);}
     const moved=Math.hypot(e.clientX-g.x,e.clientY-g.y);
     if(g.mode==='pending'){
       const hit=board.pick(e.clientX,e.clientY);
@@ -219,6 +219,7 @@ function bindInput(){
   });
   const end=e=>{
     if(!g||e.pointerId!==g.id)return;
+    water?.touchEnd();
     clearTimeout(g.timer);
     if(g.mode==='pending'&&S&&!S.locked){
       hideRing(false);board.release(g.r,g.c);
