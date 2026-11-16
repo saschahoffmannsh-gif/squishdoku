@@ -163,6 +163,7 @@ export function createBoard3D(host){
   function setScale(cell,sx,sy){const b=cell.s.base;cell.s.group.scale.set(b.x*sx,b.y*sy,b.z*sx);}
 
   // pop sequence timing (seconds) and shape
+  const POP_GAP=.11;let lastBoom=-1,popIndex=0; // min. spacing between two BOOMs (s)
   const SEQ={squash:.09,spring:.08,wobble:.15,swell:.1,flat:.42,bulge:.2,overshoot:.12,amount:.2};
   const backOut=t=>{const c=1.9;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
   // the Boom moment drives the water (never the finger): a strong drop plus a second, wider
@@ -215,7 +216,16 @@ export function createBoard3D(host){
     popSequence(r,c,{onPop,power,amount}={}){
       const cl=cellAt(r,c);if(cl.state==='popped'||cl.state==='popping')return false;
       cl.state='popping';
-      squashSequence(cl,true,()=>{cl.state='normal';api.pop(r,c,{power,amount});popRipple(r,c);onPop?.();});
+      // squash/spring/wobble start at once under the finger; the inflate + BOOM waits for its slot so
+      // a swipe over several squishes pops them one after another (Sascha: hear several pops, not one bang)
+      squashSequence(cl,false,()=>{
+        if(cl.state!=='popping')return;
+        const boomAt=Math.max(clock+SEQ.swell,lastBoom+POP_GAP);lastBoom=boomAt;
+        const swell=()=>animate(cl,SEQ.swell,t=>{const e=1-Math.pow(1-t,2);setScale(cl,1+SEQ.amount*e,1+SEQ.amount*1.2*e);},()=>{
+          if(cl.state!=='popping')return;cl.state='normal';api.pop(r,c,{power,amount});popRipple(r,c);onPop?.(popIndex++);});
+        const wait=boomAt-SEQ.swell-clock;
+        if(wait>.004)animate(cl,wait,t=>{const j=.012*Math.sin(t*wait*40);setScale(cl,1+j,1-j);},()=>{if(cl.state==='popping')swell();});else swell();
+      });
       return true;
     },
     restore(r,c){

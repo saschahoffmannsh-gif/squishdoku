@@ -223,18 +223,18 @@ void main(){
   color+=vec3(1.,.99,.85)*specular*(.05+uLight*.16)*(.45+sun*.55);
   color+=vec3(.75,.94,.90)*pow(highlight,24.)*.009*uLight;
   if(uGloss>0.){
-    color=refracted+vec3(.10,.13,.18)*fresnel*.5; // black lacquer base: no milky fresnel sheen from the swell
+    color=refracted*.4+vec3(.10,.13,.18)*fresnel*.35; // black lacquer base: no milky fresnel sheen from the swell
     // SquishDoku: glossy black lacquer water. A soft studio sky (two broad light bands) is
     // reflected through the surface normal, so the bands bend and travel with every wave;
     // steep wave fronts (pop rings) catch a bright rim on their sun-facing side.
     vec2 rn=normal.xy/max(normal.z,.25);
-    float b1=exp(-pow((uv.y*.85+uv.x*.25+rn.y*uGlossBend+rn.x*.3*uGlossBend-.30+.03*sin(t*.21))/.075,2.));
-    float b2=exp(-pow((uv.x*.7-uv.y*.30-rn.x*uGlossBend+rn.y*.4*uGlossBend-.12+.025*sin(t*.16+1.3))/.05,2.));
+    float b1=exp(-pow((uv.y*.85+uv.x*.25+rn.y*uGlossBend+rn.x*.3*uGlossBend-.30+.03*sin(t*.21))/.034,2.));
+    float b2=exp(-pow((uv.x*.7-uv.y*.30-rn.x*uGlossBend+rn.y*.4*uGlossBend-.12+.025*sin(t*.16+1.3))/.02,2.));
     float slope=length(grad);
     float rim=smoothstep(uRimLo,uRimHi,slope)*(.35+.65*max(dot(normalize(vec2(-grad.x,grad.y)+1e-6),vec2(-.55,.83)),0.));
-    color+=vec3(.70,.80,1.)*(b1*.11+b2*.07)*uGloss;
-    color+=vec3(.92,.97,1.)*rim*.7*uGloss;
-    color+=vec3(1.,.98,.9)*pow(highlight,300.)*(.18+rim*1.5)*uGloss;
+    color+=vec3(.78,.86,1.)*(b1*.26+b2*.18)*uGloss;
+    color+=vec3(.95,.98,1.)*rim*rim*1.1*uGloss;
+    color+=vec3(1.,.98,.92)*pow(highlight,900.)*(.5+rim*3.)*uGloss;
     // strong drops (the pop) also send out a crisp analytic ring pair that reads at any size:
     // a bright glossy wave front with a dark trough behind it, expanding ~0.3 screen-heights/s
     for(int i=0;i<20;i++){
@@ -245,12 +245,12 @@ void main(){
       float fade=(1.-age/1.8)*min(st/2.2,1.);
       for(int k=0;k<3;k++){
         float R=age*uRingSpeed-float(k)*.045;if(R<=0.)continue;
-        float w=.004+R*.014;float x=(r-R)/w;
+        float w=.0025+R*.008;float x=(r-R)/w;
         float front=exp(-x*x)*(1.-float(k)*.3);
         float trough=exp(-pow((r-R+w*1.6)/w,2.))*(1.-float(k)*.3);
         float side=.55+.45*max(dot(d/max(r,1e-4),vec2(-.55,-.83)),0.);
-        color+=vec3(.9,.96,1.)*front*fade*side*1.7*uGloss;
-        color*=1.-trough*fade*.35;
+        color+=vec3(.9,.96,1.)*front*fade*side*2.4*uGloss;
+        color*=1.-min(trough*fade*.7,.9);
       }
     }
   }

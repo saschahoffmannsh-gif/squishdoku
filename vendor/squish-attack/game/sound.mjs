@@ -245,7 +245,7 @@ export function createGameSound(button,{
 
   function stop(){for(const voice of [...voices])release(voice);pending.length=0;}
 
-  function play(kind,size=1,{combo=1,pan=0,requestedAt,delay=0,fromQueue=false}={}){
+  function play(kind,size=1,{combo=1,pan=0,requestedAt,delay=0,fromQueue=false,detune=1}={}){
     try{
     if(flags.nosound||!enabled||paused||disposed){
       notePlay({kind,name:sampleName(kind),skipped:'off',t:requestedAt??now()});
@@ -343,7 +343,7 @@ export function createGameSound(button,{
     if(kind==='merge'||kind==='flow'||kind==='pop'){
       // Balloon burst, fired by the caller at the fusion pop (or a menu/duel pop).
       const large=size>=5,quad=size===4;
-      const rate=roundedRate(pitch*(large?.82:quad?.90:kind==='flow'?.96:1));
+      const rate=roundedRate(pitch*detune*(large?.82:quad?.90:kind==='flow'?.96:1)); // SquishDoku: optional per-pop detune
       const volume=(large?.64:quad?.54:kind==='pop'?.50:.48)*level;
       sample('burst',{volume,rate,pan,priority:2});
       notePlay({kind,name:'burst',size,rate,volume,t:now(),layer:1});

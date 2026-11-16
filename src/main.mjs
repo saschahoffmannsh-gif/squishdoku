@@ -27,6 +27,7 @@ const sound=createGameSound(soundProxy);
 const haptics=createHaptics();
 const confetti=createConfetti();
 installBackdrop();
+const POP_DETUNE=[1,1.1,.95,1.15,.9,1.05,.85]; // each pop of a swipe sounds a little different
 const sfx=(kind,...a)=>{try{sound.play(kind,...a);}catch{}};
 const buzz=k=>{try{haptics.pulse(k);}catch{}};
 
@@ -161,7 +162,7 @@ function swipeCell(r,c,stroke){
   // wobble -> swell -> pop (the pop sound and buzz land on the actual burst)
   if(S.state[r][c]!=='normal')return;S.state[r][c]='popped';
   sfx('squish');buzz('tap');
-  board.popSequence(r,c,{onPop:()=>{sfx('pop',1);buzz('move');}});
+  board.popSequence(r,c,{onPop:i=>{sfx('pop',1,{detune:POP_DETUNE[i%POP_DETUNE.length]});buzz('move');}});
 }
 function holdFire(r,c){
   const st=S.state[r][c];

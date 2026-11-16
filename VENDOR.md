@@ -30,3 +30,4 @@ außerdem `EXT_color_buffer_half_float` als Fallback für WebKit/iOS (sonst anal
 `src/water.mjs` legt das Wasser bildschirmfüllend unter Squishs und UI (kein Tisch, kein Herbst-Hintergrund).
 Der Finger bewegt das Wasser nicht; nur der Pop (Boom) löst Wellen am geplatzten Squish aus. Ein geplatzter Squish hinterlässt nichts außer Wasser.
 `clean-screen.mjs` gibt zusätzlich `chromeFrame` zurück, damit der SA-Tischrahmen ausgeblendet werden kann.
+`sound.mjs`: optionale `detune`-Option für `play('pop',…)` (jeder Pop eines Wischers klingt leicht anders).

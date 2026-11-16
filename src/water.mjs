@@ -14,7 +14,7 @@ export function createWater(parent,{reducedMotion=matchMedia('(prefers-reduced-m
   const wrap=document.createElement('div');wrap.className='sd-water';wrap.setAttribute('aria-hidden','true');
   const canvas=document.createElement('canvas');canvas.className='sd-water-canvas';wrap.append(canvas);parent.prepend(wrap);
   // flat, fully opaque "seabed": the shader's refraction/caustic terms then add nothing
-  const bed=document.createElement('canvas');bed.width=bed.height=4;const bx=bed.getContext('2d');bx.fillStyle='#05070d';bx.fillRect(0,0,4,4);
+  const bed=document.createElement('canvas');bed.width=bed.height=4;const bx=bed.getContext('2d');bx.fillStyle='#000000';bx.fillRect(0,0,4,4);
   let renderer;
   try{renderer=new WaterSurface(canvas,bed);canvas.dataset.waterRenderer='webgl2';}
   catch(e){console.warn('water: webgl2 failed, canvas fallback',e);renderer=new CanvasSurface(canvas,bed);canvas.dataset.waterRenderer='canvas';}
@@ -22,11 +22,13 @@ export function createWater(parent,{reducedMotion=matchMedia('(prefers-reduced-m
   renderer.setOceanView(0);
   const settings=resolveWaterSettings({...BOAT_VOYAGE_PRESET.settings,light:100},reducedMotion);
   // SquishDoku gloss layer (vendor shader extension, off in OceanMerge): moving sky reflections + bright ring rims
-  Object.assign(settings,{gloss:1,glossBend:.35,rimLo:.3,rimHi:1.0});
+  Object.assign(settings,{gloss:1,glossBend:.35,rimLo:.35,rimHi:.8});
   const fx=reducedMotion?BOAT_VOYAGE_PRESET.reducedMotion.fingerStrengthMultiplier:1;
-  const dpr=Math.min(devicePixelRatio||1,1.25); // full-screen now: a bit below OceanMerge's 1.5 "auto" cap to keep the fill cost low on iPhone
+  // Sascha: crisp, high-contrast surface. Shading runs at native density up to 2x; the wave
+  // simulation itself stays at OceanMerge's 'high' grid (240 wide), so the cost grows only in the cheap shading pass.
+  const dpr=Math.min(devicePixelRatio||1,2);
   let W=0,H=0;
-  function fit(){const w=Math.max(1,wrap.clientWidth),h=Math.max(1,wrap.clientHeight);if(w===W&&h===H)return;W=w;H=h;renderer.resize(W,H,dpr,'auto');try{renderer.advance(0,settings,[]);}catch{}}
+  function fit(){const w=Math.max(1,wrap.clientWidth),h=Math.max(1,wrap.clientHeight);if(w===W&&h===H)return;W=w;H=h;renderer.resize(W,H,dpr,'high');try{renderer.advance(0,settings,[]);}catch{}}
   let raf=0,last=0,running=false,ambient=0;
   function frame(now){
     raf=requestAnimationFrame(frame);
