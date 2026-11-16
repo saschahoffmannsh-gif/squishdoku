@@ -1,7 +1,5 @@
 // SquishDoku – App: Menüs (Squish-Attack-Design), Levelauswahl, Spiel, Sieg.
 import {createBoard3D} from './board3d.mjs';
-import {createWater} from './water.mjs';
-let water=null; // OceanMerge water under the squishes (created with the board)
 import {createGameSound} from '../vendor/squish-attack/game/sound.mjs?v=launch-26';
 import {createHaptics} from '../vendor/squish-attack/game/haptics.mjs?v=launch-26';
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
@@ -64,7 +62,6 @@ function renderStars(){$('home-stars').querySelector('b').textContent=`${totalSt
 const nextLevel=()=>Math.min(levels.length,Math.max(1,...levels.filter(l=>store.stars[l.id]).map(l=>l.id+1),1));
 function showHome(screen='home'){
   closeDialog();
-  water?.stop();document.body.classList.remove('sd-playing');
   $('game').hidden=true;home.hidden=false;document.documentElement.classList.add('home-open');
   home.dataset.screen=screen;renderStars();
   if(screen==='home'){
@@ -110,16 +107,15 @@ $('home-stars').querySelector('i').innerHTML=starIcon();
 const game=$('game'),stage=$('stage'),fx=$('fx');
 $('btn-back').innerHTML=ICONS.back;$('btn-reset').innerHTML=ICONS.retry;
 let board=null,S=null;
-function ensureBoard(){if(!board){board=createBoard3D($('host'));try{water=createWater(game);board.water=water;}catch(e){console.warn('water',e);}bindInput();window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
-function placeWater(){if(water&&!game.hidden)water.fit();}
-function placePlate(){placeWater();if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
+function ensureBoard(){if(!board){board=createBoard3D($('host'));bindInput();window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
+function placePlate(){if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
 
 function startLevel(id){
   const L=levels[id-1];
-  home.hidden=true;document.documentElement.classList.remove('home-open');game.hidden=false;document.body.classList.add('sd-playing');closeDialog();
+  home.hidden=true;document.documentElement.classList.remove('home-open');game.hidden=false;closeDialog();
   ensureBoard();
   S={L,id,N:L.N,state:Array.from({length:L.N},()=>Array(L.N).fill('normal')),hearts:HEARTS,glow:0,done:false,locked:false};
-  board.build(L,g=>L.colors[g]);water?.start();
+  board.build(L,g=>L.colors[g]);
   $('lvl-num').textContent=id;$('lvl-name').textContent=NAMES[id-1]||L.label;
   $('glow-total').textContent=L.N;
   $('hint').innerHTML=HINTS[id-1]||'';

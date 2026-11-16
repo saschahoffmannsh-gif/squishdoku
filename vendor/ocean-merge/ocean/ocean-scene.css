@@ -1,8 +1,0 @@
-/* Original ocean layer composition, scoped to the supplied container. */
-.ocean-scene{position:relative;overflow:hidden;isolation:isolate;touch-action:none;background:#08c1cb}
-.ocean-backdrop,.ocean-water,.ocean-fish,.ocean-air,.ocean-spray,.ocean-scene-shade,.ocean-voyage-shade{position:absolute;inset:0;width:100%;height:100%}
-.ocean-backdrop{background:#13c4ce url('./assets/coast-no-tent-v4.png') center bottom/100% 230% no-repeat;pointer-events:none}
-.ocean-water{display:block;outline-offset:-4px;touch-action:none;cursor:crosshair}
-.ocean-fish{z-index:1;pointer-events:none}.ocean-air{z-index:2;pointer-events:none}.ocean-spray{z-index:4;pointer-events:none}
-.ocean-scene-shade{background:linear-gradient(#092e332b 0%,transparent 15%,transparent 65%,#005d7138 100%);pointer-events:none}
-.ocean-voyage-shade{z-index:5;pointer-events:none;background:linear-gradient(180deg,#024c5d80 0%,#036b7526 27%,transparent 53%,#00677926 76%,#034b6099 100%)}

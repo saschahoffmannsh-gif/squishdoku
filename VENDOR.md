@@ -22,12 +22,5 @@ Only change in the copies: `glass-reflections.mjs` / `glass-shadows.mjs` default
 Engine (solver, unique-puzzle generator, human-style logic step solver) comes from the
 GlowDoku prototype `/workspace/glowdoku/engine.js` → `src/engine.js`.
 
-## Wasser (OceanMerge)
-`vendor/ocean-merge/ocean/` stammt aus Saschas OceanMerge_Bootfahrt_Wasser.zip (WaterSurface, Höhenfeld-Simulation, BOAT_VOYAGE_PRESET).
-Kleine, standardmäßig abgeschaltete Erweiterungen in `water.js` (nur aktiv mit `settings.gloss>0`):
-schwarzer Lack-Look ohne Kaustik/Küste, wandernde Himmels-Reflexe, helle Wellenkanten, analytische Pop-Ringe;
-außerdem `EXT_color_buffer_half_float` als Fallback für WebKit/iOS (sonst analytischer Wellen-Pfad).
-`src/water.mjs` legt das Wasser bildschirmfüllend unter Squishs und UI (kein Tisch, kein Herbst-Hintergrund).
-Der Finger bewegt das Wasser nicht; nur der Pop (Boom) löst Wellen am geplatzten Squish aus. Ein geplatzter Squish hinterlässt nichts außer Wasser.
-`clean-screen.mjs` gibt zusätzlich `chromeFrame` zurück, damit der SA-Tischrahmen ausgeblendet werden kann.
 `sound.mjs`: optionale `detune`-Option für `play('pop',…)` (jeder Pop eines Wischers klingt leicht anders).
+Kein Ladering; geplatzte Squishs hinterlassen nichts (leeres Glas); Glas-Reflexe folgen dem aktuellen Zustand (Leuchten = Gold).

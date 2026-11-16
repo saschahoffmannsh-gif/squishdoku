@@ -41,15 +41,7 @@ export function createBoard3D(host){
   graphics.renderer.setSize=(...a)=>{setSize(...a);requestFrame({shadows:true});};
   const setting=installCleanScreen(graphics,host,{direct:true});
   const scene=graphics.scene,camera=graphics.camera;
-  // The 25 stone bowls ("fields") give way to Sascha's water, which is a separate canvas under this one;
-  // the Squish Attack chrome frame, glass reflections and contact shadows stay.
-  graphics.board.visible=false;
-  // Sascha: "only squish and water" – no chrome table frame either; the water fills the screen
-  if(setting.chromeFrame)setting.chromeFrame.group.visible=false;
-  // table floor = water: the interior of the chrome frame
-  const WATER_H=2*P.board.pitch+P.board.cavityHalf+.28;
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();
-  const waterPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-P.board.top),_wv=new THREE.Vector3();
   const jobs=[];
   function ensureColor(v){if(v>8)P.colors[v]=HUD_PARAMETERS.colors[v]=P.colors[(v-1)%8+1];}
   const internals={THREE,PARAMETERS:P,HUD_PARAMETERS,setting,requestFrame,ensureColor,get onLand(){return null;},
@@ -60,7 +52,7 @@ export function createBoard3D(host){
 
   // ---------- board layout ----------
   let N=5,pitch=P.board.pitch,k=1,cells=[];
-  const SPACING=1.0, BODY=.76; // body footprint relative to pitch (water shows between the squishes)
+  const SPACING=1.0, BODY=.93; // body footprint relative to pitch (small glass gaps between squishes)
   function cellPos(r,c){return new THREE.Vector3((c-(N-1)/2)*pitch,P.board.floor,(r-(N-1)/2)*pitch);}
   function disposeGel(s){s.group.traverse(o=>{o.geometry?.dispose?.();for(const m of [].concat(o.material||[]))m.dispose?.();o.customDepthMaterial?.dispose?.();});scene.remove(s.group);}
 
@@ -163,13 +155,9 @@ export function createBoard3D(host){
   function setScale(cell,sx,sy){const b=cell.s.base;cell.s.group.scale.set(b.x*sx,b.y*sy,b.z*sx);}
 
   // pop sequence timing (seconds) and shape
-  const POP_GAP=.11;let lastBoom=-1,popIndex=0; // min. spacing between two BOOMs (s)
+  const POP_GAP=.11;let lastBoom=-1,popIndex=0; // min. spacing between two BOOMs in a swipe (s)
   const SEQ={squash:.09,spring:.08,wobble:.15,swell:.1,flat:.42,bulge:.2,overshoot:.12,amount:.2};
   const backOut=t=>{const c=1.9;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
-  // the Boom moment drives the water (never the finger): a strong drop plus a second, wider
-  // pulse 90 ms later so concentric rings run out from the burst squish and fade in ~1.5 s
-  function popRipple(r,c){splash(r,c,.75,7);setTimeout(()=>splash(r,c,.35,9),110);}
-  function splash(r,c,amp,radius){const w=api.water;if(!w)return;const p=cellPos(r,c);p.y=P.board.top;p.project(camera);const rc=graphics.renderer.domElement.getBoundingClientRect();w.splashAt(rc.left+(p.x+1)/2*rc.width,rc.top+(1-p.y)/2*rc.height,amp,radius);}
   function squashSequence(cl,withSwell,done){
     const s=cl.s;s.press.held=false;s.press.releaseQueued=false;
     const a=SEQ.squash,b=a+SEQ.spring,w=b+SEQ.wobble,T=w+(withSwell?SEQ.swell:0);
@@ -185,11 +173,6 @@ export function createBoard3D(host){
   const api={
     graphics,fusion,SEQ,get N(){return N;},get cells(){return cells;},
     build,clear,pick,worldOf,screenOf,boardRect,frameRect,cellAt,requestFrame,
-    // water: projected interior corners (tl,tr,br,bl in client px) and finger -> water uv
-    waterQuad(){const rc=graphics.renderer.domElement.getBoundingClientRect(),H=WATER_H;camera.updateMatrixWorld();
-      return [[-H,-H],[H,-H],[H,H],[-H,H]].map(([x,z])=>{const v=new THREE.Vector3(x,P.board.top,z).project(camera);return [rc.left+(v.x+1)/2*rc.width,rc.top+(1-v.y)/2*rc.height];});},
-    waterUV(x,y){screenRay(x,y);const p=ray.ray.intersectPlane(waterPlane,_wv);if(!p)return null;const u=(p.x+WATER_H)/(2*WATER_H),v=(p.z+WATER_H)/(2*WATER_H);return u<0||v<0||u>1||v>1?null:{u,v};},
-    cellUV(r,c){const p=cellPos(r,c);return {u:(p.x+WATER_H)/(2*WATER_H),v:(p.z+WATER_H)/(2*WATER_H)};},
     press(r,c){const cl=cellAt(r,c);if(cl.state==='popped')return;press(cl.s);requestFrame();},
     drag(r,c,x,z){const cl=cellAt(r,c);drag(cl.s,x/k,z/k);requestFrame();},
     release(r,c){const cl=cellAt(r,c);release(cl.s);requestFrame();},
@@ -202,11 +185,11 @@ export function createBoard3D(host){
       const cl=cellAt(r,c);if(cl.state==='popped')return false;
       cl.state='popped';cl.s.press.held=false;cl.s.press.releaseQueued=false;
       try{fusion.popBody(cl.s,{value:cl.value,power,amount});}catch(e){console.warn('pop',e);}
-      setBodyTone(cl,'popped');
-      // a popped squish lies flat: no coloured glass reflection/contact glow of its old colour under it
-      setting.removeHudShadow(cl.s);
+      setBodyTone(cl,'popped');cl.s.value=cl.value;
       cl.halo.visible=false;cl.spark.visible=false;
-      // Sascha: a popped squish leaves NOTHING behind but water (and its ripple) – no splat, no flat skin
+      // Sascha: a popped squish leaves NOTHING behind (no splat, no flat skin, no coloured glass
+      // reflection/contact glow of its old colour) – just empty glass. Tap brings it back.
+      setting.removeHudShadow(cl.s);
       cl.anim=null;cl.s.group.visible=false;setScale(cl,.25,.25);requestFrame({shadows:true});
       return true;
     },
@@ -222,7 +205,7 @@ export function createBoard3D(host){
         if(cl.state!=='popping')return;
         const boomAt=Math.max(clock+SEQ.swell,lastBoom+POP_GAP);lastBoom=boomAt;
         const swell=()=>animate(cl,SEQ.swell,t=>{const e=1-Math.pow(1-t,2);setScale(cl,1+SEQ.amount*e,1+SEQ.amount*1.2*e);},()=>{
-          if(cl.state!=='popping')return;cl.state='normal';api.pop(r,c,{power,amount});popRipple(r,c);onPop?.(popIndex++);});
+          if(cl.state!=='popping')return;cl.state='normal';api.pop(r,c,{power,amount});onPop?.(popIndex++);});
         const wait=boomAt-SEQ.swell-clock;
         if(wait>.004)animate(cl,wait,t=>{const j=.012*Math.sin(t*wait*40);setScale(cl,1+j,1-j);},()=>{if(cl.state==='popping')swell();});else swell();
       });
@@ -232,24 +215,23 @@ export function createBoard3D(host){
       const cl=cellAt(r,c);
       if(cl.state==='popping'){cl.anim=null;cl.state='normal';setScale(cl,1,1);wobble(cl.s,.4);requestFrame();return;}
       if(cl.state!=='popped')return;
-      cl.state='normal';setBodyTone(cl,'normal');setting.addHudShadow(cl.s);
-      cl.s.group.visible=true;splash(cl.r,cl.c,.12,6);
-      animate(cl,.3,t=>{const e=backOut(t);setScale(cl,.25+.75*e,.25+.75*e);},()=>{setScale(cl,1,1);wobble(cl.s,.6);});
+      cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;setting.addHudShadow(cl.s);cl.s.group.visible=true;
+      animate(cl,.3,t=>{const e=backOut(t);setScale(cl,.25+.75*e,.25+.75*e);},()=>{setScale(cl,1,1);wobble(cl.s,.6);});requestFrame({shadows:true});
     },
     glow(r,c,on){
       const cl=cellAt(r,c);
-      if(on){cl.state='glow';setBodyTone(cl,'glow');cl.s.value=6; /* glass reflection/glow under it: gold, not the region colour */cl.halo.visible=true;cl.spark.visible=true;
+      if(on){cl.state='glow';setBodyTone(cl,'glow');cl.s.value=6; /* glass reflection/contact glow under it: gold, never the old region colour */requestFrame({shadows:true});cl.halo.visible=true;cl.spark.visible=true;
         const top=cellPos(r,c);top.y=P.board.floor+P.gel.height*1.45*k;cl.spark.position.copy(top).add(new THREE.Vector3(-pitch*.22,0,-pitch*.22));
         animate(cl,.5,t=>{const e=ease(t);cl.halo.material.opacity=.95*e;const s=1+.18*Math.sin(t*Math.PI);setScale(cl,s,s);cl.spark.scale.setScalar(pitch*.55*(t<.5?t*2:1+.2*Math.sin((t-.5)*Math.PI*2)));cl.spark.material.rotation=t*2;},()=>{setScale(cl,1,1);cl.halo.material.opacity=.95;});
         wobble(cl.s,.5);
-      }else{cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;cl.halo.visible=false;cl.spark.visible=false;cl.halo.material.opacity=0;wobble(cl.s,.4);}
+      }else{cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;requestFrame({shadows:true});cl.halo.visible=false;cl.spark.visible=false;cl.halo.material.opacity=0;wobble(cl.s,.4);}
     },
     dispose(){clear();cancelAnimationFrame(raf);setting.dispose?.();graphics.dispose();},
     get stats(){return {frames,cells:cells.length,popped:cells.filter(c=>c.state==='popped').length};},
   };
 
   // ---------- render loop (same scheme as graphics-adapter: idle tables keep the last frame) ----------
-  let last=null,raf=0,frames=0,renderedLast=false,bobTick=0;
+  let last=null,raf=0,frames=0,renderedLast=false;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   function loop(now){
     raf=requestAnimationFrame(loop);
@@ -265,10 +247,6 @@ export function createBoard3D(host){
         if(live||cl.anim){s.forceUpdate=false;updateSquishy(s,clock,dt,false);active=true;}
       }
       graphics.quality?.update?.(wall,now/1000,!active,renderedLast);
-      // buoyancy: the squishes ride the water very slightly (heave only, ~1.5 % of a squish),
-      // updated at 30 Hz so an idle board costs one light frame every other vsync
-      if(api.water?.running&&!reduced.matches&&cells.length){bobTick^=1;if(bobTick){const a=P.gel.height*k*.035;
-        for(const cl of cells){const y=P.board.floor+Math.sin(clock*1.6+cl.s.phase)*a+Math.sin(clock*.9+cl.s.phase*1.7)*a*.5;if(cl.s.group.position.y!==y){cl.s.group.position.y=y;}}active=true;}}
       if(active)dirty=true;
       renderedLast=dirty;
       if(dirty){graphics.render(dt);dirty=false;frames++;}
