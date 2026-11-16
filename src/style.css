@@ -129,5 +129,7 @@ button{font:inherit;}
 }
 
 /* ---------- Wasser (OceanMerge water.js, per Homographie auf den Tischboden gelegt) ---------- */
-.sd-water{position:absolute;left:0;top:0;transform-origin:0 0;z-index:0;pointer-events:none;background:#04060b;}
+.sd-water{position:absolute;inset:0;z-index:0;pointer-events:none;background:#05070d;}
+.sd-stage{z-index:1;}
+body.sd-playing .aw-bg{display:none;}
 .sd-water-canvas{display:block;width:100%;height:100%;}

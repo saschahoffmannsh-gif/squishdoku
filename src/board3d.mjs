@@ -44,6 +44,8 @@ export function createBoard3D(host){
   // The 25 stone bowls ("fields") give way to Sascha's water, which is a separate canvas under this one;
   // the Squish Attack chrome frame, glass reflections and contact shadows stay.
   graphics.board.visible=false;
+  // Sascha: "only squish and water" – no chrome table frame either; the water fills the screen
+  if(setting.chromeFrame)setting.chromeFrame.group.visible=false;
   // table floor = water: the interior of the chrome frame
   const WATER_H=2*P.board.pitch+P.board.cavityHalf+.28;
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();
@@ -58,7 +60,7 @@ export function createBoard3D(host){
 
   // ---------- board layout ----------
   let N=5,pitch=P.board.pitch,k=1,cells=[];
-  const SPACING=1.0, BODY=.86; // body footprint relative to pitch (water shows between the squishes)
+  const SPACING=1.0, BODY=.76; // body footprint relative to pitch (water shows between the squishes)
   function cellPos(r,c){return new THREE.Vector3((c-(N-1)/2)*pitch,P.board.floor,(r-(N-1)/2)*pitch);}
   function disposeGel(s){s.group.traverse(o=>{o.geometry?.dispose?.();for(const m of [].concat(o.material||[]))m.dispose?.();o.customDepthMaterial?.dispose?.();});scene.remove(s.group);}
 
@@ -166,7 +168,7 @@ export function createBoard3D(host){
   // the Boom moment drives the water (never the finger): a strong drop plus a second, wider
   // pulse 90 ms later so concentric rings run out from the burst squish and fade in ~1.5 s
   function popRipple(r,c){splash(r,c,.75,7);setTimeout(()=>splash(r,c,.35,9),110);}
-  function splash(r,c,amp,radius){const w=api.water;if(!w)return;const p=api.cellUV(r,c);w.splash(p.u,p.v,amp,radius);}
+  function splash(r,c,amp,radius){const w=api.water;if(!w)return;const p=cellPos(r,c);p.y=P.board.top;p.project(camera);const rc=graphics.renderer.domElement.getBoundingClientRect();w.splashAt(rc.left+(p.x+1)/2*rc.width,rc.top+(1-p.y)/2*rc.height,amp,radius);}
   function squashSequence(cl,withSwell,done){
     const s=cl.s;s.press.held=false;s.press.releaseQueued=false;
     const a=SEQ.squash,b=a+SEQ.spring,w=b+SEQ.wobble,T=w+(withSwell?SEQ.swell:0);
@@ -203,9 +205,8 @@ export function createBoard3D(host){
       // a popped squish lies flat: no coloured glass reflection/contact glow of its old colour under it
       setting.removeHudShadow(cl.s);
       cl.halo.visible=false;cl.spark.visible=false;
-      cl.splat.visible=true;
-      animate(cl,.32,t=>{const e=ease(t);setScale(cl,.25+.53*e,.03+.15*e);cl.splat.material.opacity=.8*e;cl.splat.scale.setScalar(pitch*(.6+.38*e));},()=>{setScale(cl,.78,.18);cl.splat.material.opacity=.8;});
-      setScale(cl,.25,.03);
+      // Sascha: a popped squish leaves NOTHING behind but water (and its ripple) – no splat, no flat skin
+      cl.anim=null;cl.s.group.visible=false;setScale(cl,.25,.25);requestFrame({shadows:true});
       return true;
     },
     // Tap/swipe pop (Sascha's sequence): 1 squash flat under the finger, 2 spring back up with a
@@ -222,7 +223,8 @@ export function createBoard3D(host){
       if(cl.state==='popping'){cl.anim=null;cl.state='normal';setScale(cl,1,1);wobble(cl.s,.4);requestFrame();return;}
       if(cl.state!=='popped')return;
       cl.state='normal';setBodyTone(cl,'normal');setting.addHudShadow(cl.s);
-      animate(cl,.28,t=>{const e=ease(t);setScale(cl,.78+.22*e,.18+.82*e);cl.splat.material.opacity=.8*(1-e);},()=>{setScale(cl,1,1);cl.splat.visible=false;wobble(cl.s,.6);});
+      cl.s.group.visible=true;splash(cl.r,cl.c,.12,6);
+      animate(cl,.3,t=>{const e=backOut(t);setScale(cl,.25+.75*e,.25+.75*e);},()=>{setScale(cl,1,1);wobble(cl.s,.6);});
     },
     glow(r,c,on){
       const cl=cellAt(r,c);

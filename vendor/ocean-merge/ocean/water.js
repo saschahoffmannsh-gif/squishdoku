@@ -64,6 +64,11 @@ uniform float uTime;
 uniform float uWind;
 uniform float uLight;
 uniform float uHasSimulation;
+uniform float uGloss;
+uniform float uGlossBend;
+uniform float uRimLo;
+uniform float uRimHi;
+uniform float uRingSpeed;
 uniform vec4 uVortices[4];
 uniform int uVortexCount;
 uniform vec4 uRipples[20];
@@ -206,6 +211,7 @@ void main(){
   float focus=clamp(inversesqrt(max(jxx*jyy-jxy*jxy,.42)),.76,1.45);
   vec3 refracted=softScene(sampleUv,4.)+movingLight*(.55+uLight*.7)*focus;
   refracted*=1.+(focus-1.)*.028*uLight;
+  if(uGloss>0.)refracted=softScene(sampleUv,4.); // SquishDoku: opaque black water – no caustic light from below
   vec2 micro=vec2(sin(p.x*175.+p.y*131.-t*3.5),cos(p.x*117.-p.y*167.+t*3.9))*.006*seaEnergy;
   vec3 reflectionNormal=normalize(vec3(-grad.x-micro.x,grad.y+micro.y,1.));
   vec3 halfLight=normalize(sunDirection+vec3(0.,0.,1.));
@@ -216,9 +222,42 @@ void main(){
   vec3 color=mix(refracted,vec3(.55,.85,.91),fresnel*.6);
   color+=vec3(1.,.99,.85)*specular*(.05+uLight*.16)*(.45+sun*.55);
   color+=vec3(.75,.94,.90)*pow(highlight,24.)*.009*uLight;
+  if(uGloss>0.){
+    color=refracted+vec3(.10,.13,.18)*fresnel*.5; // black lacquer base: no milky fresnel sheen from the swell
+    // SquishDoku: glossy black lacquer water. A soft studio sky (two broad light bands) is
+    // reflected through the surface normal, so the bands bend and travel with every wave;
+    // steep wave fronts (pop rings) catch a bright rim on their sun-facing side.
+    vec2 rn=normal.xy/max(normal.z,.25);
+    float b1=exp(-pow((uv.y*.85+uv.x*.25+rn.y*uGlossBend+rn.x*.3*uGlossBend-.30+.03*sin(t*.21))/.075,2.));
+    float b2=exp(-pow((uv.x*.7-uv.y*.30-rn.x*uGlossBend+rn.y*.4*uGlossBend-.12+.025*sin(t*.16+1.3))/.05,2.));
+    float slope=length(grad);
+    float rim=smoothstep(uRimLo,uRimHi,slope)*(.35+.65*max(dot(normalize(vec2(-grad.x,grad.y)+1e-6),vec2(-.55,.83)),0.));
+    color+=vec3(.70,.80,1.)*(b1*.11+b2*.07)*uGloss;
+    color+=vec3(.92,.97,1.)*rim*.7*uGloss;
+    color+=vec3(1.,.98,.9)*pow(highlight,300.)*(.18+rim*1.5)*uGloss;
+    // strong drops (the pop) also send out a crisp analytic ring pair that reads at any size:
+    // a bright glossy wave front with a dark trough behind it, expanding ~0.3 screen-heights/s
+    for(int i=0;i<20;i++){
+      if(i>=uRippleCount)break;
+      float st=uRipples[i].w;if(st<1.2)continue;
+      float age=t-uRipples[i].z;if(age<0.||age>1.8)continue;
+      vec2 d=(uv-uRipples[i].xy)*vec2(aspect,1.);float r=length(d);
+      float fade=(1.-age/1.8)*min(st/2.2,1.);
+      for(int k=0;k<3;k++){
+        float R=age*uRingSpeed-float(k)*.045;if(R<=0.)continue;
+        float w=.004+R*.014;float x=(r-R)/w;
+        float front=exp(-x*x)*(1.-float(k)*.3);
+        float trough=exp(-pow((r-R+w*1.6)/w,2.))*(1.-float(k)*.3);
+        float side=.55+.45*max(dot(d/max(r,1e-4),vec2(-.55,-.83)),0.);
+        color+=vec3(.9,.96,1.)*front*fade*side*1.7*uGloss;
+        color*=1.-trough*fade*.35;
+      }
+    }
+  }
   color+=vec3(.35,.8,.68)*height*.28;
   float crest=smoothstep(.18,.7,length(dynamicGrad))*.18;
   color=mix(color,vec3(.87,1.,.95),min(crest+vortexFoam,.25));
+  if(uGloss>0.){fragColor=vec4(clamp(color,0.,1.),1.);return;} // SquishDoku: open black water, no coast/surf layers
   // A restrained offshore crest grows into broken whitewater near the cove.
   float shoulder=exp(-pow((crestDistance-.011)/.018,2.))*(1.-smoothstep(.48,.52,surfPhase));
   color*=1.-shoulder*.032*surfStrength;
@@ -270,7 +309,7 @@ export class WaterSurface{
     const gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false,powerPreference:'default'});
     if(!gl)throw new Error('WebGL2 unavailable');
     this.gl=gl;this.surface=program(gl,FRAGMENT);this.stepProgram=program(gl,STEP);this.time=0;this.accumulator=0;this.pending=[];this.ripples=[];this.stateIndex=0;this.camera={x:0,y:0};
-    this.floatSupported=!!gl.getExtension('EXT_color_buffer_float');
+    this.floatSupported=!!gl.getExtension('EXT_color_buffer_float');if(!this.floatSupported)this.floatSupported=!!gl.getExtension('EXT_color_buffer_half_float'); // SquishDoku: WebKit/iOS may only expose the half-float one
     const vertices=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vertices);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
     this.vaos=new Map();
     for(const item of [this.surface,this.stepProgram]){
@@ -329,6 +368,7 @@ export class WaterSurface{
     g.uniform2f(this.uniform('uCamera'),this.camera.x,this.camera.y);
     g.uniform1f(this.uniform('uOceanMode'),this.oceanMode?1:0);g.uniform1f(this.uniform('uOceanTravel'),this.oceanTravel||0);
     g.uniform2f(this.uniform('uResolution'),this.width,this.height);g.uniform2f(this.uniform('uTexel'),1/this.simW,1/this.simH);g.uniform1f(this.uniform('uTime'),this.time);g.uniform1f(this.uniform('uWind'),settings.swell/100);g.uniform1f(this.uniform('uLight'),settings.light/100);g.uniform1f(this.uniform('uHasSimulation'),hasSimulation?1:0);
+    g.uniform1f(this.uniform('uGloss'),settings.gloss||0);g.uniform1f(this.uniform('uGlossBend'),settings.glossBend??2.5);g.uniform1f(this.uniform('uRimLo'),settings.rimLo??.04);g.uniform1f(this.uniform('uRimHi'),settings.rimHi??.3);g.uniform1f(this.uniform('uRingSpeed'),settings.ringSpeed??.3);
     const vortexData=new Float32Array(16);vortices.slice(0,4).forEach((v,index)=>vortexData.set([v.x,v.y,v.strength,0],index*4));g.uniform4fv(this.uniform('uVortices[0]'),vortexData);g.uniform1i(this.uniform('uVortexCount'),Math.min(vortices.length,4));
     const ripples=new Float32Array(80);this.ripples.forEach((r,index)=>ripples.set(r,index*4));g.uniform4fv(this.uniform('uRipples[0]'),ripples);g.uniform1i(this.uniform('uRippleCount'),this.ripples.length);g.drawArrays(g.TRIANGLES,0,3);
   }

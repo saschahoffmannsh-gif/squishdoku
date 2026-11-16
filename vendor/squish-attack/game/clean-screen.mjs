@@ -208,7 +208,7 @@ export function installCleanScreen(graphics,host,{direct=false}={}) {
     renderer.setRenderTarget(null);renderer.render(screenScene,screenCamera);
   });
   const resize=new ResizeObserver(calibrate);resize.observe(host);resize.observe(slot);calibrate();
-  return {ready:Promise.resolve(),update(){},wells,withBoardPositions,
+  return {chromeFrame,ready:Promise.resolve(),update(){},wells,withBoardPositions,
     addHudShadow(tile){hudOwners.add(tile);},
     removeHudShadow(tile){hudOwners.delete(tile);},
     dispose(){
