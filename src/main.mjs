@@ -154,7 +154,10 @@ function swipeCell(r,c,stroke){
   const st=S.state[r][c];
   if(st!=='normal')return;
   if(isSol(r,c)){if(!stroke.wrong.has(r*S.N+c)){stroke.wrong.add(r*S.N+c);wrongAt(r,c);}return;}
-  popAt(r,c);sfx('pop',1);buzz('move');
+  // wobble -> swell -> pop (the pop sound and buzz land on the actual burst)
+  if(S.state[r][c]!=='normal')return;S.state[r][c]='popped';
+  sfx('squish');buzz('tap');
+  board.popSequence(r,c,{onPop:()=>{sfx('pop',1);buzz('move');}});
 }
 function holdFire(r,c){
   const st=S.state[r][c];

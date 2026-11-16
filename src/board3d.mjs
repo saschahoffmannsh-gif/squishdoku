@@ -154,8 +154,23 @@ export function createBoard3D(host){
   const ease=t=>1-Math.pow(1-t,3);
   function setScale(cell,sx,sy){const b=cell.s.base;cell.s.group.scale.set(b.x*sx,b.y*sy,b.z*sx);}
 
+  // pop sequence timing (seconds) and shape
+  const SEQ={squash:.09,spring:.08,wobble:.15,swell:.1,flat:.42,bulge:.2,overshoot:.12,amount:.2};
+  const backOut=t=>{const c=1.9;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
+  function squashSequence(cl,withSwell,done){
+    const s=cl.s;s.press.held=false;s.press.releaseQueued=false;
+    const a=SEQ.squash,b=a+SEQ.spring,w=b+SEQ.wobble,T=w+(withSwell?SEQ.swell:0);
+    let wobbled=false;
+    animate(cl,T,t=>{
+      const x=t*T;
+      if(x<a){const e=Math.sin(x/a*Math.PI/2);setScale(cl,1+SEQ.bulge*e,1-SEQ.flat*e);}
+      else if(x<b){const e=backOut((x-a)/SEQ.spring);setScale(cl,1+SEQ.bulge*(1-e),1-SEQ.flat*(1-e));}
+      else if(x<w){if(!wobbled){wobbled=true;setScale(cl,1,1);wobble(s,1);}}
+      else{const e=1-Math.pow(1-(x-w)/SEQ.swell,2);setScale(cl,1+SEQ.amount*e,1+SEQ.amount*1.2*e);}
+    },done);
+  }
   const api={
-    graphics,fusion,get N(){return N;},get cells(){return cells;},
+    graphics,fusion,SEQ,get N(){return N;},get cells(){return cells;},
     build,clear,pick,worldOf,screenOf,boardRect,frameRect,cellAt,requestFrame,
     press(r,c){const cl=cellAt(r,c);if(cl.state==='popped')return;press(cl.s);requestFrame();},
     drag(r,c,x,z){const cl=cellAt(r,c);drag(cl.s,x/k,z/k);requestFrame();},
@@ -163,7 +178,7 @@ export function createBoard3D(host){
     wobble(r,c,p=.5){const cl=cellAt(r,c);wobble(cl.s,p);requestFrame();},
     // finger brushes over a squish: the game's swipe reaction (press, lean along the stroke, spring back)
     brush(r,c,dx,dz){const cl=cellAt(r,c);if(cl.state==='popped')return;press(cl.s);drag(cl.s,dx,dz);setTimeout(()=>release(cl.s),90);requestFrame();},
-    wrong(r,c){const cl=cellAt(r,c);setBodyTone(cl,'wrong');wobble(cl.s,.85);cl.s.press.held=false;setTimeout(()=>{if(cl.state!=='popped')setBodyTone(cl,cl.state==='glow'?'glow':'normal');},650);requestFrame();},
+    wrong(r,c){const cl=cellAt(r,c);setBodyTone(cl,'wrong');squashSequence(cl,false,()=>{setScale(cl,1,1);if(cl.state!=='popped')setBodyTone(cl,cl.state==='glow'?'glow':'normal');});requestFrame();},
     // the game's comic balloon pop (fusion.popBody: torn skin, gel drops, burst flash), then a flat popped squish stays
     pop(r,c,{power=2.4,amount=1}={}){
       const cl=cellAt(r,c);if(cl.state==='popped')return false;
@@ -176,8 +191,19 @@ export function createBoard3D(host){
       setScale(cl,.25,.03);
       return true;
     },
+    // Tap/swipe pop (Sascha's sequence): 1 squash flat under the finger, 2 spring back up with a
+    // little overshoot, 3 visible wobble (Squish Attack's wobble spring), 4 swell, 5 the real pop.
+    // Each squish runs its own clock-driven sequence (no timers), so a swipe overlaps several naturally.
+    popSequence(r,c,{onPop,power,amount}={}){
+      const cl=cellAt(r,c);if(cl.state==='popped'||cl.state==='popping')return false;
+      cl.state='popping';
+      squashSequence(cl,true,()=>{cl.state='normal';api.pop(r,c,{power,amount});onPop?.();});
+      return true;
+    },
     restore(r,c){
-      const cl=cellAt(r,c);if(cl.state!=='popped')return;
+      const cl=cellAt(r,c);
+      if(cl.state==='popping'){cl.anim=null;cl.state='normal';setScale(cl,1,1);wobble(cl.s,.4);requestFrame();return;}
+      if(cl.state!=='popped')return;
       cl.state='normal';setBodyTone(cl,'normal');
       animate(cl,.28,t=>{const e=ease(t);setScale(cl,.78+.22*e,.18+.82*e);cl.splat.material.opacity=.8*(1-e);},()=>{setScale(cl,1,1);cl.splat.visible=false;wobble(cl.s,.6);});
     },
