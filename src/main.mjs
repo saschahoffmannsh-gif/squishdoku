@@ -107,7 +107,7 @@ const game=$('game'),stage=$('stage'),fx=$('fx');
 $('btn-back').innerHTML=ICONS.back;$('btn-reset').innerHTML=ICONS.retry;
 let board=null,S=null;
 function ensureBoard(){if(!board){board=createBoard3D($('host'));bindInput();window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
-function placePlate(){if(!board||game.hidden)return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
+function placePlate(){if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
 
 function startLevel(id){
   const L=levels[id-1];
