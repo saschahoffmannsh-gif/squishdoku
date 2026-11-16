@@ -33,7 +33,7 @@ export function createWater(parent,{reducedMotion=matchMedia('(prefers-reduced-m
   try{renderer=new WaterSurface(canvas,bed);canvas.dataset.waterRenderer='webgl2';}
   catch{renderer=new CanvasSurface(canvas,bed);canvas.dataset.waterRenderer='canvas';}
   renderer.setOceanView(0);
-  const settings=resolveWaterSettings({...BOAT_VOYAGE_PRESET.settings},reducedMotion);
+  const settings=resolveWaterSettings({...BOAT_VOYAGE_PRESET.settings,light:100},reducedMotion) // black water: full light so the wave fronts read glossy;
   const finger=reducedMotion?BOAT_VOYAGE_PRESET.reducedMotion.fingerStrengthMultiplier:1;
   const dpr=Math.min(devicePixelRatio||1,BOAT_VOYAGE_PRESET.rendering.devicePixelRatioCap.auto); // 1.5, as OceanMerge "auto"
   wrap.style.width=wrap.style.height=SIZE+'px';canvas.style.width=canvas.style.height='100%';
@@ -56,14 +56,7 @@ export function createWater(parent,{reducedMotion=matchMedia('(prefers-reduced-m
     canvas,wrap,renderer,settings,
     place(quad){wrap.style.transform=squareToQuad(SIZE,quad);},
     start,stop,get running(){return running;},
-    touchStart(u,v){lastTouch={u,v};lastTouchT=performance.now();renderer.disturb(u,v,.10*finger,5.5);},
-    touchMove(u,v){
-      const now=performance.now();if(!lastTouch){api.touchStart(u,v);return;}if(now-lastTouchT<32)return;
-      const dpx=Math.hypot(u-lastTouch.u,v-lastTouch.v)*SIZE,amp=(.12+Math.min(.14,dpx/180))*finger,n=Math.max(1,Math.min(4,Math.ceil(dpx/24)));
-      for(let i=1;i<=n;i++)renderer.disturb(lastTouch.u+(u-lastTouch.u)*i/n,lastTouch.v+(v-lastTouch.v)*i/n,amp/Math.sqrt(n),5.5);
-      lastTouch={u,v};lastTouchT=now;
-    },
-    touchEnd(){lastTouch=null;},
+    // only game events (the pop) disturb the water – the finger never does
     splash(u,v,amp=.12,radius=6){renderer.disturb(u,v,amp*finger,radius);},
     dispose(){stop();wrap.remove();},
   };

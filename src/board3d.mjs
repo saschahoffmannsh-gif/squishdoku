@@ -163,6 +163,9 @@ export function createBoard3D(host){
   // pop sequence timing (seconds) and shape
   const SEQ={squash:.09,spring:.08,wobble:.15,swell:.1,flat:.42,bulge:.2,overshoot:.12,amount:.2};
   const backOut=t=>{const c=1.9;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
+  // the Boom moment drives the water (never the finger): a strong drop plus a second, wider
+  // pulse 90 ms later so concentric rings run out from the burst squish and fade in ~1.5 s
+  function popRipple(r,c){splash(r,c,.75,7);setTimeout(()=>splash(r,c,.35,9),110);}
   function splash(r,c,amp,radius){const w=api.water;if(!w)return;const p=api.cellUV(r,c);w.splash(p.u,p.v,amp,radius);}
   function squashSequence(cl,withSwell,done){
     const s=cl.s;s.press.held=false;s.press.releaseQueued=false;
@@ -190,7 +193,7 @@ export function createBoard3D(host){
     wobble(r,c,p=.5){const cl=cellAt(r,c);wobble(cl.s,p);requestFrame();},
     // finger brushes over a squish: the game's swipe reaction (press, lean along the stroke, spring back)
     brush(r,c,dx,dz){const cl=cellAt(r,c);if(cl.state==='popped')return;press(cl.s);drag(cl.s,dx,dz);setTimeout(()=>release(cl.s),90);requestFrame();},
-    wrong(r,c){const cl=cellAt(r,c);setBodyTone(cl,'wrong');splash(r,c,.07,5);squashSequence(cl,false,()=>{setScale(cl,1,1);if(cl.state!=='popped')setBodyTone(cl,cl.state==='glow'?'glow':'normal');});requestFrame();},
+    wrong(r,c){const cl=cellAt(r,c);setBodyTone(cl,'wrong');squashSequence(cl,false,()=>{setScale(cl,1,1);if(cl.state!=='popped')setBodyTone(cl,cl.state==='glow'?'glow':'normal');});requestFrame();},
     // the game's comic balloon pop (fusion.popBody: torn skin, gel drops, burst flash), then a flat popped squish stays
     pop(r,c,{power=2.4,amount=1}={}){
       const cl=cellAt(r,c);if(cl.state==='popped')return false;
@@ -210,8 +213,8 @@ export function createBoard3D(host){
     // Each squish runs its own clock-driven sequence (no timers), so a swipe overlaps several naturally.
     popSequence(r,c,{onPop,power,amount}={}){
       const cl=cellAt(r,c);if(cl.state==='popped'||cl.state==='popping')return false;
-      cl.state='popping';splash(r,c,.07,5);
-      squashSequence(cl,true,()=>{cl.state='normal';api.pop(r,c,{power,amount});splash(r,c,.16,7);onPop?.();});
+      cl.state='popping';
+      squashSequence(cl,true,()=>{cl.state='normal';api.pop(r,c,{power,amount});popRipple(r,c);onPop?.();});
       return true;
     },
     restore(r,c){

@@ -182,7 +182,6 @@ function bindInput(){
     try{sound.unlock?.();}catch{}
     const {r,c}=hit;
     g={id:e.pointerId,r,c,x:e.clientX,y:e.clientY,t:e.timeStamp,mode:'pending',last:{r,c},lx:e.clientX,ly:e.clientY,stroke:{wrong:new Set(),seen:new Set([r*S.N+c])}};
-    {const w=board.waterUV(e.clientX,e.clientY);if(w)water?.touchStart(w.u,w.v);}
     if(S.state[r][c]!=='popped'){board.press(r,c);showRing(r,c);sfx('squish');}
     g.timer=setTimeout(()=>{
       if(!g||g.mode!=='pending')return;
@@ -191,7 +190,6 @@ function bindInput(){
   });
   host.addEventListener('pointermove',e=>{
     if(!g||e.pointerId!==g.id||!S)return;
-    {const w=board.waterUV(e.clientX,e.clientY);if(w)water?.touchMove(w.u,w.v);}
     const moved=Math.hypot(e.clientX-g.x,e.clientY-g.y);
     if(g.mode==='pending'){
       const hit=board.pick(e.clientX,e.clientY);
@@ -219,7 +217,6 @@ function bindInput(){
   });
   const end=e=>{
     if(!g||e.pointerId!==g.id)return;
-    water?.touchEnd();
     clearTimeout(g.timer);
     if(g.mode==='pending'&&S&&!S.locked){
       hideRing(false);board.release(g.r,g.c);
