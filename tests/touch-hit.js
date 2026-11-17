@@ -17,7 +17,7 @@ async function session(vp, { standalone = false } = {}) {
   if (standalone) await ctx.addInitScript(() => Object.defineProperty(navigator, 'standalone', { get: () => true }));
   const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p);
   const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await p.goto(BASE); await p.evaluate(() => localStorage.setItem('squishdoku-v1', JSON.stringify({ unlocked: 50, stars: { 1: 3, 2: 3, 3: 3 }, seenRules: true, revealed: {} })));
+  await p.goto(BASE); await p.evaluate(() => localStorage.setItem('squishdoku-v1', JSON.stringify({ v: 2, unlocked: 50, stars: { 1: 3, 2: 3, 3: 3 }, seenRules: true, revealed: {} })));
   await p.reload(); await p.waitForFunction(() => document.documentElement.dataset.ready === '1');
   const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' || type === 'touchCancel' ? [] : [{ x, y, id: 1, radiusX: 4, radiusY: 4, force: 1 }] });
   async function start(lv) {

@@ -11,7 +11,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p);
   const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await p.goto(BASE); await p.waitForFunction(() => document.documentElement.dataset.ready === '1');
-  await p.evaluate(() => { localStorage.setItem('squishdoku-v1', JSON.stringify({ unlocked: 5, stars: {}, seenRules: true })); });
+  await p.evaluate(() => { localStorage.setItem('squishdoku-v1', JSON.stringify({ v: 2, unlocked: 5, stars: {}, seenRules: true })); });
   await p.reload(); await p.waitForFunction(() => document.documentElement.dataset.ready === '1');
   const lv = +(process.env.LV || 1);
   await p.evaluate(lv => SquishDoku.startLevel(lv), lv); await sleep(1500);

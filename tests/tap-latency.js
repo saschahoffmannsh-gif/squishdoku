@@ -23,7 +23,7 @@ async function run(vp) {
     addEventListener('pointerdown', e => { L.down = e.timeStamp; L.downs++; }, true);
     addEventListener('pointerup', e => { L.up = e.timeStamp; }, true);
   });
-  await p.goto(BASE); await p.evaluate(() => localStorage.setItem('squishdoku-v1', JSON.stringify({ unlocked: 50, stars: { 1: 3, 2: 3, 3: 3 }, seenRules: true, revealed: {} })));
+  await p.goto(BASE); await p.evaluate(() => localStorage.setItem('squishdoku-v1', JSON.stringify({ v: 2, unlocked: 50, stars: { 1: 3, 2: 3, 3: 3 }, seenRules: true, revealed: {} })));
   await p.reload(); await p.waitForFunction(() => document.documentElement.dataset.ready === '1'); await sleep(600);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: RATE });
   const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1, radiusX: 4, radiusY: 4, force: 1 }] });
@@ -88,11 +88,10 @@ async function run(vp) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: RATE });
   await tap('Sieg → Weiter', '#btn-next', `document.getElementById('veil').hidden&&SquishDoku.state.id===13`, { settle: 1500 });
   await tap('Zurück (Spiel → Levels)', '#btn-back', `${screen('levels')}`);
-  await tap('Levels → Zurück', '#btn-home', `${screen('home')}`);
-  await tap('Home → Tutorial', '#btn-tutorial', `!document.getElementById('game').hidden&&SquishDoku.state.id===1`, { settle: 1500 });
+  await tap('Level-Kachel 1 (Mission)', '.aw-tile[data-level="1"]', `!document.getElementById('game').hidden&&SquishDoku.state.id===1`, { settle: 1500 });
   await p.evaluate(() => { window.__tx = document.querySelector('.sd-tut-text').textContent; });
-  await tap('Tutorial-Blase Weiter', '#tut-next', `document.querySelector('.sd-tut-text').textContent!==window.__tx`);
-  await tap('Zurück (Tutorial → Levels)', '#btn-back', `${screen('levels')}`);
+  await tap('Anleitungs-Blase Weiter', '#tut-next', `document.querySelector('.sd-tut-text').textContent!==window.__tx`);
+  await tap('Zurück (Mission → Levels)', '#btn-back', `${screen('levels')}`);
   await p.evaluate(() => { window.__snd = document.getElementById('sound-toggle').getAttribute('aria-pressed'); });
   await tap('Ton-Knopf', '#sound-toggle', `document.getElementById('sound-toggle').getAttribute('aria-pressed')!==window.__snd`);
   if (errors.length) { console.log('  page errors:', errors.slice(0, 5)); failures++; }

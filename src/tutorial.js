@@ -1,9 +1,10 @@
-// SquishDoku tutorial flow (browser + node). Levels 1–3 are tutorials; each teaches one rule.
+// SquishDoku guided missions (browser + node). Level 1 teaches the no-touch rule, level 2 the
+// "colour inside one row/column claims that line" trick.
 // The guide never plays for you: it only computes the next sensible action from the current board
 // (which squishes the learnt rules rule out → "wisch weg", or which squish is now forced → "halt gedrückt").
 (function (root) {
   // rules each tutorial level may use for its hints (cumulative)
-  const RULES = { 1: ['reg'], 2: ['reg', 'row', 'col'], 3: ['reg', 'row', 'col', 'touch'] };
+  const RULES = { touch: ['reg', 'row', 'col', 'touch'], claim: ['reg', 'row', 'col', 'touch', 'claim'] };
   // why does a glow at a forbid b? → first matching learnt rule, or null
   function why(reg, rules, a, b) {
     if (a[0] === b[0] && a[1] === b[1]) return null;
@@ -21,7 +22,7 @@
   //  {type:'done'} | {type:'stuck'}
   function nextStep(level, state, opts = {}) {
     const N = level.N, reg = level.regions.map(r => r.split('').map(ch => ch.charCodeAt(0) - 97));
-    const rules = opts.rules || RULES[level.id] || RULES[3];
+    const rules = opts.rules || RULES[level.guide] || RULES.touch;
     const glows = []; let normals = 0;
     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { if (state[r][c] === 'glow') glows.push([r, c]); else if (state[r][c] === 'normal') normals++; }
     if (glows.length === N) return { type: 'done' };
@@ -47,7 +48,22 @@
       const free = cells.filter(([r, c]) => state[r][c] === 'normal');
       if (free.length === 1) return { type: 'hold', cell: free[0], kind, idx: i };
     }
-    // fallback (level 1 teaches only the colour rule): point at the next solution squish
+    // claim: all squishes a colour has left lie in ONE row (or column). Its glow must be in that line,
+    // so every other squish of the line can go.  {type:'pop', rule:'claim', cells, from, region, area, line}
+    if (rules.includes('claim')) {
+      for (let k = 0; k < N; k++) {
+        const all = [], free = [];
+        for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (reg[r][c] === k) { all.push([r, c]); if (state[r][c] === 'normal') free.push([r, c]); }
+        if (!free.length || all.some(([r, c]) => state[r][c] === 'glow')) continue;
+        for (const [kind, i] of [['row', 0], ['col', 1]]) {
+          if (!free.every(x => x[i] === free[0][i])) continue;
+          const L = free[0][i], cells = [];
+          for (let j = 0; j < N; j++) { const [r, c] = kind === 'row' ? [L, j] : [j, L]; if (state[r][c] === 'normal' && reg[r][c] !== k) cells.push([r, c]); }
+          if (cells.length) return { type: 'pop', rule: 'claim', cells, from: free[0], region: k, area: free, line: { kind, idx: L } };
+        }
+      }
+    }
+    // fallback: point at the next solution squish
     if (opts.solutionFallback) {
       for (let r = 0; r < N; r++) { const c = level.solution[r]; if (state[r][c] !== 'glow') return { type: 'hold', cell: [r, c], kind: 'guide', idx: reg[r][c] }; }
     }

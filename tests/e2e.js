@@ -53,22 +53,22 @@ async function run(vp, dpr) {
   ok(await noScroll(), 'levels: page itself does not scroll');
   ok(await p.evaluate(() => { const sc = document.querySelector('.sd-levels-scroll'), r = sc.getBoundingClientRect(); return sc.scrollHeight > sc.clientHeight && r.bottom <= innerHeight && r.top >= 0; }), 'levels: list scrolls inside its card, card fits the screen');
   ok(await p.evaluate(() => { const b = document.querySelector('#btn-home').getBoundingClientRect(); return b.bottom <= innerHeight && b.top > 0; }), 'levels: back button visible');
-  // ---------- Tutorial (Level 1–3): follow the hand, the player does every action ----------
+  // ---------- Missions 1–2 with guidance: follow the hand, the player does every action ----------
   await p.click('#btn-home'); await sleep(400);
+  ok(!(await p.isVisible('#btn-tutorial')), 'home: no separate "Tutorial" button any more');
   await p.click('#btn-play');
   await p.waitForFunction(() => SquishDoku.board && SquishDoku.board.stats.frames > 1, null, { timeout: 30000 });
   await sleep(900);
-  ok(await dialog() === null, 'L1: no rules dialog any more – the tutorial explains instead');
-  const tut = () => p.evaluate(() => { const t = SquishDoku.tutorial; return { active: t.active, blocking: t.blocking, step: t.step, text: document.querySelector('.sd-tut-text').textContent, next: !document.getElementById('tut-next').hidden, marks: document.querySelectorAll('.sd-tut-mark').length, hand: document.querySelector('.sd-tut-hand').classList.contains('is-on') }; });
-  const bar = () => p.evaluate(() => [...document.querySelectorAll('.sd-rb-chip')].map(c => (c.classList.contains('is-locked') ? 'L' : c.classList.contains('is-new') ? 'N' : 'o')).join(''));
+  ok(await dialog() === null, 'L1: no rules dialog – the guide explains instead');
+  const tut = () => p.evaluate(() => { const t = SquishDoku.tutorial; return { active: t.active, blocking: t.blocking, step: t.step, text: document.querySelector('.sd-tut-text').textContent, kicker: document.querySelector('.sd-tut-kicker').textContent, next: !document.getElementById('tut-next').hidden, marks: document.querySelectorAll('.sd-tut-mark').length, hand: document.querySelector('.sd-tut-hand').classList.contains('is-on') }; });
+  const bar = () => p.evaluate(() => [...document.querySelectorAll('.sd-rb-chip')].map(c => (c.classList.contains('is-locked') || c.disabled ? 'L' : 'o')).join(''));
   let t = await tut(); s = await st();
-  ok(s.id === 1 && s.N === 4 && t.active && t.next && /Jede Farbe/.test(t.text), `L1 tutorial 4x4 opens with the colour rule ("${t.text.slice(0, 40)}…")`);
-  ok(await bar() === 'NLL', 'L1 rules bar: only rule 1 open (pulsing), rules 2+3 still locked');
-  ok(!(await p.isVisible('#btn-adtip')) && !(await p.isVisible('#hint')), 'tutorial: no ad button, no hint line (bubble instead)');
-  ok(await noScroll(), 'tutorial: no scrolling');
+  ok(s.id === 1 && s.N === 4 && t.active && t.next && /Farbe/.test(t.text) && /berühren sich nie/.test(t.text) && /Mission 1/.test(t.kicker), `L1 mission 4x4 opens with all rules ("${t.text.slice(0, 50)}…")`);
+  ok(await bar() === 'ooo', 'rules bar: all three rules open from the start');
+  ok(!(await p.isVisible('#btn-adtip')) && !(await p.isVisible('#hint')), 'guided mission: no ad button, no hint line (bubble instead)');
+  ok(await noScroll(), 'guided mission: no scrolling');
   ok(await p.evaluate(() => { const b = document.getElementById('tut-bubble').getBoundingClientRect(), z = SquishDoku.board.boardRect(), r = document.getElementById('rulesbar').getBoundingClientRect(), st = document.querySelector('.sd-status').getBoundingClientRect(); return b.top >= z.top + z.height - 2 && b.bottom <= innerHeight && r.top >= st.bottom - 1 && r.bottom <= z.top + 2; }), 'layout: status → rules bar → board → speech bubble, all on screen');
-  await shot('03-tut1-intro');
-  // blocking intro: the board ignores input until "Weiter"
+  await shot('03-m1-intro');
   await hold(3, 1); s = await st(); ok(s.glow === 0, 'intro bubble: board waits for "Weiter"');
   await p.click('#tut-next'); await sleep(500);
   // play a tutorial level by following tutorial.step; returns the steps seen
@@ -81,12 +81,17 @@ async function run(vp, dpr) {
       const key = t.step.type + ':' + (t.step.rule || t.step.kind);
       if (!seen.includes(key) && shotAt[key]) await shot(shotAt[key]);
       if (!seen.length || !seen.includes(key)) ok(t.hand && t.marks >= 1, `L${lvl} ${key}: hand + highlight shown ("${t.text.slice(0, 48)}…")`);
+      if (key === 'pop:claim' && !seen.includes(key)) {
+        const m = await p.evaluate(() => ({ band: document.querySelectorAll('.sd-tut-mark.is-band').length, claim: document.querySelectorAll('.sd-tut-mark.is-claim').length, pop: document.querySelectorAll('.sd-tut-mark.is-pop').length }));
+        ok(m.band === 1 && m.claim === t.step.area.length && m.pop === t.step.cells.length, `L${lvl} claim: the line (band), the colour's squishes (gold) and the squishes to wipe are marked (${JSON.stringify(m)})`);
+        ok(/nur in dieser (Reihe|Spalte)/.test(t.text) && /muss/.test(t.text) && /keiner/.test(t.text), `L${lvl} claim: the bubble explains why ("${t.text}")`);
+      }
       seen.push(key);
       if (n === wrongAt) { // deliberately hold a wrong squish → heart lost + "Autsch" bubble
         s = await st(); let w = null; for (let r = 0; r < s.N && !w; r++) for (let c = 0; c < s.N; c++) if (s.grid[r][c] === 'normal' && s.sol[r] !== c) { w = [r, c]; break; }
         await hold(...w); await sleep(400); const s3 = await st(), t3 = await tut();
         ok(s3.hearts === 2 && /Herz/.test(t3.text), `L${lvl}: wrong squish costs a heart, bubble explains it ("${t3.text.slice(0, 30)}…")`);
-        await shot('06-tut3-ouch'); await sleep(2400);
+        await shot('06-m1-ouch'); await sleep(2400);
       }
       if (t.step.type === 'hold') { await hold(...t.step.cell); await sleep(500); }
       else if (t.step.path.length === 1) { await tapCell(...t.step.path[0]); await sleep(500); }
@@ -95,33 +100,26 @@ async function run(vp, dpr) {
     }
     return seen;
   }
-  let seen = await followTutorial(1, { shotAt: { 'hold:reg': '04-tut1-hold' } });
-  ok(seen[0] === 'hold:reg' && seen.includes('hold:guide'), `L1 steps: ${[...new Set(seen)].join(', ')}`);
+  let seen = await followTutorial(1, { wrongAt: 1, shotAt: { intro: '04-m1-hearts', 'pop:touch': '05-m1-touch' } });
+  ok(seen.includes('hold:reg') && seen.includes('pop:touch') && seen.includes('pop:known'), `L1 steps: ${[...new Set(seen)].join(', ')}`);
   await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 15000 }); await sleep(1300);
-  ok(await dialog() === 'win' && /Tutorial 1\/3/.test(await p.textContent('#dialog')), 'L1 tutorial won → "Tutorial 1/3 geschafft"');
+  ok(await dialog() === 'win' && /Mission 1 geschafft/.test(await p.textContent('#dialog')), 'L1 won → "Mission 1 geschafft"');
   await p.click('#btn-next'); await sleep(1500);
   s = await st(); t = await tut();
-  ok(s.id === 2 && t.active && /Reihe/.test(t.text) && await bar() === 'oNL', 'L2 tutorial: row/column rule, rules bar opens rule 2');
-  ok(await p.evaluate(() => SquishDoku.state.state[1][1] === 'popped' && SquishDoku.board.stats.popped === 2), 'L2: two squishes start as empty glass');
-  seen = await followTutorial(2, { shotAt: { 'pop:row': '05-tut2-swipe' } });
-  ok(seen.includes('pop:row') && seen.includes('pop:col') && (seen.includes('hold:row') || seen.includes('hold:col')), `L2 steps: ${[...new Set(seen)].join(', ')}`);
+  ok(s.id === 2 && s.N === 5 && t.active && /Profi-Trick/.test(t.text) && /Mission 2/.test(t.kicker), `L2 mission: Profi-Trick intro ("${t.text.slice(0, 50)}…")`);
+  ok(!(await p.isVisible('#btn-adtip')), 'L2: no ad button');
+  seen = await followTutorial(2, { shotAt: { 'pop:claim': '06-m2-claim', 'hold:reg': '07-m2-hold' } });
+  ok(seen[0] === 'intro' && seen[1] === 'pop:claim' && seen.filter(k => k === 'pop:claim').length >= 2, `L2 steps: ${seen.join(', ')}`);
   await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 15000 }); await sleep(1300);
-  ok(await dialog() === 'win', 'L2 tutorial won');
+  ok(await dialog() === 'win' && /Mission 2 geschafft/.test(await p.textContent('#dialog')) && (await st()).hearts === 3, `L2 won → "Mission 2 geschafft" with 3 hearts (${(await st()).hearts})`);
+  await shot('07-m2-win');
+  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 0), 'guided missions do not count for ads');
   await p.click('#btn-next'); await sleep(1500);
-  s = await st(); t = await tut();
-  ok(s.id === 3 && /berühren/.test(t.text) && await bar() === 'ooN', 'L3 tutorial: no-touching rule, all three rules in the bar');
-  seen = await followTutorial(3, { wrongAt: 1, shotAt: { intro: '05-tut3-intro', 'pop:touch': '06-tut3-touch' } });
-  ok(seen.includes('pop:touch') && seen.includes('pop:known'), `L3 steps: ${[...new Set(seen)].join(', ')}`);
-  await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 15000 }); await sleep(1600);
-  ok(await dialog() === 'tutorial-done' && /Du kannst/.test(await p.textContent('#dialog')), 'after L3: "Du kannst’s!" screen');
-  await shot('07-tut-done');
-  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 0), 'tutorial wins do not count for ads');
-  await p.click('#btn-tut-done'); await sleep(1500);
 
-  // ---------- Level 4: first regular 5x5 (gestures) ----------
-  await shot('08-L4');
+  // ---------- Level 3: first regular 5x5 (gestures) ----------
+  await shot('08-L3');
   ok(await noScroll(), 'game: no scrolling');
-  ok(await p.isVisible('#btn-adtip') && !(await p.evaluate(() => SquishDoku.tutorial.active)), 'L4: tutorial off, ad button back');
+  ok(await p.isVisible('#btn-adtip') && !(await p.evaluate(() => SquishDoku.tutorial.active)), 'L3: guide off, ad button back');
   // layout: board inside viewport, between rules bar and hint
   const lay = await p.evaluate(() => { const fr = SquishDoku.board.frameRect(), st = document.getElementById('rulesbar').getBoundingClientRect(), hint = document.getElementById('hint').getBoundingClientRect(); return { fr, st: st.bottom, hint: hint.top, w: innerWidth, h: innerHeight }; });
   ok(lay.fr.left >= 0 && lay.fr.left + lay.fr.width <= lay.w + .5, `board fits horizontally (${lay.fr.left.toFixed(0)}..${(lay.fr.left + lay.fr.width).toFixed(0)} of ${lay.w})`);
@@ -129,15 +127,15 @@ async function run(vp, dpr) {
   // rules bar: tap a chip → its mini demo + explanation; collapse/expand is remembered
   await p.click('.sd-rb-chip[data-rule="touch"]'); await sleep(250);
   ok(await p.evaluate(() => document.querySelector('.sd-rb-chip[data-rule="touch"]').classList.contains('is-demo') && /schräg/.test(document.getElementById('hint').textContent)), 'rules bar: tapping a chip replays its demo and explains the rule');
-  await shot('08-L4-chip-demo');
+  await shot('08-L3-chip-demo');
   await p.click('.sd-rb-toggle'); await sleep(300);
   ok(await p.evaluate(() => document.getElementById('rulesbar').classList.contains('is-collapsed') && JSON.parse(localStorage.getItem('squishdoku-v1')).rulesCollapsed === true), 'rules bar collapses (saved)');
-  await shot('08-L4-collapsed');
+  await shot('08-L3-collapsed');
   await p.click('.sd-rb-toggle'); await sleep(300);
   ok(await p.evaluate(() => !document.getElementById('rulesbar').classList.contains('is-collapsed')), 'rules bar expands again');
 
   s = await st();
-  ok(s.id === 4 && s.N === 5 && s.hearts === 3, 'L4 is 5x5 with 3 hearts');
+  ok(s.id === 3 && s.N === 5 && s.hearts === 3, 'L3 is 5x5 with 3 hearts');
   // 1) hold to glow
   const r0 = 0, c0 = s.sol[0];
   await hold(r0, c0); await sleep(1400);
@@ -146,7 +144,7 @@ async function run(vp, dpr) {
   let untouched = true;
   for (let r = 0; r < s.N; r++) for (let c = 0; c < s.N; c++) if (!(r === r0 && c === c0)) untouched = untouched && s.grid[r][c] === 'normal';
   ok(untouched, 'no auto-pop: every other squish stays untouched after a glow');
-  await shot('09-L4-glow');
+  await shot('09-L3-glow');
   // 2) swipe over non-solution squishes -> pop ; across a solution squish -> wobble + heart
   const row = 2, sc = s.sol[row];
   const path = []; for (let c = 0; c < s.N; c++) if (s.grid[row][c] === 'normal') path.push([row, c]);
@@ -158,7 +156,7 @@ async function run(vp, dpr) {
   ok(s2.grid[row][sc] === 'normal', 'swipe does NOT pop the squish that must glow');
   ok(s2.hearts === 2, `wrong swipe costs a heart (hearts ${s2.hearts})`);
   ok(path.filter(([r, c]) => c !== sc).every(([r, c]) => s2.grid[r][c] === 'popped'), 'swipe pops the other squishes');
-  await shot('10-L4-swipe');
+  await shot('10-L3-swipe');
   // 3) tap restores a popped squish, tap again pops it
   const pc = path.find(([r, c]) => c !== sc);
   await tapCell(pc[0], pc[1]); await sleep(400);
@@ -175,24 +173,24 @@ async function run(vp, dpr) {
   let wrong = null; for (let r = 0; r < s.N && !wrong; r++) for (let c = 0; c < s.N; c++) if (s.grid[r][c] === 'normal' && s.sol[r] !== c) { wrong = [r, c]; break; }
   if (wrong) { await hold(...wrong); await sleep(500); s = await st(); ok(s.hearts === 1 && s.grid[wrong[0]][wrong[1]] === 'normal', 'hold on wrong squish -> wobble + heart lost'); }
   else ok(true, '(no wrong squish left to hold)');
-  // 6) finish L4
+  // 6) finish L3
   for (let r = 0; r < s.N; r++) if ((await st()).grid[r][s.sol[r]] !== 'glow') { await hold(r, s.sol[r]); await sleep(250); }
   await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 15000 });
   await sleep(1500); await shot('11-win');
-  ok(await dialog() === 'win', 'L4 won -> win screen');
+  ok(await dialog() === 'win', 'L3 won -> win screen');
   ok(await p.locator('.sd-stars i.on').count() === 1, 'win screen shows stars = hearts left (1)');
   const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-v1')));
-  ok(saved.unlocked === 5 && saved.stars[4] === 1 && saved.stars[3] >= 1, 'progress saved in localStorage');
+  ok(saved.v === 2 && saved.unlocked === 4 && saved.stars[3] === 1 && saved.stars[2] === 3 && saved.stars[1] >= 1, `progress saved in localStorage (missions count) ${JSON.stringify(saved.stars)}`);
   await p.click('#btn-next'); await sleep(1500);
-  // 7) L5-L8: solve by holds only
-  for (let lvl = 5; lvl <= 8; lvl++) {
+  // 7) L4-L7: solve by holds only
+  for (let lvl = 4; lvl <= 7; lvl++) {
     s = await st();
     ok(s.id === lvl, `level ${lvl} started (${s.N}x${s.N})`);
     for (let r = 0; r < s.N; r++) { await hold(r, s.sol[r]); await sleep(200); }
     await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 });
     await sleep(1600);
     ok(await dialog() === 'win' && (await st()).hearts === 3, `level ${lvl} won with 3 hearts`);
-    if (lvl < 8) await p.click('#btn-next'), await sleep(1500);
+    if (lvl < 7) await p.click('#btn-next'), await sleep(1500);
   }
   // 7b) unlock everything, pick an 8x8 (L41) and the final level (L50) from the scrolling list and win them
   await p.click('#btn-to-levels'); await sleep(700);
@@ -223,7 +221,7 @@ async function run(vp, dpr) {
   // 8) lose flow
   await p.click('#btn-to-levels'); await sleep(700);
   ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 0, 'all levels unlocked');
-  ok((await p.textContent('.sd-lv-progress')).startsWith('10 / 50'), 'level select shows solved count');
+  ok((await p.textContent('.sd-lv-progress')).startsWith('9 / 50'), 'level select shows solved count');
   await p.click('[data-level="5"]'); await sleep(1500);
   s = await st(); let n = 0;
   for (let r = 0; r < s.N && n < 3; r++) for (let c = 0; c < s.N && n < 3; c++) if (s.sol[r] !== c && Math.abs(s.sol[r] - c) > 0) { await hold(r, c); n++; await sleep(150); break; }
@@ -268,24 +266,31 @@ async function run(vp, dpr) {
   ok(await p.isVisible('#ad-interstitial'), 'ads: interstitial after every 5th win');
   await p.waitForFunction(() => !document.getElementById('ad-continue').disabled, null, { timeout: 8000 }); await p.click('#ad-continue'); await sleep(1500);
   ok((await st()).id === 8 && !(await p.evaluate(() => SquishDoku.adPacing.interstitialDue)), 'ads: level starts after the interstitial, counter cleared');
-  // 12) tutorial can be replayed from the menu (and never shows ads, even when one is due)
+  // 12) the guided missions can be replayed from the level list and never show ads, even when one is due
   for (let lvl = 8; lvl <= 12; lvl++) { if (lvl > 8) { await p.evaluate(l => SquishDoku.startLevel(l), lvl); await sleep(1500); }
     const t = await st(); for (let r = 0; r < t.N; r++) { await hold(r, t.sol[r]); await sleep(200); }
     await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 }); await sleep(1200); }
   ok(await p.evaluate(() => SquishDoku.adPacing.interstitialDue), 'ads: 15 wins -> interstitial due');
-  await p.evaluate(() => SquishDoku.showHome('home')); await sleep(500);
-  await p.click('#btn-tutorial'); await sleep(1500);
-  ok(!(await p.isVisible('#ad-interstitial')) && (await st()).id === 1 && await p.evaluate(() => SquishDoku.tutorial.active), 'menu "Tutorial" replays tutorial level 1 without an ad');
+  await p.evaluate(() => SquishDoku.showHome('levels')); await sleep(600);
+  await p.locator('[data-level="2"]').scrollIntoViewIfNeeded(); await p.click('[data-level="2"]'); await sleep(1500);
+  ok(!(await p.isVisible('#ad-interstitial')) && (await st()).id === 2 && await p.evaluate(() => SquishDoku.tutorial.active), 'mission 2 replays from the level list with its guide, without an ad');
   await p.evaluate(() => SquishDoku.showHome('rules')); await sleep(500);
-  ok(await p.isVisible('#btn-rules-tutorial'), 'rules screen offers "Tutorial spielen"');
+  ok(!(await p.isVisible('#btn-rules-tutorial')) && !/Tutorial/.test(await p.textContent('#home-screen')), 'rules screen: no "Tutorial spielen" any more');
+  // 13) saved progress from before the missions (old tutorial numbering) is migrated
+  await p.evaluate(() => localStorage.setItem('squishdoku-v1', JSON.stringify({ unlocked: 6, stars: { 1: 3, 2: 3, 3: 2, 4: 1, 5: 3 }, revealed: { 5: 2 }, seenRules: true, rulesCollapsed: true })));
+  await p.reload(); await p.waitForFunction(() => document.documentElement.dataset.ready === '1');
+  const mig = await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-v1')));
+  ok(mig.v === 2 && mig.unlocked === 5 && JSON.stringify(mig.stars) === JSON.stringify({ 1: 2, 3: 1, 4: 3 }) && mig.revealed[4] === 2 && mig.rulesCollapsed === true, `old save migrated: old L3 → L1, old L4-5 → L3-4, unlocked 6 → 5 (${JSON.stringify(mig)})`);
+  await p.evaluate(() => SquishDoku.showHome('levels')); await sleep(600);
+  ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 45, 'migrated save: L1-5 open (incl. the new mission 2), L6-50 locked');
   ok(errors.length === 0, 'no console errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   if (warnings.length) console.log('  (warnings: ' + [...new Set(warnings)].join(' | ') + ')');
   await b.close();
 }
 (async () => {
   const dpr = SHOTS ? 2 : 1;
-  await run({ width: 390, height: 844 }, dpr);
-  await run({ width: 375, height: 667 }, dpr);
+  if (process.env.VP !== 'se') await run({ width: 390, height: 844 }, dpr);
+  if (process.env.VP !== 'pro') await run({ width: 375, height: 667 }, dpr);
   console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED');
   process.exit(failures ? 1 : 0);
 })();

@@ -16,7 +16,19 @@ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
 // ---------- Speicher ----------
-function load(){try{return {unlocked:1,stars:{},seenRules:false,revealed:{},rulesCollapsed:false,...JSON.parse(localStorage.getItem(STORE)||'{}')};}catch{return {unlocked:1,stars:{},seenRules:false,revealed:{}};}}
+// v2 (missions): the separate tutorial is gone. Old saves: old L1–2 dropped, old L3 → L1, old L4–10 → L3–9,
+// L11+ unchanged (tools/missions.js). New L2 and L10 just appear unlocked if you were past them.
+const mapOldId=id=>id<=2?0:id===3?1:id<=10?id-1:id;
+function migrate(d){
+  if(d.v>=2)return d;
+  const remap=o=>{const n={};for(const [k,v] of Object.entries(o||{})){const id=mapOldId(+k);if(id)n[id]=Math.max(n[id]||0,v);}return n;};
+  const u=+d.unlocked||1;
+  return {...d,v:2,stars:remap(d.stars),revealed:remap(d.revealed),unlocked:u<=3?1:u<=10?u-1:u};
+}
+function load(){
+  const base={v:2,unlocked:1,stars:{},seenRules:false,revealed:{},rulesCollapsed:false};
+  try{const raw=localStorage.getItem(STORE);if(!raw)return base;const o=JSON.parse(raw),d=migrate(o);if(d!==o)try{localStorage.setItem(STORE,JSON.stringify(d));}catch{}return {...base,...d};}catch{return base;}
+}
 let store=load();
 function save(){try{localStorage.setItem(STORE,JSON.stringify(store));}catch{}}
 const totalStars=()=>Object.values(store.stars).reduce((a,b)=>a+b,0);
@@ -91,7 +103,7 @@ const HINTS=[
 ];
 // Meilenstein-Tipps für die 50er-Rampe; dazwischen wechseln die Grundregeln
 const MILESTONES={
-  4:'Jetzt allein: Jedes Level hier hat einen <b>Einzel-Squish</b> – eine Farbe aus nur einem Feld. Fang dort an!',
+  3:'Jetzt allein: Jedes Level hier hat einen <b>Einzel-Squish</b> – eine Farbe aus nur einem Feld. Fang dort an!',
   11:'Ab jetzt gibt es <b>kein Einzelfeld</b> mehr: Such eine kleine Farbe, die nur in <b>einer Reihe</b> liegt.',
   15:'Neu: <b>6×6</b>! Liegt eine Farbe nur in einer Spalte, gehört diese Spalte ihr.',
   21:'Prüf auch: Würde ein Squish hier eine Farbe <b>komplett blockieren</b>? Dann kann er nicht leuchten.',
@@ -125,7 +137,6 @@ function showHome(screen='home'){
       button({label:played?`Level ${n} spielen`:'Spielen',icon:'play',color:'aw-green',size:'aw-big',id:'btn-play',action:()=>startLevel(n)}),
       button({label:'Levels',icon:'grid',color:'aw-blue',id:'btn-levels',action:()=>showHome('levels')}),
       button({label:'Regeln',icon:'cap',color:'aw-purple',id:'btn-rules',action:()=>showHome('rules')}),
-      button({label:'Tutorial',icon:'flag',color:'aw-orange',size:'aw-small',id:'btn-tutorial',action:()=>startLevel(1)}),
     ]);
   }else if(screen==='levels'){
     const grid=document.createElement('div');grid.className='sd-levels';
@@ -147,7 +158,7 @@ function showHome(screen='home'){
     requestAnimationFrame(()=>{const cur=grid.querySelector(`[data-level="${nextLevel()}"]`);if(cur)scroller.scrollTop=Math.max(0,cur.offsetTop-scroller.clientHeight/2+cur.offsetHeight/2);});
     setItems([ribbon('Levels','aw-r-blue'),card,button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',id:'btn-home',action:()=>showHome('home')})]);
   }else if(screen==='rules'){
-    setItems([ribbon('So geht’s','aw-r-purple'),rulesCard(),button({label:'Tutorial spielen',icon:'flag',color:'aw-orange',id:'btn-rules-tutorial',action:()=>startLevel(1)}),button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',action:()=>showHome('home')})]);
+    setItems([ribbon('So geht’s','aw-r-purple'),rulesCard(),button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',action:()=>showHome('home')})]);
   }
 }
 function rulesCard(){
@@ -186,8 +197,8 @@ let starting=false;
 // Zwischenwerbung nur zwischen zwei Leveln: fällig nach jedem 5. Sieg, gezeigt beim Start des nächsten Levels.
 async function startLevel(id){
   if(starting)return;
-  // Im Tutorial (Level 1–3) gibt es keine Werbung
-  if(!levels[id-1]?.tutorial&&adPacing.takeInterstitial()){starting=true;closeDialog();try{await adUI.interstitial();}catch{}finally{starting=false;}}
+  // In den Missionen mit Anleitung (Level 1–2) gibt es keine Werbung
+  if(!levels[id-1]?.guide&&adPacing.takeInterstitial()){starting=true;closeDialog();try{await adUI.interstitial();}catch{}finally{starting=false;}}
   beginLevel(id);
 }
 function beginLevel(id){
@@ -204,14 +215,14 @@ function beginLevel(id){
   ensureBoard();
   S={L,id,N:L.N,state:Array.from({length:L.N},()=>Array(L.N).fill('normal')),hearts:HEARTS,glow:0,done:false,locked:false};
   board.build(L,g=>L.colors[g]);
-  for(const [r,c] of L.prePopped||[]){S.state[r][c]='popped';board.vanish(r,c);} // Tutorial 2: schon leeres Glas
+  for(const [r,c] of L.prePopped||[]){S.state[r][c]='popped';board.vanish(r,c);} // optional: schon leeres Glas
   S.fixed=new Set((L.prePopped||[]).map(([r,c])=>r*L.N+c));
   $('lvl-num').textContent=id;$('lvl-name').textContent=L.label;
   $('glow-total').textContent=L.N;
   $('hint').innerHTML=hintFor(id);clearTimeout(tipTimer);
   rulesBar.setLevel(L);
   renderHearts();renderProgress();renderAdTip();
-  if(L.tutorial)tut.start(S);else tut.stop();
+  if(L.guide)tut.start(S);else tut.stop();
   requestAnimationFrame(()=>requestAnimationFrame(placePlate));setTimeout(placePlate,120);
 }
 function renderHearts(){
@@ -222,9 +233,9 @@ function renderProgress(){$('glow-count').textContent=S.glow;renderAdTip();}
 // Tipp per Werbung: beliebig oft je Level, jeder Clip enthüllt einen weiteren richtigen Squish,
 // bis alle leuchten. Gemerkt wird je Level, wie viele Tipps genutzt wurden.
 const adTip=$('btn-adtip');adTip.innerHTML=`<i>${AD_ICON_SVG}</i><span>Tipp per Werbung</span>`;
-function renderAdTip(){if(!S)return;const off=S.locked||S.glow>=S.N||!!S.L.tutorial;adTip.disabled=off;adTip.setAttribute('aria-disabled',String(off));}
+function renderAdTip(){if(!S)return;const off=S.locked||S.glow>=S.N||!!S.L.guide;adTip.disabled=off;adTip.setAttribute('aria-disabled',String(off));}
 async function useAdTip(){
-  if(!S||S.locked||S.glow>=S.N||adUI.isOpen||S.L.tutorial)return;
+  if(!S||S.locked||S.glow>=S.N||adUI.isOpen||S.L.guide)return;
   tap();const s0=S,left=S.N-S.glow;
   const ok=await adUI.offerReveal({left});
   if(!ok||S!==s0||S.locked||S.glow>=S.N)return;
@@ -343,32 +354,21 @@ function bindInput(){
 // ---------- Sieg / Niederlage ----------
 async function win(){
   const id=S.id,stars=S.hearts;
-  if(!S.L.tutorial)adPacing.levelWon(); // Werbe-Takt wie Squish Attack: jede 5. gewonnene Runde (Tutorial zählt nicht)
+  if(!S.L.guide)adPacing.levelWon(); // Werbe-Takt wie Squish Attack: jede 5. gewonnene Runde (Missionen mit Anleitung zählen nicht)
   store.stars[id]=Math.max(store.stars[id]||0,stars);store.unlocked=Math.max(store.unlocked,Math.min(levels.length,id+1));save();
   sfx('record');buzz('big');
   // Jubel-Welle über die leuchtenden Squishs
   for(let r=0;r<S.N;r++){const c=S.L.solution[r];setTimeout(()=>board.wobble(r,c,.8),r*70);}
   const rect=board.boardRect();confetti.burst(rect,{reduced:reduceMotion.matches});
   await wait(1100);
-  if(id===3&&S.L.tutorial){showTutorialDone(stars);return;}
   const last=id===levels.length;
   const items=[ribbon(last?'Alles geschafft!':'Geschafft!','aw-r-green')];
   const st=document.createElement('div');st.className='sd-stars';st.innerHTML=[0,1,2].map(()=>`<i>${starIcon()}</i>`).join('');items.push(st);
-  const p=document.createElement('p');p.textContent=S.L.tutorial?`Tutorial ${id}/3 geschafft – weiter zur nächsten Regel!`:last?`Alle ${levels.length} Level gelöst – du bist ein Squish-Profi!`:`Level ${id} gelöst${stars===3?' – ohne Fehler!':'.'}`;items.push(p);
+  const p=document.createElement('p');p.textContent=S.L.guide==='touch'?'Mission 1 geschafft – du kennst jetzt alle Regeln!':S.L.guide==='claim'?'Mission 2 geschafft – den Reihen-Trick brauchst du ab jetzt öfter!':last?`Alle ${levels.length} Level gelöst – du bist ein Squish-Profi!`:`Level ${id} gelöst${stars===3?' – ohne Fehler!':'.'}`;items.push(p);
   if(!last)items.push(button({label:'Weiter',icon:'play',color:'aw-green',size:'aw-big',id:'btn-next',action:()=>startLevel(id+1)}));
   items.push(button({label:'Nochmal',icon:'retry',color:'aw-orange',id:'btn-again',action:()=>startLevel(id)}));
   items.push(button({label:'Levels',icon:'grid',color:'aw-slate',size:'aw-small',id:'btn-to-levels',action:()=>showHome('levels')}));
   openDialog(items,'win');
-  [...st.children].forEach((s,i)=>{if(i<stars)setTimeout(()=>{s.classList.add('on');sfx('star',i+1);buzz(i===2?'big':'merge');},380+i*280);});
-}
-// Nach Tutorial 3: kurzer „Du kannst's!“-Bildschirm, dann geht es mit Level 4 allein weiter
-function showTutorialDone(stars){
-  const st=document.createElement('div');st.className='sd-stars';st.innerHTML=[0,1,2].map(()=>`<i>${starIcon()}</i>`).join('');
-  const p=document.createElement('p');p.innerHTML='Du kennst jetzt alle drei Regeln. Ab jetzt knobelst du <b>allein</b> – die Regeln stehen immer <b>über dem Brett</b>.';
-  const chips=document.createElement('div');chips.className='sd-done-rules';chips.innerHTML=['1 Leuchter pro Farbe','1 pro Reihe &amp; Spalte','Leuchter berühren sich nie'].map(t=>`<span>${t}</span>`).join('');
-  openDialog([ribbon('Du kannst’s!','aw-r-green'),st,p,chips,
-    button({label:'Los geht’s',icon:'play',color:'aw-green',size:'aw-big',id:'btn-tut-done',action:()=>startLevel(4)}),
-    button({label:'Levels',icon:'grid',color:'aw-slate',size:'aw-small',action:()=>showHome('levels')})],'tutorial-done');
   [...st.children].forEach((s,i)=>{if(i<stars)setTimeout(()=>{s.classList.add('on');sfx('star',i+1);buzz(i===2?'big':'merge');},380+i*280);});
 }
 function showLose(){
