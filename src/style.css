@@ -2,6 +2,20 @@
    (vendor/squish-attack/game/autumn-ui.css + comic-ui.css). Navy & Gold, Fredoka. */
 :root{--sd-gold:#ffd25a;--sd-ink:#140a10;--sd-navy:#0e1633;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);}
 html,body{margin:0;height:100%;overflow:hidden;background:#0e1633;overscroll-behavior:none;}
+/* the page never scrolls or zooms; double-tap zoom off everywhere (no tap delay), board keeps touch-action:none */
+html{touch-action:manipulation;}
+body{position:fixed;inset:0;width:100%;}
+/* home-screen app: size from the real screen (--app-h from main.mjs), never from a shortened layout viewport */
+html.is-standalone,html.is-standalone body{height:var(--app-h,100lvh);}
+html.is-standalone body{bottom:auto;}
+html.is-standalone .sd-game,html.is-standalone .aw-bg,html.is-standalone .aw-home,html.is-standalone .sd-veil,html.is-standalone .ad-veil,html.is-standalone .aw-confetti{bottom:auto;height:var(--app-h,100lvh);}
+/* pressed look straight from the pointerdown (iOS shows :active late or not at all) */
+.aw-btn.is-pressed:not(:disabled):not(.is-dim){transform:translateY(4px);box-shadow:inset 0 -3px 0 #0000002e,inset 0 2px 0 #ffffff66,0 1px 0 var(--e),0 4px 12px #0006;filter:brightness(1.05);}
+.aw-tile.is-pressed{transform:translateY(3px);}
+.sd-sound.is-pressed,.sd-round.is-pressed{transform:translateY(2px);}
+.ad-watch.is-pressed:not(:disabled){transform:translateY(3px);box-shadow:inset 0 2px 0 #ffffffa0,0 1px 0 #0b0a16;}
+.ad-close.is-pressed,.ad-later.is-pressed,.sd-rb-toggle.is-pressed,.sd-rb-toggle:active{transform:translateY(2px);}
+button{touch-action:manipulation;}
 body{font-family:var(--aw-comic,"Fredoka"),system-ui,sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
 .aw-bg{visibility:visible;z-index:0;}
 button{font:inherit;}
@@ -149,7 +163,7 @@ button{font:inherit;}
   background:linear-gradient(180deg,#ffd25a,#f0a21a 60%,#c97a06);box-shadow:inset 0 2px 0 #fff8,inset 0 -3px 0 #0003,0 4px 0 #14163e,0 0 14px #ffd25a55;text-shadow:0 1.5px 0 #6a3304;touch-action:manipulation;}
 .sd-adtip i{display:grid;place-items:center;width:26px;height:26px;}
 .sd-adtip i svg{width:24px;height:24px;display:block;}
-.sd-adtip:active{transform:translateX(-50%) translateY(3px);box-shadow:inset 0 2px 0 #fff8,0 1px 0 #14163e;}
+.sd-adtip:active,.sd-adtip.is-pressed:not(:disabled){transform:translateX(-50%) translateY(3px);box-shadow:inset 0 2px 0 #fff8,0 1px 0 #14163e;}
 .sd-adtip:disabled{filter:saturate(.2) brightness(.6);cursor:default;box-shadow:inset 0 2px 0 #fff4,0 3px 0 #14163e;}
 @media (max-height:700px){.sd-adtip{bottom:calc(var(--safe-b) + 50px);height:34px;font-size:13.5px;padding:0 12px 0 7px;}.sd-adtip i,.sd-adtip i svg{width:21px;height:21px;}}
 .sd-reveal{position:absolute;width:var(--s);height:var(--s);transform:translate(-50%,-50%);pointer-events:none;z-index:5;}
@@ -167,7 +181,7 @@ button{font:inherit;}
 .sd-rb-chip{position:relative;display:flex;align-items:center;gap:5px;height:44px;padding:0 6px 0 4px;border:2.5px solid var(--sd-ink,#140a10);border-radius:14px;cursor:pointer;touch-action:manipulation;
   background:linear-gradient(180deg,#1f2c66,#141d48 70%,#0f1638);box-shadow:inset 0 1.5px 0 #ffffff26,0 3px 0 #0b0f2a,0 0 0 1.5px #ffc23d66;color:#fff7e8;text-align:left;
   animation:sd-rb-in .45s cubic-bezier(.2,.9,.3,1.3) both;animation-delay:calc(var(--i) * 70ms);}
-.sd-rb-chip:active{transform:translateY(2px);box-shadow:inset 0 1.5px 0 #ffffff26,0 1px 0 #0b0f2a;}
+.sd-rb-chip:active,.sd-rb-chip.is-pressed:not(:disabled){transform:translateY(2px);box-shadow:inset 0 1.5px 0 #ffffff26,0 1px 0 #0b0f2a;}
 .sd-rb-txt{font:700 11.5px/1.08 var(--aw-comic);letter-spacing:.01em;text-shadow:0 1.5px 0 #0008;}
 .sd-rb-chip.is-new{box-shadow:inset 0 1.5px 0 #ffffff26,0 3px 0 #0b0f2a,0 0 0 2.5px #ffd23f,0 0 14px #ffd23f99;animation:sd-rb-in .45s cubic-bezier(.2,.9,.3,1.3) both,sd-rb-new 1.6s ease-in-out .6s infinite;}
 .sd-rb-chip.is-new .sd-rb-txt{color:var(--sd-gold);}
@@ -235,7 +249,7 @@ button{font:inherit;}
 .sd-tut-next{flex:none;height:36px;padding:0 14px;border:2.5px solid var(--sd-ink,#140a10);border-radius:99px;cursor:pointer;font:700 15px/1 var(--aw-comic);color:#fff;text-shadow:0 1.5px 0 #6a3304;
   background:linear-gradient(180deg,#9df25a,#38b81c);box-shadow:inset 0 2px 0 #fff8,0 3px 0 #14163e;touch-action:manipulation;}
 .sd-tut-next[hidden]{display:none;}
-.sd-tut-next:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #fff8,0 1px 0 #14163e;}
+.sd-tut-next:active,.sd-tut-next.is-pressed{transform:translateY(2px);box-shadow:inset 0 2px 0 #fff8,0 1px 0 #14163e;}
 @media (max-height:700px){.sd-tut-bubble{bottom:calc(var(--safe-b) + 8px);padding:7px 10px 8px;}.sd-tut-text{font-size:13.5px;}.sd-tut-next{height:32px;font-size:14px;}}
 .sd-done-rules{display:flex;flex-direction:column;gap:6px;}
 .sd-done-rules span{padding:7px 10px;border-radius:12px;border:2px solid #ffc23d88;background:#0f1638;font:700 14px/1.2 var(--aw-comic);color:#ffe08a;text-align:center;}

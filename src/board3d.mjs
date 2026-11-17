@@ -29,6 +29,16 @@ export function createBoard3D(host){
   if(!lightingApplied){
     applyNeonGlassLighting(P,HUD_PARAMETERS);applyGelSoftness(P,HUD_PARAMETERS);
     P.contactSolver=createContactSolver(P);
+    // SquishDoku squishes carry no digits: the stock label factory builds and re-curves a subdivided
+    // 3D text mesh per squish (by far the slowest part of a level build, and its vertices were deformed
+    // every animated frame although hidden). An invisible one-triangle stand-in keeps the interface.
+    HUD_PARAMETERS.labelFactory=()=>{
+      const g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.Float32BufferAttribute([0,.01,0,0,.01,0,0,.01,0],3));
+      g.setAttribute('normal',new THREE.Float32BufferAttribute([0,1,0,0,1,0,0,1,0],3));
+      const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({visible:false,transparent:true}));
+      m.userData.rest=g.attributes.position.array.slice();m.name='Editable_number';m.castShadow=false;m.visible=false;return m;
+    };
     // Camera: Squish Attack's own view (PARAMETERS.camera + clean-screen's fitStoneBoard), unchanged.
     lightingApplied=true;
   }
@@ -41,6 +51,10 @@ export function createBoard3D(host){
   graphics.renderer.setSize=(...a)=>{setSize(...a);requestFrame({shadows:true});};
   const setting=installCleanScreen(graphics,host,{direct:true});
   const scene=graphics.scene,camera=graphics.camera;
+  // installCleanScreen re-fits the camera from its own ResizeObserver; this one is created after it,
+  // so it runs after the re-fit and redraws: the on-demand renderer would otherwise keep showing the
+  // old picture while touches already map through the new camera.
+  const refit=new ResizeObserver(()=>requestFrame({shadows:true}));refit.observe(host);if(host.parentElement?.querySelector(':scope > .board-slot'))refit.observe(host.parentElement.querySelector(':scope > .board-slot'));
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const jobs=[];
   function ensureColor(v){if(v===9){P.colors[9]=HUD_PARAMETERS.colors[9]='#e9edf5';return;} /* white gel (8 regions) */if(v>8)P.colors[v]=HUD_PARAMETERS.colors[v]=P.colors[(v-1)%8+1];}
@@ -82,7 +96,7 @@ export function createBoard3D(host){
   }
 
   function build(level,colorOf){
-    clear();
+    const old=clear(true);
     N=level.N;pitch=P.board.pitch*5/N*SPACING;k=5/N*BODY/.96;
     for(let r=0;r<N;r++)for(let c=0;c<N;c++){
       const value=colorOf(level.regions[r].charCodeAt(c)-97);ensureColor(value);
@@ -102,6 +116,7 @@ export function createBoard3D(host){
       cells.push({r,c,value,s,halo,spark,splat,state:'normal',anim:null});
     }
     prewarm();
+    disposeCells(old);
     requestFrame({shadows:true});
   }
   // Same pre-warm as Squish Attack's graphics-adapter entry: link the squish, glow, splat and
@@ -115,28 +130,64 @@ export function createBoard3D(host){
     try{if(!warmOn){fusion.warm(true);warmOn=true;}graphics.renderer.compile(scene,camera);graphics.render(0);}catch(e){console.warn('prewarm',e);}
     finally{if(glowOn){glowOn.halo.visible=glowOn.spark.visible=glowOn.splat.visible=false;}}
   }
-  function clear(){
+  function disposeCells(list){
+    for(const cell of list){setting.removeHudShadow(cell.s);disposeGel(cell.s);scene.remove(cell.halo,cell.spark,cell.splat);cell.splat.geometry.dispose();cell.splat.material.dispose();cell.halo.geometry.dispose();cell.halo.material.dispose();cell.spark.material.dispose();}
+  }
+  // keep=true: detach the old cells but free them only after the new level is built and compiled.
+  // three.js releases a shader program with its last material, so disposing first made every
+  // level start relink all squish/glow/splat programs (the bulk of a level start on a phone).
+  function clear(keep=false){
     jobs.splice(0).forEach(j=>j.cancel?.());fusion.clear();
-    for(const cell of cells){setting.removeHudShadow(cell.s);disposeGel(cell.s);scene.remove(cell.halo,cell.spark,cell.splat);cell.splat.geometry.dispose();cell.splat.material.dispose();cell.halo.geometry.dispose();cell.halo.material.dispose();cell.spark.material.dispose();}
-    cells=[];requestFrame({shadows:true});
+    const old=cells;cells=[];
+    if(keep){for(const cell of old){setting.removeHudShadow(cell.s);cell.s.group.visible=cell.halo.visible=cell.spark.visible=cell.splat.visible=false;}}
+    else disposeCells(old);
+    requestFrame({shadows:true});
+    return old;
   }
   const cellAt=(r,c)=>cells[r*N+c];
 
   // ---------- picking / projection ----------
+  // The canvas rect is read fresh on every call (no cached rect), so rules bar folding, the tutorial
+  // bubble or an iOS viewport change can never shift the touch mapping.
   function screenRay(x,y){const rc=graphics.renderer.domElement.getBoundingClientRect();pointer.set((x-rc.left)/rc.width*2-1,-(y-rc.top)/rc.height*2+1);ray.setFromCamera(pointer,camera);}
   const pickPlane=()=>new THREE.Plane(new THREE.Vector3(0,1,0),-(P.board.floor+P.gel.height*1.1*k));
+  const glassPlane=()=>new THREE.Plane(new THREE.Vector3(0,1,0),-P.board.top);
+  const cellOfPoint=p=>{if(!p)return null;const c=Math.round(p.x/pitch+(N-1)/2),r=Math.round(p.z/pitch+(N-1)/2);return r<0||c<0||r>=N||c>=N?null:cellAt(r,c);};
+  const _hits=[],_box=new THREE.Box3(),_size=new THREE.Vector3(),_hp=new THREE.Vector3();
+  // Which squish body is visible under the finger? With the tilted camera a squish shows its top and
+  // its front side; a plane at squish-top height mapped the lower ~third of every squish to the row
+  // below. So: raycast the squish bodies (nearest wins), then their ink outline (a slightly inflated
+  // box), and only where no squish is drawn fall back to the cell footprint on the glass.
+  function bodyUnderRay(){
+    let best=null,bd=Infinity;
+    for(const cl of cells){
+      if(cl.state==='popped'||!cl.s.group.visible)continue;
+      _hits.length=0;cl.s.body.raycast(ray,_hits);
+      for(const h of _hits)if(h.distance<bd){bd=h.distance;best=cl;}
+    }
+    if(best)return best;
+    for(const cl of cells){
+      if(cl.state==='popped'||!cl.s.group.visible)continue;
+      const g=cl.s.body.geometry;if(!g.boundingBox)g.computeBoundingBox();
+      _box.copy(g.boundingBox);_box.getSize(_size);_box.expandByVector(_size.multiplyScalar(.035)).applyMatrix4(cl.s.body.matrixWorld);
+      const p=ray.ray.intersectBox(_box,_hp);if(p){const d=p.distanceTo(ray.ray.origin);if(d<bd){bd=d;best=cl;}}
+    }
+    return best;
+  }
   function pick(x,y){
-    screenRay(x,y);const p=ray.ray.intersectPlane(pickPlane(),new THREE.Vector3());if(!p)return null;
-    const c=Math.round(p.x/pitch+(N-1)/2),r=Math.round(p.z/pitch+(N-1)/2);
-    if(r<0||c<0||r>=N||c>=N)return null;
-    const local={x:p.x-(c-(N-1)/2)*pitch,z:p.z-(r-(N-1)/2)*pitch};
-    return {r,c,local,world:p};
+    screenRay(x,y);
+    const top=ray.ray.intersectPlane(pickPlane(),new THREE.Vector3());
+    const cl=bodyUnderRay()||cellOfPoint(ray.ray.intersectPlane(glassPlane(),new THREE.Vector3()));
+    if(!cl)return null;
+    const {r,c}=cl,p=top||cellPos(r,c);
+    return {r,c,local:{x:p.x-(c-(N-1)/2)*pitch,z:p.z-(r-(N-1)/2)*pitch},world:p};
   }
   function worldOf(x,y){screenRay(x,y);return ray.ray.intersectPlane(pickPlane(),new THREE.Vector3());}
-  function screenOf(r,c){
-    const v=cellPos(r,c);v.y=P.board.floor+P.gel.height*1.2*k;v.project(camera);
+  // lift: height in squish heights (1.2 = top); dz: offset toward the camera in cell pitches
+  function screenOf(r,c,lift=1.2,dz=0){
+    const v=cellPos(r,c);v.y=P.board.floor+P.gel.height*lift*k;v.z+=dz*pitch;v.project(camera);
     const rc=graphics.renderer.domElement.getBoundingClientRect();
-    const v2=cellPos(r,c+1);v2.y=v.y;v2.project(camera);
+    const v2=cellPos(r,c+1);v2.y=P.board.floor+P.gel.height*lift*k;v2.z+=dz*pitch;v2.project(camera);
     return {x:rc.left+(v.x+1)/2*rc.width,y:rc.top+(1-v.y)/2*rc.height,size:Math.abs(v2.x-v.x)/2*rc.width};
   }
   // screen rect of the chrome frame (outer edge) for the CSS glass plate under the canvas
@@ -228,7 +279,8 @@ export function createBoard3D(host){
         wobble(cl.s,.5);
       }else{cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;requestFrame({shadows:true});cl.halo.visible=false;cl.spark.visible=false;cl.halo.material.opacity=0;wobble(cl.s,.4);}
     },
-    dispose(){clear();cancelAnimationFrame(raf);setting.dispose?.();graphics.dispose();},
+    refresh(){requestFrame({shadows:true});},
+    dispose(){clear();refit.disconnect();cancelAnimationFrame(raf);setting.dispose?.();graphics.dispose();},
     get stats(){return {frames,cells:cells.length,popped:cells.filter(c=>c.state==='popped').length};},
   };
 

@@ -22,6 +22,8 @@ Farbfelder, genau **eine** Lösung (Brute-Force), und vollständig lösbar mit r
 ## Tests
     node tests/levels-test.js
     NODE_PATH=<playwright-core> node tests/e2e.js [--shots]
+    NODE_PATH=<playwright-core> node tests/touch-hit.js     # Touch trifft den gezeichneten Squish, kein Seitenversatz
+    NODE_PATH=<playwright-core> node tests/tap-latency.js   # Knopf-Reaktionszeit (CPU 4x gedrosselt)
 
 Wiederverwendete Squish-Attack-Teile: siehe VENDOR.md.
 

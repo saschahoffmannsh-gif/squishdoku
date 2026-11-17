@@ -39,6 +39,47 @@ let starN=0;const STAR_SVG=TILE_ICONS.star;
 // every copy needs its own gradient id: Chrome drops url(#id) fills when the first element with that id sits in a hidden screen
 const starIcon=()=>{const id='sd-star-'+(++starN);return STAR_SVG.replace(/ti-star/g,id);};
 
+// ---------- Tippen: sofortige Rückmeldung, kein Verrutschen der Seite ----------
+// iOS Safari applies :active only when a touchstart listener exists (and then late), so buttons looked
+// dead on the first tap. The pressed look now comes from the pointerdown itself and stays at least
+// ~90 ms, so even a quick tap is visible; the action still runs on the click.
+document.addEventListener('touchstart',()=>{},{passive:true});
+let pressedBtn=null,pressedAt=0;
+function unpress(){if(!pressedBtn)return;const b=pressedBtn,left=90-(performance.now()-pressedAt);pressedBtn=null;
+  if(left>0)setTimeout(()=>b.classList.remove('is-pressed'),left);else b.classList.remove('is-pressed');}
+// window capture: runs before the sound module's first-gesture AudioContext setup on the document
+addEventListener('pointerdown',e=>{const b=e.target.closest?.('button');if(!b||b.disabled)return;unpress();pressedBtn=b;pressedAt=performance.now();b.classList.add('is-pressed');},{capture:true,passive:true});
+for(const t of ['pointerup','pointercancel'])addEventListener(t,unpress,{capture:true,passive:true});
+// The page itself never scrolls: only real scroll boxes (level list, long dialogs) may pan.
+function scrollBoxOf(el){for(;el&&el!==document.body;el=el.parentElement){const o=getComputedStyle(el).overflowY;if((o==='auto'||o==='scroll')&&el.scrollHeight>el.clientHeight+1)return el;}return null;}
+document.addEventListener('touchmove',e=>{if(e.touches.length>1||!scrollBoxOf(e.target))e.preventDefault();},{passive:false});
+// iOS (above all as a home-screen app) sometimes leaves the page scrolled or the layout viewport a
+// status bar too short after returning to the app / a toolbar change: a dark strip at the bottom and
+// touches that no longer match the picture. Snap back and size from the real screen on every change.
+const standalone=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+if(standalone)document.documentElement.classList.add('is-standalone');
+let fitKey='';
+function fitViewport(){
+  let moved=false;
+  if(scrollX||scrollY){scrollTo(0,0);moved=true;}
+  for(const el of [document.scrollingElement,document.documentElement,document.body])if(el&&(el.scrollTop||el.scrollLeft)){el.scrollTop=0;el.scrollLeft=0;moved=true;}
+  if(standalone){
+    const portrait=innerHeight>=innerWidth,sw=portrait?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height),sh=portrait?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height);
+    // only when the app fills the screen width (not in an iPad split view)
+    const h=Math.abs(innerWidth-sw)<2?Math.max(innerHeight,sh):innerHeight;
+    document.documentElement.style.setProperty('--app-h',h+'px');
+  }
+  const key=`${innerWidth}x${innerHeight}:${visualViewport?.height|0}:${document.documentElement.style.getPropertyValue('--app-h')}`;
+  if(moved||key!==fitKey){fitKey=key;window.SquishDoku?.board?.refresh?.();}
+}
+let fitTimer=0;
+function fitSoon(){fitViewport();requestAnimationFrame(fitViewport);clearTimeout(fitTimer);fitTimer=setTimeout(fitViewport,350);}
+for(const t of ['resize','orientationchange','pageshow'])addEventListener(t,fitSoon);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)fitSoon();});
+visualViewport?.addEventListener('resize',fitSoon);visualViewport?.addEventListener('scroll',()=>{if(scrollY)fitSoon();});
+addEventListener('scroll',()=>{if(scrollX||scrollY)scrollTo(0,0);},{passive:true});
+fitViewport();
+
 // ---------- Level ----------
 const levels=await (await fetch('src/levels.json')).json();
 const HINTS=[
@@ -152,6 +193,14 @@ async function startLevel(id){
 function beginLevel(id){
   const L=levels[id-1];
   home.hidden=true;document.documentElement.classList.remove('home-open');game.hidden=false;closeDialog();
+  if(!board&&!beginLevel.deferred){beginLevel.deferred=true;
+    // First level of the session: WebGL setup + shader linking take a moment on a phone. Show the
+    // game screen first (the tap answers at once), build the table right after that frame is painted.
+    $('lvl-num').textContent=id;$('lvl-name').textContent=L.label;$('glow-total').textContent=L.N;$('glow-count').textContent=0;
+    $('hint').innerHTML=hintFor(id);
+    starting=true;requestAnimationFrame(()=>setTimeout(()=>{starting=false;if(!game.hidden)beginLevel(id);},0));
+    return;
+  }
   ensureBoard();
   S={L,id,N:L.N,state:Array.from({length:L.N},()=>Array(L.N).fill('normal')),hearts:HEARTS,glow:0,done:false,locked:false};
   board.build(L,g=>L.colors[g]);
@@ -255,7 +304,7 @@ function bindInput(){
     const moved=Math.hypot(e.clientX-g.x,e.clientY-g.y);
     if(g.mode==='pending'){
       const hit=board.pick(e.clientX,e.clientY);
-      const left=hit&&(hit.r!==g.r||hit.c!==g.c);
+      const left=hit&&(hit.r!==g.r||hit.c!==g.c)&&moved>6; // the pressed squish shrinks under the finger
       if(moved>14||left){
         clearTimeout(g.timer);hideRing(false);board.release(g.r,g.c);
         g.mode='swipe';if(!S.locked)swipeCell(g.r,g.c,g.stroke);
