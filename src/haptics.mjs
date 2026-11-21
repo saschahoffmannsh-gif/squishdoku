@@ -21,9 +21,11 @@ export function createSdHaptics({ isEnabled = () => true } = {}) {
       const now = performance.now(), rank = RANK[kind];
       // one pattern at a time; only a stronger one may cut in (a swipe pops many squishes fast)
       if (now - lastAt < (rank > lastRank ? 40 : 90)) return false;
-      lastAt = now; lastRank = rank;
-      try { const n = native(); if (n) { n(kind); return true; } if (vib) { vib(PATTERNS[kind]); return true; } } catch {}
-      return false;
+      try {
+        const n = native();
+        if (n) n(kind); else if (vib) vib(PATTERNS[kind]); else return false;
+        lastAt = now; lastRank = rank; return true;
+      } catch { return false; }
     },
     prime() {},
   };

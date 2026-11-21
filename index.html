@@ -24,6 +24,7 @@
     <div class="sd-topbar">
       <span class="aw-stat" id="home-stars" aria-label="Sterne"><i class="aw-stat-ico aw-stat-star" aria-hidden="true"></i><b>0</b></span>
       <span class="sd-gap"></span>
+      <button class="sd-sound" id="vibe-toggle" type="button" aria-label="Vibration" hidden></button>
       <button class="sd-sound" id="sound-toggle" type="button" aria-label="Ton"></button>
     </div>
     <div class="sd-logo" aria-label="SquishDoku" role="img">
@@ -50,11 +51,13 @@
       <div class="board-slot" id="slot"></div>
       <header class="sd-hud">
         <button class="sd-round" id="btn-back" type="button" aria-label="Zurück zum Menü"></button>
-        <div class="sd-level aw-card" id="level-card"><span class="sd-level-kicker">LEVEL <b id="lvl-num">1</b></span><span class="sd-level-name" id="lvl-name">Sehr leicht</span></div>
+        <div class="sd-level aw-card" id="level-card"><span class="sd-level-kicker"><span id="lvl-kind">LEVEL</span> <b id="lvl-num">1</b></span><span class="sd-level-name" id="lvl-name">Sehr leicht</span></div>
+        <button class="sd-round sd-undo" id="btn-undo" type="button" aria-label="Rückgängig" disabled></button>
         <button class="sd-round" id="btn-reset" type="button" aria-label="Level neu starten"></button>
       </header>
       <div class="sd-status">
         <div class="sd-hearts" id="hearts" aria-label="3 Herzen"></div>
+        <div class="sd-timer" id="timer" role="timer" aria-label="Zeit"><i aria-hidden="true"></i><span id="timer-text">0:00</span></div>
         <div class="sd-progress" id="progress"><i class="sd-mini-glow"></i><b id="glow-count">0</b>/<span id="glow-total">5</span></div>
       </div>
       <div class="sd-rulesbar" id="rulesbar" aria-label="Regeln"></div>
@@ -71,6 +74,7 @@
 
   <script src="src/config.js"></script>
   <script src="src/tutorial.js"></script>
+  <script src="src/daily.js"></script>
   <script type="module" src="src/main.mjs"></script>
 </body>
 </html>
