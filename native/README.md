@@ -21,3 +21,10 @@ Zwischenwerbung = Dummy-Spot mit 3-s-Countdown. Kein Netz, kein Fremdcode im Spi
 
 Für echte Werbung nötig: AdMob-App + 2 Anzeigenblöcke für SquishDoku (IDs in `app-config.mjs` statt der TODOs),
 AdMob-App-ID in Info.plist, UMP-Einwilligungstexte in AdMob, SKAdNetwork-IDs, `app-ads.txt`, Datenschutztext.
+
+## Haptik (Vibration)
+Im Browser vibriert `src/haptics.mjs` per `navigator.vibrate` (Android); iOS Safari kann das nicht → still.
+In der App-Hülle einmal beim Start `installNativeHaptics()` aus `haptics-bridge.mjs` aufrufen
+(`npm i @capacitor/haptics`). Das setzt `window.SquishNative.haptic(kind)`; das Spiel ruft es dann für
+`tap | pop | light | wrong | win | undo` statt `navigator.vibrate` auf. Der Schalter im Spiel
+(`settings.vibration`) gilt auch dort.

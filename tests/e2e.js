@@ -180,7 +180,7 @@ async function run(vp, dpr) {
   ok(await dialog() === 'win', 'L3 won -> win screen');
   ok(await p.locator('.sd-stars i.on').count() === 1, 'win screen shows stars = hearts left (1)');
   const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-v1')));
-  ok(saved.v === 2 && saved.unlocked === 4 && saved.stars[3] === 1 && saved.stars[2] === 3 && saved.stars[1] >= 1, `progress saved in localStorage (missions count) ${JSON.stringify(saved.stars)}`);
+  ok(saved.v === 3 && saved.unlocked === 4 && saved.stars[3] === 1 && saved.stars[2] === 3 && saved.stars[1] >= 1, `progress saved in localStorage (missions count) ${JSON.stringify(saved.stars)}`);
   await p.click('#btn-next'); await sleep(1500);
   // 7) L4-L7: solve by holds only
   for (let lvl = 4; lvl <= 7; lvl++) {
@@ -280,7 +280,7 @@ async function run(vp, dpr) {
   await p.evaluate(() => localStorage.setItem('squishdoku-v1', JSON.stringify({ unlocked: 6, stars: { 1: 3, 2: 3, 3: 2, 4: 1, 5: 3 }, revealed: { 5: 2 }, seenRules: true, rulesCollapsed: true })));
   await p.reload(); await p.waitForFunction(() => document.documentElement.dataset.ready === '1');
   const mig = await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-v1')));
-  ok(mig.v === 2 && mig.unlocked === 5 && JSON.stringify(mig.stars) === JSON.stringify({ 1: 2, 3: 1, 4: 3 }) && mig.revealed[4] === 2 && mig.rulesCollapsed === true, `old save migrated: old L3 → L1, old L4-5 → L3-4, unlocked 6 → 5 (${JSON.stringify(mig)})`);
+  ok(mig.v === 3 && mig.unlocked === 5 && JSON.stringify(mig.stars) === JSON.stringify({ 1: 2, 3: 1, 4: 3 }) && mig.revealed[4] === 2 && mig.rulesCollapsed === true, `old save migrated: old L3 → L1, old L4-5 → L3-4, unlocked 6 → 5 (${JSON.stringify(mig)})`);
   await p.evaluate(() => SquishDoku.showHome('levels')); await sleep(600);
   ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 45, 'migrated save: L1-5 open (incl. the new mission 2), L6-50 locked');
   ok(errors.length === 0, 'no console errors' + (errors.length ? ': ' + errors.join(' | ') : ''));

@@ -195,7 +195,7 @@ const nextLevel=()=>Math.min(levels.length,Math.max(1,...levels.filter(l=>store.
 function showHome(screen='home'){
   closeDialog();tut?.stop();
   $('game').hidden=true;home.hidden=false;document.documentElement.classList.add('home-open');
-  home.dataset.screen=screen;renderStars();
+  home.dataset.screen=screen;renderStars();vibeBtn.hidden=!haptics.supported;
   if(screen==='home'){
     const n=nextLevel(),played=Object.keys(store.stars).length>0;
     setItems([
