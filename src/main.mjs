@@ -1,5 +1,8 @@
 // SquishDoku – App: Menüs (Squish-Attack-Design), Levelauswahl, Spiel, Sieg.
-import {createBoard3D} from './board3d.mjs';
+import {createBoard3D as createSquishBoard} from './board3d.mjs';
+// Prototype look (tube.html sets window.SD_LOOK='tube'): neon silicone tubes instead of squishes.
+const LOOK=window.SD_LOOK||'squish',TUBE=LOOK==='tube';
+const createBoard3D=TUBE?(await import('./tube3d.mjs')).createTubeBoard:createSquishBoard;
 import {createGameSound} from '../vendor/squish-attack/game/sound.mjs?v=launch-26';
 import {createHaptics} from '../vendor/squish-attack/game/haptics.mjs?v=launch-26';
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
@@ -11,7 +14,7 @@ import {createRulesBar,createTutorial} from './tutorial-ui.mjs';
 
 const $=id=>document.getElementById(id);
 let HOLD_MS=400; const TAP_MS=200, HEARTS=3;
-const STORE='squishdoku-v1';
+const STORE=TUBE?'squishdoku-tube-v1':'squishdoku-v1';
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -94,6 +97,7 @@ fitViewport();
 
 // ---------- Level ----------
 const levels=await (await fetch('src/levels.json')).json();
+if(TUBE){store.unlocked=levels.length;} // Vorschau: alle Level offen
 const HINTS=[
   'Halte einen Squish kurz <b>gedrückt</b> – richtig gewählt, <b>leuchtet</b> er!',
   '<b>Wische</b> über Squishs, die nicht leuchten können – sie <b>ploppen</b>.',
@@ -186,6 +190,7 @@ let tut=null,rulesBar=null,tipTimer=0;
 function ruleTip(rule){clearTimeout(tipTimer);if(!S)return;if(!rule){$('hint').innerHTML=hintFor(S.id);return;}
   $('hint').innerHTML=rule.tip;tipTimer=setTimeout(()=>{if(S)$('hint').innerHTML=hintFor(S.id);},3800);}
 function ensureBoard(){if(!board){board=createBoard3D($('host'));bindInput();
+  if(TUBE)board.onTubeLit=()=>{sfx('magic');setTimeout(()=>sfx('star',3),120);buzz('big');};
   tut=createTutorial({stage,board,getS:()=>S});tut.stop();
   rulesBar=createRulesBar($('rulesbar'),{store,save:()=>save(),onTip:ruleTip});window.addEventListener('resize',()=>requestAnimationFrame(placePlate));}return board;}
 function placePlate(){if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
@@ -283,7 +288,7 @@ function swipeCell(r,c,stroke){
   // wobble -> swell -> pop (the pop sound and buzz land on the actual burst)
   if(S.state[r][c]!=='normal')return;S.state[r][c]='popped';tut.changed();
   sfx('squish');buzz('tap');
-  board.popSequence(r,c,{onPop:i=>{sfx('pop',1,{detune:POP_DETUNE[i%POP_DETUNE.length]});buzz('move');}});
+  board.popSequence(r,c,{onPop:i=>{if(TUBE)sfx('land');else sfx('pop',1,{detune:POP_DETUNE[i%POP_DETUNE.length]});buzz('move');}});
 }
 function holdFire(r,c){
   const st=S.state[r][c];
@@ -358,7 +363,8 @@ async function win(){
   store.stars[id]=Math.max(store.stars[id]||0,stars);store.unlocked=Math.max(store.unlocked,Math.min(levels.length,id+1));save();
   sfx('record');buzz('big');
   // Jubel-Welle über die leuchtenden Squishs
-  for(let r=0;r<S.N;r++){const c=S.L.solution[r];setTimeout(()=>board.wobble(r,c,.8),r*70);}
+  if(TUBE)board.celebrate();
+  else for(let r=0;r<S.N;r++){const c=S.L.solution[r];setTimeout(()=>board.wobble(r,c,.8),r*70);}
   const rect=board.boardRect();confetti.burst(rect,{reduced:reduceMotion.matches});
   await wait(1100);
   const last=id===levels.length;
@@ -386,7 +392,8 @@ $('btn-back').addEventListener('click',()=>{tap();tut?.stop();showHome('levels')
 $('btn-reset').addEventListener('click',()=>{tap();if(S)startLevel(S.id);});
 
 // ---------- Test-/Debug-Zugriff ----------
-window.SquishDoku={adUI,adPacing,get tutorial(){return tut;},get rulesBar(){return rulesBar;},get state(){return S;},get board(){return board;},levels,startLevel,showHome,get store(){return store;},get holdMs(){return HOLD_MS;},set holdMs(v){HOLD_MS=v;},TAP_MS,
+window.SquishDoku={act:{hold:(r,c)=>holdFire(r,c),swipe:(r,c)=>swipeCell(r,c,{wrong:new Set(),seen:new Set()}),tap:(r,c)=>{if(S.state[r][c]==='popped')restoreAt(r,c);}},adUI,adPacing,get tutorial(){return tut;},get rulesBar(){return rulesBar;},get state(){return S;},get board(){return board;},levels,startLevel,showHome,get store(){return store;},get holdMs(){return HOLD_MS;},set holdMs(v){HOLD_MS=v;},TAP_MS,
   reset(){localStorage.removeItem(STORE);store=load();}};
-showHome('home');
+const startAt=+new URLSearchParams(location.search).get('level');
+if(startAt>=1&&startAt<=levels.length)startLevel(startAt);else showHome('home');
 document.documentElement.dataset.ready='1';

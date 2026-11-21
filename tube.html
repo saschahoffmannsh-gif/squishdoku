@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de" class="home-open">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#0e1633" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SquishDoku" />
+  <title>SquishDoku – Neon-Vorschau</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="preload" as="font" type="font/ttf" href="vendor/squish-attack/game/assets/fonts/LilitaOne-Regular.ttf" crossorigin />
+  <link rel="stylesheet" href="vendor/squish-attack/game/autumn-ui.css" />
+  <link rel="stylesheet" href="vendor/squish-attack/game/ads.css" />
+  <link rel="stylesheet" href="vendor/squish-attack/game/comic-ui.css" />
+  <link rel="stylesheet" href="src/style.css" />
+</head>
+<body class="aw">
+  <div class="aw-bg" id="aw-bg" aria-hidden="true"></div>
+
+  <!-- Startbildschirm / Levelauswahl / Regeln (Squish-Attack-Menü-Design) -->
+  <div class="aw-home sd-home" id="home" data-screen="home">
+    <div class="sd-topbar">
+      <span class="aw-stat" id="home-stars" aria-label="Sterne"><i class="aw-stat-ico aw-stat-star" aria-hidden="true"></i><b>0</b></span>
+      <span class="sd-gap"></span>
+      <button class="sd-sound" id="sound-toggle" type="button" aria-label="Ton"></button>
+    </div>
+    <div class="sd-logo" aria-label="SquishDoku" role="img">
+      <svg viewBox="0 0 420 130" aria-hidden="true">
+        <defs>
+          <linearGradient id="logo-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6b8"/><stop offset=".42" stop-color="#ffd25a"/><stop offset=".75" stop-color="#ff9a24"/><stop offset="1" stop-color="#f06a12"/></linearGradient>
+        </defs>
+        <text x="210" y="92" text-anchor="middle" class="sd-logo-shadow">SquishDoku</text>
+        <text x="210" y="86" text-anchor="middle" class="sd-logo-stroke">SquishDoku</text>
+        <text x="210" y="86" text-anchor="middle" class="sd-logo-fill" fill="url(#logo-fill)">SquishDoku</text>
+        <text x="210" y="86" text-anchor="middle" class="sd-logo-shine">SquishDoku</text>
+      </svg>
+      <div class="sd-chips" aria-hidden="true"><i style="--c:#1f7ff0;--l:#5cc2ff"></i><i style="--c:#e8291f;--l:#ff7a66"></i><i class="is-glow" style="--c:#ffc21f;--l:#ffe36b"></i><i style="--c:#38b81c;--l:#9df25a"></i><i style="--c:#8a3cf0;--l:#b57cff"></i></div>
+    </div>
+    <p class="aw-tagline" id="tagline">Halten. Leuchten. Ploppen.</p>
+    <nav class="aw-screen" id="home-screen" aria-label="Menü"></nav>
+  </div>
+
+  <!-- Spielbildschirm -->
+  <main class="sd-game" id="game" hidden>
+    <div class="sd-stage" id="stage">
+      
+      <div class="sd-host" id="host"></div>
+      <div class="board-slot" id="slot"></div>
+      <header class="sd-hud">
+        <button class="sd-round" id="btn-back" type="button" aria-label="Zurück zum Menü"></button>
+        <div class="sd-level aw-card" id="level-card"><span class="sd-level-kicker">LEVEL <b id="lvl-num">1</b></span><span class="sd-level-name" id="lvl-name">Sehr leicht</span></div>
+        <button class="sd-round" id="btn-reset" type="button" aria-label="Level neu starten"></button>
+      </header>
+      <div class="sd-status">
+        <div class="sd-hearts" id="hearts" aria-label="3 Herzen"></div>
+        <div class="sd-progress" id="progress"><i class="sd-mini-glow"></i><b id="glow-count">0</b>/<span id="glow-total">5</span></div>
+      </div>
+      <div class="sd-rulesbar" id="rulesbar" aria-label="Regeln"></div>
+      <button class="sd-adtip" id="btn-adtip" type="button" aria-label="Tipp per Werbung: ein richtiger Squish leuchtet auf"></button>
+      <p class="sd-hint" id="hint"></p>
+      <div class="sd-fx" id="fx" aria-hidden="true"></div>
+    </div>
+  </main>
+
+  <!-- Dialoge -->
+  <div class="sd-veil" id="veil" hidden>
+    <div class="aw-panel sd-dialog" id="dialog" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <script src="src/config.js"></script>
+  <script src="src/tutorial.js"></script>
+  <script>window.SD_LOOK="tube";</script>
+  <script type="module" src="src/main.mjs"></script>
+</body>
+</html>
