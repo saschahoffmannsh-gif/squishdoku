@@ -41,7 +41,7 @@ const TUBE_DEFORM=`
   float ws=mix(1.,uSqz,clamp(press,0.,1.))*(1.+.08*sq),hs=1.-.18*sq;
   // a loose tube never lies perfectly flat: soft memory curl lifts it a little here and there
   float loose=clamp(1.-press,0.,1.),cw=sin(aF*2.2+uSeed)*.5+.5,cw2=cos((aF+e)*2.2+uSeed)*2.2*.5;
-  float yc=uTop+uTH*hs-uGD*press+uTH*.16*cw*cw*loose;
+  float yc=uTop+uTH*hs-uGD*press+uTH*(.22+.16*cw*cw)*loose;
   float dyds=(-uGD*(c1.x-c0.x)+uTH*(-.18)*(c1.y-c0.y))/(2.*e*uPitch)+uTH*.16*2.*cw*cw2*loose/uPitch;
   vec3 T=vec3(aTan.x,0.,aTan.y),S=vec3(aSide.x,0.,aSide.y);
   vec3 objectNormal;
@@ -65,9 +65,9 @@ vec3 neonLight(float g){float top=smoothstep(-.35,.95,vTop);float face=mix(.42,1
 function makeTubeMaterial(env,uniforms,base){
   const bc=new THREE.Color(base);
   const m=new THREE.MeshPhysicalMaterial({
-    color:bc,roughness:.46,metalness:0,
-    clearcoat:.35,clearcoatRoughness:.32,sheen:1,sheenRoughness:.55,sheenColor:new THREE.Color('#ffffff').lerp(bc,.5),
-    specularIntensity:.45,envMap:env,envMapIntensity:.8,
+    color:bc.clone().multiplyScalar(.9),roughness:.5,metalness:0,
+    clearcoat:.32,clearcoatRoughness:.3,sheen:.7,sheenRoughness:.65,sheenColor:new THREE.Color('#ffffff').lerp(bc,.6),
+    specularIntensity:.3,envMap:env,envMapIntensity:.65,
   });
   m.userData.u=uniforms;
   m.onBeforeCompile=sh=>{
@@ -94,8 +94,12 @@ ${NEON_FRAG_HEAD}`)
       .replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
   {vec3 V=normalize(vViewPosition);float fres=pow(1.-abs(dot(normal,V)),2.);
    totalEmissiveRadiance+=neonLight(glowAmt);
-   // milky silicone: light scattered inside the jacket glows softly at the rims
-   totalEmissiveRadiance+=diffuseColor.rgb*(.05+.16*fres)*(1.-clamp(glowAmt,0.,1.)*.5);
+   // milky translucent silicone: room light scatters inside the jacket, so the body glows softly from
+   // within (strongest along the top, where the diffuser core sits) and the rims turn milky
+   float topS=smoothstep(-.4,1.,vTop);
+   vec3 milk=mix(diffuseColor.rgb,vec3(1.),.35);
+   totalEmissiveRadiance+=(diffuseColor.rgb*(.06+.14*topS)+milk*.14*fres)*(1.-clamp(glowAmt,0.,1.)*.6);
+   totalEmissiveRadiance+=mix(diffuseColor.rgb,vec3(1.),.6)*pow(topS,6.)*.16*(1.-clamp(glowAmt,0.,1.));
    totalEmissiveRadiance+=vec3(1.,.06,.08)*clamp(vRed,0.,1.)*.55;}`);
   };
   m.customProgramCacheKey=()=>'sd-neon-tube-2';
@@ -330,7 +334,7 @@ export function createTubeBoard(host){
   boardMat.customProgramCacheKey=()=>'sd-board-grid-1';
   const sideMat=new THREE.MeshPhysicalMaterial({color:new THREE.Color('#0a0f26'),roughness:.5,clearcoat:.8,clearcoatRoughness:.15,envMap:env,envMapIntensity:.7});
   // routed channel: frosted walls; on the floor the white LED strip with its small chips (like the reference)
-  const grooveMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#3a4472'),roughness:.9,metalness:0,envMap:env,envMapIntensity:.4,side:THREE.DoubleSide});
+  const grooveMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#4b578c'),roughness:.85,metalness:0,envMap:env,envMapIntensity:.4,side:THREE.DoubleSide});
   const grooveU={uPitch:{value:1},uFloor:{value:0}};
   grooveMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,grooveU);
     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aS,aD;varying float vS,vD,vY;')
@@ -339,10 +343,10 @@ export function createTubeBoard(host){
       .replace('#include <color_fragment>',`#include <color_fragment>
   float fl=1.-smoothstep(uFloor+.004,uFloor+.02,vY);
   float strip=fl*(1.-smoothstep(.62,.7,abs(vD)));
-  float q=fract(vS/(uPitch*.25))-.5;float chip=strip*(1.-smoothstep(.13,.17,abs(q)))*(1.-smoothstep(.3,.36,abs(vD)));
-  diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.86,.86,.84),strip);
-  diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.98,.82,.42),chip);
-  float pad=strip*(1.-chip)*(1.-smoothstep(.06,.09,abs(abs(q)-.3)))*(1.-smoothstep(.45,.5,abs(vD)));
+  float q=fract(vS/(uPitch*.5))-.5;float qa=fwidth(vS/(uPitch*.5))*1.5;float chip=strip*(1.-smoothstep(.08,.08+qa,abs(q)))*(1.-smoothstep(.3,.4,abs(vD)));
+  diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.5,.52,.58),strip);
+  diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.62,.54,.34),chip);
+  float pad=0.;
   diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.75,.62,.4),pad*.6);`);};
   grooveMat.customProgramCacheKey=()=>'sd-groove-1';
   // board slab + side band are rebuilt per level (the slab top must sit under the channel floor)
@@ -383,7 +387,7 @@ export function createTubeBoard(host){
   function build(level,colorOf){
     disposeLevel();
     N=level.N;p=9.7/N;
-    TW=.15*p;TH=.19*p;GW=TW*.82;GD=.33*p;
+    TW=.14*p;TH=.18*p;GW=TW*1.3;GD=.3*p;
     grooveU.uPitch.value=p;grooveU.uFloor.value=TOP-GD;gridU.uPitch.value=p;gridU.uHalf.value=N*p/2;
     levelGroup=new THREE.Group();levelGroup.name='Neon_level';
     glowLevel=new THREE.Group();glowScene.add(glowLevel);
@@ -397,7 +401,7 @@ export function createTubeBoard(host){
       for(const path of ps){
         const line=centreline(path,p,cellPos);
         const cell=new Array(MAXC).fill(0).map(()=>new THREE.Vector4());
-        const u={uCell:{value:cell},uCount:{value:path.length},uPitch:{value:p},uTop:{value:TOP},uGD:{value:GD},uTW:{value:TW},uTH:{value:TH},uSqz:{value:.84},uSeed:{value:pieces.length*1.7+region*.9},
+        const u={uCell:{value:cell},uCount:{value:path.length},uPitch:{value:p},uTop:{value:TOP},uGD:{value:GD},uTW:{value:TW},uTH:{value:TH},uSqz:{value:1.04},uSeed:{value:pieces.length*1.7+region*.9},
           uEmit:{value:new THREE.Color(col.emit)},uLit:{value:0},uLitFrom:{value:0},uLitSpread:{value:0},uLitGain:{value:0},uFront:{value:0}};
         const tube=new THREE.Mesh(tubeGeometry(line),makeTubeMaterial(env,u,col.base));tube.frustumCulled=false;tube.renderOrder=3;
         const spill=new THREE.Mesh(ribbonGeometry(line,TOP+.004,.62*p),makeSpillMaterial(u));spill.renderOrder=2;spill.frustumCulled=false;
