@@ -1,0 +1,26 @@
+// Unit test for src/progress.mjs (stars, time, streak rules). node tests/progress-test.mjs
+import * as P from '../src/progress.mjs';
+import D from '../src/daily.js';
+let f = 0; const ok = (c, m) => { console.log((c ? '  ✔ ' : '  ✘ ') + m); if (!c) f++; };
+const s = (N, h, sec, guide) => P.starsFor({ N, guide }, h, sec * 1000);
+ok([s(5,3,60),s(5,3,61),s(5,2,120),s(5,2,121),s(5,1,1)].join('') === '32211', '5×5: T=60 s');
+ok([s(4,3,45),s(6,3,90),s(7,3,120),s(8,3,150),s(8,3,151)].join('') === '33332', 'targets 45/90/120/150 s');
+ok([s(8,3,9999,'touch'),s(8,2,0,'claim'),s(8,1,0,'touch')].join('') === '321', 'guided missions: hearts only');
+ok(P.fmtTime(0) === '0:00' && P.fmtTime(61999) === '1:01' && P.fmtTime(600000) === '10:00', 'time format m:ss');
+ok(P.missingFor3({ N: 5 }, 2, 70000) === 'ohne Fehler und unter 1:00' && P.missingFor3({ N: 5 }, 3, 1) === null, 'hint for 3 stars');
+const st = { stars: { 3: 3 }, times: { 3: 50000 } };
+let r = P.recordLevel(st, 3, 2, 40000); ok(st.stars[3] === 3 && st.times[3] === 40000 && r.newBest, 'replay keeps best stars, takes better time');
+r = P.recordLevel(st, 3, 1, 90000); ok(st.times[3] === 40000 && !r.newBest, 'slower replay keeps best time');
+const d = { done: {}, streak: 0, best: 0, last: null }, A = D.addDays;
+P.recordDaily(d, '2026-11-20', { stars: 3, ms: 1, hearts: 3 }, '2026-11-20', A);
+P.recordDaily(d, '2026-11-21', { stars: 2, ms: 1, hearts: 3 }, '2026-11-21', A);
+r = P.recordDaily(d, '2026-11-21', { stars: 3, ms: 1, hearts: 3 }, '2026-11-21', A);
+ok(d.streak === 2 && d.best === 2 && !r.grew && d.done['2026-11-21'].stars === 3, 'consecutive days → 2; replay doesn\'t count twice, keeps best');
+ok(P.curStreak(d, '2026-11-22', A) === 2 && P.curStreak(d, '2026-11-23', A) === 0, 'streak alive until the end of the next day, then 0');
+P.recordDaily(d, '2026-11-22', { stars: 1, ms: 1, hearts: 1 }, '2026-11-23', A);
+ok(d.streak === 3, 'yesterday\'s puzzle finished after midnight still counts');
+P.recordDaily(d, '2026-11-26', { stars: 1, ms: 1, hearts: 1 }, '2026-11-26', A);
+ok(d.streak === 1 && d.best === 3, 'gap → restart at 1, best stays');
+r = P.recordDaily(d, '2026-11-10', { stars: 1, ms: 1, hearts: 1 }, '2026-11-26', A);
+ok(d.streak === 1 && !r.grew, 'old days never move the streak');
+console.log(f ? `${f} FAILED` : 'ALL PASSED'); process.exit(f ? 1 : 0);

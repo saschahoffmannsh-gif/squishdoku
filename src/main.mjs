@@ -11,9 +11,11 @@ import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=laun
 import {createAdPacing} from '../vendor/squish-attack/game/ad-pacing.mjs';
 import {createAdUI,AD_ICON_SVG} from './ad-ui.mjs';
 import {createRulesBar,createTutorial} from './tutorial-ui.mjs';
+import * as P from './progress.mjs';
+const {starsFor,targetMs,fmtTime,HEARTS}=P;
 
 const $=id=>document.getElementById(id);
-let HOLD_MS=400; const TAP_MS=200, HEARTS=3;
+let HOLD_MS=400; const TAP_MS=200;
 const STORE=TUBE?'squishdoku-tube-v1':'squishdoku-v1';
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -135,13 +137,6 @@ const hintFor=id=>typeof id!=='number'?DAILY_HINTS[(SquishDaily.dayNum(S?.L?.dai
 // ---------- Sterne & Zeit ----------
 // Zielzeit je Größe (Sekunden). 3★ = ohne Herzverlust UND ≤ Zielzeit; 2★ = ohne Herzverlust (egal wie lange)
 // ODER höchstens 1 Herz verloren und ≤ 2× Zielzeit; 1★ = sonst gelöst. Missionen mit Anleitung (L1–2): nur Herzen.
-const TARGET_S={4:45,5:60,6:90,7:120,8:150};
-const targetMs=N=>(TARGET_S[N]||N*20)*1000;
-function starsFor(L,hearts,ms){
-  const lost=HEARTS-hearts;if(L.guide)return Math.max(1,3-lost);
-  const T=targetMs(L.N);if(lost===0&&ms<=T)return 3;if(lost===0||(lost<=1&&ms<=2*T))return 2;return 1;
-}
-const fmtTime=ms=>{const t=Math.floor(Math.max(0,ms)/1000);return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;};
 
 // ---------- Tagesrätsel ----------
 let todayOverride=null; // tests: SquishDoku.today='2026-11-23'
@@ -149,7 +144,7 @@ const todayKey=()=>todayOverride||SquishDaily.dateKey();
 const dayLabel=(key,o={weekday:'short',day:'numeric',month:'short'})=>new Intl.DateTimeFormat('de-DE',{...o,timeZone:'UTC'}).format(new Date(SquishDaily.dayNum(key)*864e5));
 const dailyPlan=key=>SquishDaily.PLAN[SquishDaily.weekday(key)];
 // streak counts consecutive days; it is still alive today if the last solved day was today or yesterday
-function curStreak(){const D=store.daily,t=todayKey();return D.last===t||D.last===SquishDaily.addDays(t,-1)?D.streak:0;}
+const curStreak=()=>P.curStreak(store.daily,todayKey(),SquishDaily.addDays);
 let dailyTable=null;const dailyCache=new Map();let dailyWorker=null;const dailyWaiters=new Map();
 const loadDailyTable=()=>dailyTable??=fetch('src/daily.json').then(r=>r.ok?r.json():{}).catch(()=>({}));
 function buildDailyOffThread(key){
@@ -166,18 +161,7 @@ async function dailyPuzzle(key){
   const L={id:'daily',daily:key,N:p.N,label:dailyPlan(key).label,regions:p.regions,solution:p.solution,colors:p.colors};
   dailyCache.set(key,L);return L;
 }
-function recordDaily(key,stars,ms,hearts){
-  const D=store.daily,prev=D.done[key],t=todayKey(),y=SquishDaily.addDays(t,-1);
-  D.done[key]={stars:Math.max(prev?.stars||0,stars),ms:Math.min(prev?.ms??Infinity,ms),hearts:Math.max(prev?.hearts||0,hearts)};
-  let grew=false;
-  // only today's puzzle (or yesterday's, if you started it before midnight) moves the streak, once per day
-  if(!prev&&(key===t||key===y)&&(!D.last||key>D.last)){
-    D.streak=D.last===SquishDaily.addDays(key,-1)?D.streak+1:1;D.last=key;D.best=Math.max(D.best||0,D.streak);grew=true;
-  }
-  // keep the save small: results of the last 120 days
-  const cut=SquishDaily.addDays(t,-120);for(const k of Object.keys(D.done))if(k<cut)delete D.done[k];
-  return {prev,grew};
-}
+const recordDaily=(key,stars,ms,hearts)=>P.recordDaily(store.daily,key,{stars,ms,hearts},todayKey(),SquishDaily.addDays);
 
 // ---------- Menüs ----------
 const home=$('home'),screenEl=$('home-screen');
@@ -511,7 +495,7 @@ async function win(){
   if(!L.guide)adPacing.levelWon(); // Werbe-Takt wie Squish Attack: jede 5. gewonnene Runde (Missionen mit Anleitung zählen nicht; das Tagesrätsel zählt wie ein Level)
   let prevBest,dailyRes=null;
   if(daily){prevBest=store.daily.done[daily]?.ms;dailyRes=recordDaily(daily,stars,ms,S.hearts);}
-  else{prevBest=store.times[id];store.stars[id]=Math.max(store.stars[id]||0,stars);store.times[id]=Math.min(prevBest??Infinity,ms);store.unlocked=Math.max(store.unlocked,Math.min(levels.length,id+1));}
+  else{prevBest=P.recordLevel(store,id,stars,ms).prevTime;store.unlocked=Math.max(store.unlocked,Math.min(levels.length,id+1));}
   save();
   const newBest=prevBest!=null&&ms<prevBest;
   sfx('record');buzz('win');
@@ -531,10 +515,9 @@ async function win(){
   items.push(tm);
   if(daily)items.push(streakBox(curStreak(),store.daily.best||0,dailyRes.grew));
   const p=document.createElement('p');p.className='sd-center';
-  const lost=HEARTS-S.hearts,T=targetMs(L.N);
   p.innerHTML=L.guide==='touch'?'Mission 1 geschafft – du kennst jetzt alle Regeln!':L.guide==='claim'?'Mission 2 geschafft – den Reihen-Trick brauchst du ab jetzt öfter!':last?`Alle ${levels.length} Level gelöst – du bist ein Squish-Profi!`
     :stars===3?(daily?'Perfekt – ohne Fehler und flott! Morgen wartet das nächste.':`Level ${id}: perfekt – ohne Fehler und flott!`)
-    :`${daily?'Gelöst!':`Level ${id} gelöst.`} Für 3 Sterne: ${lost?'ohne Fehler':''}${lost&&ms>T?' und ':''}${ms>T?`unter ${fmtTime(T)}`:''}.`;
+    :`${daily?'Gelöst!':`Level ${id} gelöst.`} Für 3 Sterne: ${P.missingFor3(L,S.hearts,ms)}.`;
   items.push(p);
   if(daily){
     items.push(button({label:'Super!',icon:'play',color:'aw-green',size:'aw-big',id:'btn-daily-ok',action:()=>showHome('home')}));

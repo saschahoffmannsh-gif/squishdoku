@@ -69,6 +69,7 @@ Farbfelder, genau **eine** Lösung (Brute-Force), und vollständig lösbar mit r
 
 ## Tests
     node tests/levels-test.js
+    node tests/progress-test.mjs                            # Sterne/Zeit/Serie-Regeln (src/progress.mjs)
     NODE_PATH=<playwright-core> node tests/e2e.js [--shots]
     NODE_PATH=<playwright-core> node tests/touch-hit.js     # Touch trifft den gezeichneten Squish, kein Seitenversatz
     NODE_PATH=<playwright-core> node tests/tap-latency.js   # Knopf-Reaktionszeit (CPU 4x gedrosselt)
