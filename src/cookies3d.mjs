@@ -211,13 +211,16 @@ export function createCrumbs(scene,camera,{crumbs=1600,bits=640,dust=8000}={}){
           if(P.alive[i]){
             P.age[i]+=dt;const g=step(P.p,P.v,o,P.sc[o+1]*.45);
             // tumbling in the air, rolling with the slide speed on the plate
-            const k=g?Math.min(1,Math.hypot(P.v[o],P.v[o+2])*.8):1;for(let a=0;a<3;a++)P.r[o+a]+=P.w[o+a]*dt*k;
-            pos.set(P.p[o],P.p[o+1],P.p[o+2]);
-            if(gone(P.p[o],P.p[o+1],P.p[o+2],P.age[i])){P.alive[i]=0;P.live--;}
+            const k=g?Math.min(1,(Math.abs(P.v[o])+Math.abs(P.v[o+2]))*.6):1;P.r[o]+=P.w[o]*dt*k;P.r[o+1]+=P.w[o+1]*dt*k;
+            const M=P.mesh.instanceMatrix.array,j=i*16;
+            if(gone(P.p[o],P.p[o+1],P.p[o+2],P.age[i])){P.alive[i]=0;P.live--;M.fill(0,j,j+16);continue;}
+            // matrix written in place: R = Ry(r1)·Rx(r0) (tumble + yaw, 4 trig) × scale, + position
+            top=i+1;const cx=Math.cos(P.r[o]),sx=Math.sin(P.r[o]),cy=Math.cos(P.r[o+1]),sy=Math.sin(P.r[o+1]),a=P.sc[o],b=P.sc[o+1],c=P.sc[o+2];
+            M[j]=cy*a;M[j+1]=0;M[j+2]=-sy*a;M[j+3]=0;
+            M[j+4]=sy*sx*b;M[j+5]=cx*b;M[j+6]=cy*sx*b;M[j+7]=0;
+            M[j+8]=sy*cx*c;M[j+9]=-sx*c;M[j+10]=cy*cx*c;M[j+11]=0;
+            M[j+12]=P.p[o];M[j+13]=P.p[o+1];M[j+14]=P.p[o+2];M[j+15]=1;
           }
-          if(P.alive[i]){top=i+1;e.set(P.r[o],P.r[o+1],P.r[o+2]);q.setFromEuler(e);scl.set(P.sc[o],P.sc[o+1],P.sc[o+2]);m4.compose(pos,q,scl);}
-          else m4.makeScale(0,0,0);
-          P.mesh.setMatrixAt(i,m4);
         }
         P.mesh.count=top;P.mesh.instanceMatrix.needsUpdate=true;
       }
