@@ -31,11 +31,16 @@ function body(shape,depth,bevel,seg,seed){
   const g=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel*.9,bevelSegments:seg,curveSegments:1,steps:1});
   g.rotateX(-Math.PI/2);g.translate(0,bevel,0);
   const p=g.attributes.position;let R=0,Y=0;
-  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),n=fbm(x*3.1+seed,y*3.1,z*3.1),f=fbm(x*14,y*14+seed,z*14,2),r=Math.hypot(x,z)||1,k=.018*(n*.8+f*.35);p.setXYZ(i,x+x/r*k,y+k*.4,z+z/r*k);}
+  // ExtrudeGeometry is non-indexed (each position ~6×): the noise is evaluated once per distinct position
+  const memo=new Map(),key=(x,y,z)=>Math.round(x*1e4)+','+Math.round(y*1e4)+','+Math.round(z*1e4);
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),kk=key(x,y,z);let d=memo.get(kk);
+    if(!d){const n=fbm(x*3.1+seed,y*3.1,z*3.1),f=fbm(x*14,y*14+seed,z*14,2),r=Math.hypot(x,z)||1,k=.018*(n*.8+f*.35);d=[x+x/r*k,y+k*.4,z+z/r*k];memo.set(kk,d);}
+    p.setXYZ(i,d[0],d[1],d[2]);}
+  memo.clear();
   for(let i=0;i<p.count;i++){R=Math.max(R,Math.hypot(p.getX(i),p.getZ(i)));Y=Math.max(Y,p.getY(i));}
   // golden-brown baking: darker toward the rim and the underside
   const col=new Float32Array(p.count*3),pale=new THREE.Color('#fff2de'),gold=new THREE.Color('#e0a35a'),brown=new THREE.Color('#9a5a26'),c=new THREE.Color();
-  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),r=Math.hypot(x,z)/R,n=fbm(x*2.3,y*2.3,z*2.3);
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),r=Math.hypot(x,z)/R,kk=key(x,y,z);let n=memo.get(kk);if(n===undefined){n=fbm(x*2.3,y*2.3,z*2.3);memo.set(kk,n);}
     const t=Math.min(1,Math.max(0,(Math.min(1,Math.max(0,(r-.72)/.28))*.65+(1-y/Y)*.55+n*.25)*1.1));
     c.copy(pale).lerp(gold,Math.min(1,t*1.6));if(t>.6)c.lerp(brown,(t-.6)/.4*.8);col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;}
   g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();return g;
