@@ -2,7 +2,7 @@
 // Each animal is a list of icing sections (puffy filled shapes on layers) and piped lines; the cookie
 // outline is the icing outline grown by a baked rim. Height field → displaced mesh (big forms) +
 // normal map (fine piping), colour map with subtle variation, alpha from the union of all sections.
-import { THREE, fbm, bake, doughMaterial, canvas, heightMesh, crumbleGeometry, bodyGeometry, shapeFrom, polar } from './cookies.mjs';
+import { THREE, saturate, fbm, bake, doughMaterial, canvas, heightMesh, crumbleGeometry, bodyGeometry, shapeFrom, polar } from './cookies.mjs';
 
 const DARK = '#2a1610', CHOC = '#4a2416', CREAM = '#fff0d8', WHITE = '#fffaf4', PINK = '#f7a3b8', CHEEK = '#ff9fb2';
 // ---------- section builder (unit coords, y up) ----------
@@ -12,7 +12,7 @@ function Sketch() {
   const api = {
     items,
     // filled puffy section: draw(ctx,T,S) adds subpaths; z = base height, t = puff height
-    fill(color, z, t, draw, o = {}) { return add({ kind: 'fill', color, z, t, draw, soft: o.soft ?? .035, color2: o.color2 }); },
+    fill(color, z, t, draw, o = {}) { return add({ kind: 'fill', color, z, t, draw, soft: o.soft ?? .055, color2: o.color2 }); },
     line(color, z, t, pts, w, o = {}) { return add({ kind: 'line', color, z, t, pts, w, smooth: o.smooth ?? true }); },
     ell(color, z, t, x, y, rx, ry, rot = 0, o) { return api.fill(color, z, t, (p, T, S) => { const [X, Y] = T(x, y); p.moveTo(X + S(rx) * Math.cos(-rot), Y + S(rx) * Math.sin(-rot)); p.ellipse(X, Y, S(rx), S(ry), -rot, 0, Math.PI * 2); }, o); },
     blob(color, z, t, pts, o) { return api.fill(color, z, t, (p, T) => closedSpline(p, pts.map(q => T(...q))), o); },
@@ -40,7 +40,7 @@ const ANIMALS = {
   lion(S, C) { const m1 = shade(C, -.04), m2 = shade(C, -.2), face = '#ffbf3f';
     const n = 13; for (let k = 0; k < n; k++) { const a = Math.PI / 2 + k / n * Math.PI * 2, da = Math.PI / n * 1.12, tw = .12;
       const pt = (r, aa) => [Math.cos(aa) * r, Math.sin(aa) * r];
-      S.blob(k % 2 ? m2 : m1, 0, .07, [pt(.36, a - da * .9), pt(.66, a - da * 1.02), pt(.84, a - da * .55 + tw * .2), pt(.88, a + tw * .3), pt(.82, a + da * .7), pt(.62, a + da * 1.02), pt(.36, a + da * .9)], { soft: .04 }); }
+      S.blob(k % 2 ? m2 : m1, 0, .07, [pt(.36, a - da * .9), pt(.64, a - da * 1.05), pt(.83, a - da * .7), pt(.92, a - da * .05 + tw * .12), pt(.86, a + da * .55), pt(.66, a + da * .98), pt(.36, a + da * .9)], { soft: .04 }); }
     for (const s of [-1, 1]) { S.ell(face, .06, .07, s * .42, .4, .17, .17, 0); S.ell(PINK, .12, .025, s * .42, .4, .09, .09, 0, { soft: .03 }); }
     S.ell(face, .07, .08, 0, -.03, .53, .47); S.ell(CREAM, .13, .045, 0, -.23, .28, .17, 0, { soft: .05 });
     S.tri(CHOC, .17, .035, [[-.075, -.08], [.075, -.08], [0, -.17]], .03, { soft: .03 }); S.line(CHOC, .16, .016, [[0, -.17], [0, -.21]], .02); S.smile(0, -.24, .1);
@@ -50,7 +50,7 @@ const ANIMALS = {
     S.blob(C, 0, .07, [[-.78, .1], [-.55, .42], [0, .52], [.55, .42], [.78, .1], [.7, -.3], [.35, -.58], [0, -.64], [-.35, -.58], [-.7, -.3]]);
     S.blob(d, .06, .03, [[-.08, .48], [.08, .48], [.06, .24], [0, .16], [-.06, .24]], { soft: .03 });
     for (const s of [-1, 1]) S.blob(WHITE, .07, .05, [[s * .08, -.18], [s * .32, -.06], [s * .62, -.08], [s * .66, -.26], [s * .4, -.5], [s * .12, -.56], [0, -.4]]);
-    S.eye(-.27, .1, .082, .1); S.eye(.27, .1, .082, .1); S.ell(DARK, .14, .035, 0, -.2, .075, .055, 0, { soft: .03 }); S.ell(WHITE, .18, .01, -.025, -.185, .02, .015); S.smile(0, -.29, .08); S.cheeks(.42, -.12, .06, .12); },
+    S.eye(-.27, .1, .082, .1); S.eye(.27, .1, .082, .1); S.ell(DARK, .14, .035, 0, -.2, .075, .055, 0, { soft: .03 }); S.ell(WHITE, .18, .01, -.025, -.185, .02, .015); S.line(DARK, .15, .015, [[0, -.25], [0, -.29]], .02); S.smile(0, -.32, .11, .15); S.cheeks(.44, -.14, .065, .13); },
   frog(S, C) { const lt = shade(C, .28);
     for (const s of [-1, 1]) S.ell(C, 0, .07, s * .44, .38, .3, .28);
     S.blob(C, 0, .07, [[-.9, -.12], [-.7, .25], [0, .32], [.7, .25], [.9, -.12], [.7, -.5], [0, -.66], [-.7, -.5]]);
@@ -143,13 +143,14 @@ export function designD(P) {
     const pts = polar(inside, 260, 1.15).map(([x, y]) => { const a = Math.atan2(y, x), f = 1 + .012 * fbm(Math.cos(a) * 3 + P.key, Math.sin(a) * 3, 1, 3); return [x * f, y * f]; });
     // fit into the unit cell (cookie radius ≤ .97)
     const R = Math.max(...pts.map(([x, y]) => Math.hypot(x, y))), sc = Math.min(1, .97 / R);
-    const body = bake(crumbleGeometry(bodyGeometry(shapeFrom(pts.map(([x, y]) => [x * sc, y * sc])), .17, .075, 6), .02, P.key), .9);
+    const body = bake(crumbleGeometry(bodyGeometry(shapeFrom(pts.map(([x, y]) => [x * sc, y * sc])), .17, .075, 6), .02, P.key), 1.1);
     const topY = .17 + .15;
     const geo = heightMesh({ H: ice.Hgeo, M: ice.M, N: ice.N }, 230, sc, topY - .012, 1);
     const tex = new THREE.CanvasTexture(ice.colorCanvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
     const nrm = new THREE.CanvasTexture(ice.normalCanvas); nrm.anisotropy = 8; const alpha = new THREE.CanvasTexture(ice.unionCanvas);
     const icing = new THREE.MeshPhysicalMaterial({ map: tex, normalMap: nrm, normalScale: new THREE.Vector2(1, 1), alphaMap: alpha, alphaTest: .5,
-      roughness: .36, clearcoat: .85, clearcoatRoughness: .1, clearcoatNormalMap: nrm, clearcoatNormalScale: new THREE.Vector2(.6, .6), sheen: .15, sheenColor: new THREE.Color('#ffffff') });
+      roughness: .36, clearcoat: .85, clearcoatRoughness: .1, clearcoatNormalMap: nrm, clearcoatNormalScale: new THREE.Vector2(.6, .6), });
+    saturate(icing, 1.3);
     this.pts = pts.map(([x, y]) => [x * sc, y * sc]); this.ice = ice;
     // pale-golden, finely porous shortbread: own material with stronger pores
     const dough = doughMaterial().clone(); dough.bumpScale = 2; dough.roughness = .85;
