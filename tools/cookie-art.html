@@ -1,0 +1,39 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><title>SquishDoku · Menübilder (Kekse)</title>
+<style>html,body{margin:0;background:transparent;overflow:hidden}#stage{position:fixed;inset:0}#host{position:absolute;inset:0}</style></head>
+<body><div id="stage"><div id="host"></div><div class="board-slot" style="position:absolute;left:40px;top:40px;width:820px;height:820px;pointer-events:none"></div></div>
+<script type="module">
+// Pre-renders the home/menu pictures with the game's own board renderer (src/board3d.mjs + cookies3d.mjs).
+// tools/cookie-art.html?mode=hero  → a 5×5 board: some cookies lit, some crumbled
+// tools/cookie-art.html?mode=single&v=7[&lit=1] → one big cookie (menu floaties / chapter icons)
+// window.ART = {rect} (screen rect to crop), dataset.ready = 1. Screenshots: tools/menu-art.js
+import {createBoard3D} from '../src/board3d.mjs';
+import {cookiesReady} from '../src/cookies3d.mjs';
+const q=new URLSearchParams(location.search),mode=q.get('mode')||'hero';
+await cookiesReady;
+const board=createBoard3D(document.getElementById('host'));
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+if(mode==='hero'){
+  // regions/colours like the old hero picture; '.' = crumbled, '*' = lit
+  const R=['bbabb','bbccd','eeccd','beccc','fcccc'],COL={a:2,b:2,c:3,d:1,e:5,f:8};
+  // a consistent mid-game look: 4 lit (different rows, columns, colours, never touching), cookies they rule out crumbled
+  const S=['.*...','....*','..*..','.....','*....'],keep=['.x.x.','xx.xx','xxxx.','xxxxx','xxxx.'];
+  const L={N:5,regions:R,colors:[]};const val=ch=>COL[ch];
+  board.build(L,g=>val(String.fromCharCode(97+g)));
+  await wait(400);
+  for(let r=0;r<5;r++)for(let c=0;c<5;c++){if(S[r][c]==='*')board.glow(r,c,true);else if(keep[r][c]!=='x'&&S[r][c]==='.')board.vanish(r,c);}
+}else{
+  const v=+(q.get('v')||1);board.build({N:1,regions:['a'],colors:[]},()=>v);await wait(400);
+  if(q.get('lit'))board.glow(0,0,true);
+  // only the cookie (and its glow): hide the table meshes
+  const own=new Set();for(const cl of board.cells)for(const o of [cl.s.group,cl.halo,cl.spark])o.traverse(x=>own.add(x));
+  board.graphics.scene.traverse(o=>{if((o.isMesh||o.isSprite)&&!own.has(o))o.visible=false;});
+}
+await wait(1500);
+// hero: straight from above (the home screen tilts the picture with CSS perspective itself)
+if(mode==='hero'){const cam=board.graphics.camera,d=cam.position.length()*1.3;cam.position.set(0,d,.001);cam.up.set(0,0,-1);cam.lookAt(0,0,0);cam.updateProjectionMatrix();cam.updateMatrixWorld();}
+if(mode!=='hero'){const cl=board.cells[0];cl.halo.scale.multiplyScalar(.72);cl.spark.scale.multiplyScalar(.5);}
+board.refresh();await wait(600);
+const a=board.screenOf(0,0,0,0),b=board.screenOf(board.N-1,board.N-1,0,0);
+window.ART={frame:board.frameRect(),cell:board.screenOf(0,0,1.2,0),a,b};
+document.documentElement.dataset.ready='1';
+</script></body></html>
