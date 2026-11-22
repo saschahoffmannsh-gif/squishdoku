@@ -64,7 +64,9 @@ export function createBoard3D(host){
     get paused(){return false;},get time(){return clock;},
     disposeGel,job(job){jobs.push(job);requestFrame();return job;},cancelJobs(){jobs.splice(0).forEach(j=>j.cancel?.());}};
   const fusion=createFusion({internals,graphics});
-  const crumbs=createCrumbs(scene,camera); // pooled crumb particles of popped cookies (in the scene from the start: linked by the prewarm)
+  const crumbs=createCrumbs(scene,camera);
+  // crumbs slide on the glass plate the cookies lie on, down to its front edge (inside the chrome frame)
+  crumbs.setPlate({y:P.board.top+.005,hx:2*P.board.pitch+P.board.cavityHalf+.2,hz:2*P.board.pitch+P.board.cavityHalf+.2}); // pooled crumb particles of popped cookies (in the scene from the start: linked by the prewarm)
 
   // ---------- board layout ----------
   let N=5,pitch=P.board.pitch,k=1,cells=[],size=1,Y0=P.board.top-.02,HU=.3;

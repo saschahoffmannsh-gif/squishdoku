@@ -119,7 +119,7 @@ export function releaseSlot(s){if(s)s.busy=false;}
 // of the spot they came from, sides = dough). They burst up and toward the viewer, spin, and fall with
 // gravity out of the screen, then their slot is recycled. Two preallocated InstancedMeshes, one draw
 // call each, no allocation per pop.
-export function createCrumbs(scene,camera,{crumbs=1400,bits=560,dust=4800}={}){
+export function createCrumbs(scene,camera,{crumbs=1600,bits=640,dust=8000}={}){
   const S=shared();
   const bitGeo=new THREE.BoxGeometry(1,.42,1,1,1,1),bp=bitGeo.attributes.position,mask=new Float32Array(bp.count*3);
   for(let i=0;i<bp.count;i++){const top=bp.getY(i)>.2?1:0;mask[i*3]=mask[i*3+1]=mask[i*3+2]=top;bp.setXYZ(i,bp.getX(i)*(1+.25*hash3(i,1,2)),bp.getY(i),bp.getZ(i)*(1+.25*hash3(i,3,4)));}
@@ -158,7 +158,7 @@ export function createCrumbs(scene,camera,{crumbs=1400,bits=560,dust=4800}={}){
     D.col.array[o]=c.r;D.col.array[o+1]=c.g;D.col.array[o+2]=c.b;if(i+1>D.top)D.top=i+1;stat.spawned++;stat.dust++;
   }
   const stat={spawned:0,dust:0};
-  const VP=new THREE.Matrix4();
+  const VP=new THREE.Matrix4(),plate={y:.32,hx:5,hz:5};
   return {
     pools,
     stat,dust:dPts,
@@ -180,14 +180,28 @@ export function createCrumbs(scene,camera,{crumbs=1400,bits=560,dust=4800}={}){
       if(nd){D.col.needsUpdate=true;}
       for(const P of pools)P.mesh.instanceColor.needsUpdate=true;
     },
+    // the plate the cookies lie on (world: horizontal glass at y, half extents hx/hz); the camera tilt makes
+    // its "downhill" the +z direction (toward the player / screen bottom)
+    setPlate(o){Object.assign(plate,o);},
     update(dt){
-      if(!this.alive)return 0;const G=26,drag=Math.exp(-dt*.6);
+      if(!this.alive)return 0;
       VP.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);const m=VP.elements;
+      const {y:PY,hx,hz}=plate,G=26,A=4.2,fr=Math.exp(-dt*1.7),air=Math.exp(-dt*.4),J=1.6;
       // off screen (below / beside) or old → recycle. ndc = clip.xy / clip.w from the view-projection rows
-      const gone=(x,y,z,age)=>{const w=m[3]*x+m[7]*y+m[11]*z+m[15],cy=(m[1]*x+m[5]*y+m[9]*z+m[13])/w,cx=(m[0]*x+m[4]*y+m[8]*z+m[12])/w;return age>4||cy<-1.1||cx<-1.25||cx>1.25;};
+      const gone=(x,y,z,age)=>{const w=m[3]*x+m[7]*y+m[11]*z+m[15],cy=(m[1]*x+m[5]*y+m[9]*z+m[13])/w,cx=(m[0]*x+m[4]*y+m[8]*z+m[12])/w;return age>9||cy<-1.1||cx<-1.25||cx>1.25;};
+      // one step: fall onto the plate, bounce a little, then slide downhill (+z) with friction and sideways
+      // jitter; past the plate's edge it falls away. Returns 1 while it lies on the plate (for rolling).
+      const step=(p,v,o,rad)=>{
+        const x=p[o],z=p[o+2],on=x>-hx&&x<hx&&z>-hz&&z<hz,floor=PY+rad;
+        let ground=0;const vy=v[o+1];
+        // landing speed is judged before this frame's gravity (frame-rate independent): hard → small bounce, soft → rests
+        if(on&&p[o+1]<=floor+.002&&vy<=0){p[o+1]=floor;if(vy<-1.6){v[o+1]=-vy*.3;v[o]*=.8;v[o+2]*=.8;}else{v[o+1]=0;ground=1;}}
+        else{v[o+1]-=G*dt;if(on&&p[o+1]+v[o+1]*dt<floor){v[o+1]=(floor-p[o+1])/dt;}}
+        if(ground){v[o]=v[o]*fr+(rnd()-.5)*J*dt;v[o+2]=v[o+2]*fr+A*dt;}else{v[o]*=air;v[o+2]*=air;}
+        p[o]+=v[o]*dt;p[o+1]+=v[o+1]*dt;p[o+2]+=v[o+2]*dt;return ground;
+      };
       if(D.live){let top=0;const p=D.p,v=D.v;
-        for(let i=0;i<D.top;i++){if(!D.alive[i])continue;const o=i*3;D.age[i]+=dt;v[o+1]-=G*.8*dt;v[o]*=drag;v[o+2]*=drag;
-          p[o]+=v[o]*dt;p[o+1]+=v[o+1]*dt;p[o+2]+=v[o+2]*dt;
+        for(let i=0;i<D.top;i++){if(!D.alive[i])continue;const o=i*3;D.age[i]+=dt;step(p,v,o,.014);
           if(gone(p[o],p[o+1],p[o+2],D.age[i])){D.alive[i]=0;D.live--;p[o+1]=-1e4;}else top=i+1;}
         D.top=top;dGeo.setDrawRange(0,top);D.pos.needsUpdate=true;}
       for(const P of pools){
@@ -195,9 +209,9 @@ export function createCrumbs(scene,camera,{crumbs=1400,bits=560,dust=4800}={}){
         for(let i=0;i<P.mesh.count;i++){
           const o=i*3;
           if(P.alive[i]){
-            P.age[i]+=dt;P.v[o+1]-=G*dt;P.v[o]*=drag;P.v[o+2]*=drag;
-            P.p[o]+=P.v[o]*dt;P.p[o+1]+=P.v[o+1]*dt;P.p[o+2]+=P.v[o+2]*dt;
-            for(let a=0;a<3;a++)P.r[o+a]+=P.w[o+a]*dt;
+            P.age[i]+=dt;const g=step(P.p,P.v,o,P.sc[o+1]*.45);
+            // tumbling in the air, rolling with the slide speed on the plate
+            const k=g?Math.min(1,Math.hypot(P.v[o],P.v[o+2])*.8):1;for(let a=0;a<3;a++)P.r[o+a]+=P.w[o+a]*dt*k;
             pos.set(P.p[o],P.p[o+1],P.p[o+2]);
             if(gone(P.p[o],P.p[o+1],P.p[o+2],P.age[i])){P.alive[i]=0;P.live--;}
           }
