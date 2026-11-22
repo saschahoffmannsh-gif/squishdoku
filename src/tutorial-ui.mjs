@@ -7,8 +7,8 @@ const T = window.SquishTutorial;
 // Eigene Mini-Animationen (Squish-Icons) statt Gitter: Farbe → einer leuchtet, der Rest ploppt;
 // Reihe & Spalte → Kreuz ploppt; Berühren → ein zweiter Leuchter rückt heran und wird rot.
 export const RULES = [
-  { key: 'reg', label: '1 Leuchter pro Farbe', tip: 'Jede <b>Farbe</b> hat genau <b>einen</b> Leuchter – die anderen Squishs dieser Farbe können weg.' },
-  { key: 'rowcol', label: '1 pro Reihe & Spalte', tip: 'In jeder <b>Reihe</b> und jeder <b>Spalte</b> leuchtet genau <b>ein</b> Squish.' },
+  { key: 'reg', label: '1 Leuchter pro Farbe', tip: 'Jede <b>Farbe</b> hat genau <b>einen</b> Leuchter – die anderen Kekse dieser Farbe können weg.' },
+  { key: 'rowcol', label: '1 pro Reihe & Spalte', tip: 'In jeder <b>Reihe</b> und jeder <b>Spalte</b> leuchtet genau <b>ein</b> Keks.' },
   { key: 'touch', label: 'Leuchter berühren sich nie', tip: 'Leuchter berühren sich <b>nie</b> – auch nicht <b>schräg</b>.' },
 ];
 function icon(key) {
@@ -42,30 +42,30 @@ const HAND = '<svg viewBox="0 0 44 52" aria-hidden="true"><path d="M12 27V6.5a4 
 const TXT = {
   // Mission 1: alle Regeln, vor allem „Leuchter berühren sich nie“ + Herzen
   touch: {
-    intro: ['Willkommen! In jeder <b>Farbe</b>, <b>Reihe</b> und <b>Spalte</b> leuchtet genau <b>ein</b> Squish. Und: Leuchter <b>berühren sich nie</b> – auch nicht <b>schräg</b>!', 'Achtung: Ein <b>falscher</b> Squish kostet ein <b>Herz</b>. Sind alle drei weg, startest du neu.'],
-    hold_reg: ['Los: Diese Farbe hat nur <b>einen</b> Squish – <b>halte ihn gedrückt!</b>', 'Diese <b>Farbe</b> hat nur noch <b>einen</b> Squish – <b>halten!</b>'],
+    intro: ['Willkommen! In jeder <b>Farbe</b>, <b>Reihe</b> und <b>Spalte</b> leuchtet genau <b>ein</b> Keks. Und: Leuchter <b>berühren sich nie</b> – auch nicht <b>schräg</b>!', 'Achtung: Ein <b>falscher</b> Keks kostet ein <b>Herz</b>. Sind alle drei weg, startest du neu.'],
+    hold_reg: ['Los: Diese Farbe hat nur <b>einen</b> Keks – <b>halte ihn gedrückt!</b>', 'Diese <b>Farbe</b> hat nur noch <b>einen</b> Keks – <b>halten!</b>'],
     pop_touch: ['Rund um einen Leuchter darf keiner leuchten – <b>auch schräg nicht</b>. <b>Wisch</b> die <b>Nachbarn</b> weg!', 'Wieder die <b>Nachbarn</b> – auch die schrägen. <b>Weg damit!</b>'],
     pop_known: ['Seine <b>Reihe</b>, <b>Spalte</b> und <b>Farbe</b> sind jetzt besetzt – <b>wisch</b> die anderen dort weg!', 'Und wieder: <b>Reihe</b>, <b>Spalte</b>, <b>Farbe</b> weg!'],
-    hold_row: ['In dieser <b>Reihe</b> ist nur noch <b>ein</b> Squish übrig – <b>halte ihn!</b>'],
-    hold_col: ['In dieser <b>Spalte</b> ist nur noch <b>ein</b> Squish übrig – <b>halte ihn!</b>'],
+    hold_row: ['In dieser <b>Reihe</b> ist nur noch <b>ein</b> Keks übrig – <b>halte ihn!</b>'],
+    hold_col: ['In dieser <b>Spalte</b> ist nur noch <b>ein</b> Keks übrig – <b>halte ihn!</b>'],
     done: 'Perfekt – alle Regeln sitzen!',
   },
   // Mission 2: Profi-Trick „eine Farbe liegt nur in einer Reihe → die Reihe gehört ihr“
   claim: {
-    intro: ['Mission 2: ein <b>Profi-Trick</b>! Hier gibt es keine Farbe mit nur einem Squish. Trotzdem kannst du sicher starten – ich zeig dir wie.'],
+    intro: ['Mission 2: ein <b>Profi-Trick</b>! Hier gibt es keine Farbe mit nur einem Keks. Trotzdem kannst du sicher starten – ich zeig dir wie.'],
     pop_claim_row: ['Schau: Diese Farbe liegt <b>nur in dieser Reihe</b>. Ihr Leuchter <b>muss</b> also hier sein – deshalb kann sonst <b>keiner</b> in der Reihe leuchten. <b>Wisch</b> die anderen weg!',
-      'Gleicher Trick: Diese Farbe hat jetzt nur noch Squishs in <b>einer Reihe</b>. Ihr Leuchter gehört in diese Reihe – also können die <b>anderen</b> dort weg!'],
+      'Gleicher Trick: Diese Farbe hat jetzt nur noch Kekse in <b>einer Reihe</b>. Ihr Leuchter gehört in diese Reihe – also können die <b>anderen</b> dort weg!'],
     pop_claim_col: ['Schau: Diese Farbe liegt <b>nur in dieser Spalte</b>. Ihr Leuchter <b>muss</b> also hier sein – deshalb kann sonst <b>keiner</b> in der Spalte leuchten. <b>Wisch</b> die anderen weg!',
-      'Gleicher Trick: Diese Farbe hat jetzt nur noch Squishs in <b>einer Spalte</b>. Ihr Leuchter gehört in diese Spalte – also können die <b>anderen</b> dort weg!'],
-    hold_reg: ['Siehst du? Durch den Trick hat diese Farbe nur noch <b>einen</b> Squish – <b>halte ihn!</b>', 'Diese <b>Farbe</b> hat nur noch <b>einen</b> Squish – <b>halten!</b>'],
+      'Gleicher Trick: Diese Farbe hat jetzt nur noch Kekse in <b>einer Spalte</b>. Ihr Leuchter gehört in diese Spalte – also können die <b>anderen</b> dort weg!'],
+    hold_reg: ['Siehst du? Durch den Trick hat diese Farbe nur noch <b>einen</b> Keks – <b>halte ihn!</b>', 'Diese <b>Farbe</b> hat nur noch <b>einen</b> Keks – <b>halten!</b>'],
     pop_touch: ['Jetzt wie immer: die <b>Nachbarn</b> des Leuchters (auch schräg) können weg!', 'Wieder die <b>Nachbarn</b> – weg damit!'],
     pop_known: ['Seine <b>Reihe</b>, <b>Spalte</b> und <b>Farbe</b> sind besetzt – <b>wegwischen!</b>', 'Und wieder: <b>Reihe</b>, <b>Spalte</b>, <b>Farbe</b> weg!'],
-    hold_row: ['In dieser <b>Reihe</b> ist nur noch <b>ein</b> Squish übrig – <b>halte ihn!</b>'],
-    hold_col: ['In dieser <b>Spalte</b> ist nur noch <b>ein</b> Squish übrig – <b>halte ihn!</b>'],
+    hold_row: ['In dieser <b>Reihe</b> ist nur noch <b>ein</b> Keks übrig – <b>halte ihn!</b>'],
+    hold_col: ['In dieser <b>Spalte</b> ist nur noch <b>ein</b> Keks übrig – <b>halte ihn!</b>'],
     done: 'Stark! Den <b>Reihen-Trick</b> brauchst du ab jetzt öfter – halte immer Ausschau nach Farben, die nur in einer Reihe oder Spalte liegen.',
   },
 };
-const FALLBACK = 'Halte den Squish, auf den ich zeige.';
+const FALLBACK = 'Halte den Keks, auf den ich zeige.';
 const OUCH = 'Autsch! Der durfte nicht – das kostet ein <b>Herz</b>. Folge der Hand!';
 
 export function createTutorial({ stage, board, getS }) {

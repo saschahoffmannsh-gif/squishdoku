@@ -1,5 +1,6 @@
 // SquishDoku – App: Menüs (Neon-Nacht-Design), Levelauswahl, Spiel, Sieg.
 import {createBoard3D as createSquishBoard} from './board3d.mjs';
+import {cookiesReady} from './cookies3d.mjs';
 // Prototype look (tube.html sets window.SD_LOOK='tube'): neon silicone tubes instead of squishes.
 const LOOK=window.SD_LOOK||'squish',TUBE=LOOK==='tube';
 const createBoard3D=TUBE?(await import('./tube3d.mjs')).createTubeBoard:createSquishBoard;
@@ -113,19 +114,19 @@ fitViewport();
 const levels=await (await fetch('src/levels.json')).json();
 if(TUBE){store.unlocked=levels.length;} // Vorschau: alle Level offen
 const HINTS=[
-  'Halte einen Squish kurz <b>gedrückt</b> – richtig gewählt, <b>leuchtet</b> er!',
-  '<b>Wische</b> über Squishs, die nicht leuchten können – sie <b>ploppen</b>.',
-  'Pro <b>Reihe</b>, <b>Spalte</b> und <b>Farbe</b> leuchtet genau ein Squish.',
-  'Leuchtende Squishs berühren sich nie – auch nicht <b>schräg</b>.',
+  'Halte einen Keks kurz <b>gedrückt</b> – richtig gewählt, <b>leuchtet</b> er!',
+  '<b>Wische</b> über Kekse, die nicht leuchten können – sie <b>zerbröseln</b>.',
+  'Pro <b>Reihe</b>, <b>Spalte</b> und <b>Farbe</b> leuchtet genau ein Keks.',
+  'Leuchtende Kekse berühren sich nie – auch nicht <b>schräg</b>.',
   'Kein Raten nötig: Alles lässt sich <b>logisch</b> lösen.',
 ];
 // Meilenstein-Tipps für die 50er-Rampe; dazwischen wechseln die Grundregeln
 const MILESTONES={
-  3:'Jetzt allein: Jedes Level hier hat einen <b>Einzel-Squish</b> – eine Farbe aus nur einem Feld. Fang dort an!',
+  3:'Jetzt allein: Jedes Level hier hat einen <b>Einzel-Keks</b> – eine Farbe aus nur einem Feld. Fang dort an!',
   11:'Ab jetzt gibt es <b>kein Einzelfeld</b> mehr: Such eine kleine Farbe, die nur in <b>einer Reihe</b> liegt.',
   15:'Neu: <b>6×6</b>! Liegt eine Farbe nur in einer Spalte, gehört diese Spalte ihr.',
-  21:'Prüf auch: Würde ein Squish hier eine Farbe <b>komplett blockieren</b>? Dann kann er nicht leuchten.',
-  28:'Neu: <b>7×7</b> – und der <b>weiße</b> Squish ist eine eigene Farbe.',
+  21:'Prüf auch: Würde ein Keks hier eine Farbe <b>komplett blockieren</b>? Dann kann er nicht leuchten.',
+  28:'Neu: <b>7×7</b> – und der <b>weiße</b> Keks ist eine eigene Farbe.',
   35:'Knifflig: Teilen sich <b>zwei Farben zwei Reihen</b>, gehören die Reihen nur ihnen.',
   41:'Neu: <b>8×8</b> mit acht Farben. Du schaffst das – Schritt für Schritt!',
   50:'Das letzte Level – zeig, was du gelernt hast!',
@@ -308,10 +309,10 @@ function statsScreen(){
 // --- Regeln & Tipps ---
 function rulesCard(){
   const c=el('div','nn-rules');
-  const rows=[['✦','In jeder <b>Reihe</b>, jeder <b>Spalte</b> und jeder <b>Farbe</b> leuchtet genau <b>ein</b> Squish.'],
-    ['✦','Leuchtende Squishs berühren sich <b>nie</b> – auch nicht schräg.'],
-    ['●','Kurz <b>gedrückt halten</b>: Der Squish leuchtet.'],
-    ['≋','<b>Wischen</b> (oder kurz antippen) lässt Squishs <b>ploppen</b>, die nicht leuchten können. Antippen holt sie zurück.'],
+  const rows=[['✦','In jeder <b>Reihe</b>, jeder <b>Spalte</b> und jeder <b>Farbe</b> leuchtet genau <b>ein</b> Keks.'],
+    ['✦','Leuchtende Kekse berühren sich <b>nie</b> – auch nicht schräg.'],
+    ['●','Kurz <b>gedrückt halten</b>: Der Keks leuchtet.'],
+    ['≋','<b>Wischen</b> (oder kurz antippen) lässt Kekse <b>zerbröseln</b>, die nicht leuchten können. Antippen holt sie zurück.'],
     ['♥','Falsch gehalten oder falsch geploppt kostet ein <b>Herz</b>. Ohne Herzen: nochmal!']];
   c.innerHTML=rows.map(([i,t])=>`<p><span class="sd-rule-ico">${i}</span><span>${t}</span></p>`).join('');
   return c;
@@ -448,7 +449,8 @@ function beginLevel(id,L=levels[id-1]){
     // game screen first (the tap answers at once), build the table right after that frame is painted.
     setLevelCard(id,L);$('glow-total').textContent=L.N;$('glow-count').textContent=0;$('timer-text').textContent='0:00';
     $('hint').innerHTML=hintFor(id);
-    starting=true;requestAnimationFrame(()=>setTimeout(()=>{starting=false;if(!game.hidden)beginLevel(id,L);},0));
+    // (the cookie textures were already loading since startup: the first board shows complete, no pop-in)
+    starting=true;Promise.all([TUBE?0:cookiesReady.catch(e=>console.warn('cookies',e)),new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))]).then(()=>{starting=false;if(!game.hidden)beginLevel(id,L);});
     return;
   }
   ensureBoard();
@@ -652,7 +654,7 @@ async function win(){
   items.push(tm);
   if(daily)items.push(streakBox(curStreak(),store.daily.best||0,dailyRes.grew));
   const p=document.createElement('p');p.className='sd-center';
-  p.innerHTML=L.guide==='touch'?'Mission 1 geschafft – du kennst jetzt alle Regeln!':L.guide==='claim'?'Mission 2 geschafft – den Reihen-Trick brauchst du ab jetzt öfter!':last?`Alle ${levels.length} Level gelöst – du bist ein Squish-Profi!`
+  p.innerHTML=L.guide==='touch'?'Mission 1 geschafft – du kennst jetzt alle Regeln!':L.guide==='claim'?'Mission 2 geschafft – den Reihen-Trick brauchst du ab jetzt öfter!':last?`Alle ${levels.length} Level gelöst – du bist ein SquishDoku-Profi!`
     :stars===3?(daily?'Perfekt – ohne Fehler und flott! Morgen wartet das nächste.':`Level ${id}: perfekt – ohne Fehler und flott!`)
     :`${daily?'Gelöst!':`Level ${id} gelöst.`} Für 3 Sterne: ${P.missingFor3(L,S.hearts,ms)}.`;
   items.push(p);

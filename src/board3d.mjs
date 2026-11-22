@@ -15,6 +15,7 @@ import {createContactSolver} from '../vendor/squish-attack/game/dense-contacts.m
 import {configureRenderQuality} from '../vendor/squish-attack/game/render-quality.mjs?v=launch-26';
 import {installCleanScreen} from '../vendor/squish-attack/game/clean-screen.mjs?v=launch-26';
 import {createFusion} from '../vendor/squish-attack/game/fusion.mjs?v=launch-26';
+import {makeCookie,crumbleOf,warmSet,COOKIE_TOP} from './cookies3d.mjs';
 
 const P=PARAMETERS;
 // Same press/drag/release/wobble springs as squish-graphics.js (Vh/Gh/Wh/bl),
@@ -65,7 +66,8 @@ export function createBoard3D(host){
   const fusion=createFusion({internals,graphics});
 
   // ---------- board layout ----------
-  let N=5,pitch=P.board.pitch,k=1,cells=[];
+  let N=5,pitch=P.board.pitch,k=1,cells=[],size=1,Y0=P.board.top-.02,HU=.3;
+  // cookies: Y0 = underside on the glass, HU = height unit (lift 1.2 = cookie top, like the old gel height)
   const SPACING=1.0, BODY=.93; // body footprint relative to pitch (small glass gaps between squishes)
   function cellPos(r,c){return new THREE.Vector3((c-(N-1)/2)*pitch,P.board.floor,(r-(N-1)/2)*pitch);}
   function disposeGel(s){s.group.traverse(o=>{o.geometry?.dispose?.();for(const m of [].concat(o.material||[]))m.dispose?.();o.customDepthMaterial?.dispose?.();});scene.remove(s.group);}
@@ -85,30 +87,40 @@ export function createBoard3D(host){
   const dull=(col,f)=>{const g=col.r*.3+col.g*.59+col.b*.11;return new THREE.Color(g,g,g).lerp(col,.35).lerp(NAVY,f);};
 
   const GOLD=new THREE.Color('#ffd23f'),WARM_HI=new THREE.Color('#ff9800'),WARM_LO=new THREE.Color('#c24a06');
-  function setBodyTone(cell,mode){
-    const s=cell.s,u=s.body.material.uniforms,c=comicColors(cell.value);
-    const outline=s.body.children.find(o=>o.name==='Comic_outline');
-    if(mode==='glow'){u.uLight.value.copy(WARM_HI);u.uShade.value.copy(WARM_LO);outline?.material.uniforms.uC.value.set('#ffd23f');}
-    else if(mode==='popped'){u.uLight.value.copy(dull(c.mid,.35));u.uShade.value.copy(dull(c.lo,.55));outline?.material.uniforms.uC.value.set(INK);}
-    else if(mode==='wrong'){u.uLight.value.copy(c.light);u.uShade.value.copy(c.shade);outline?.material.uniforms.uC.value.set('#ff2a2a');}
-    else{u.uLight.value.copy(c.light);u.uShade.value.copy(c.shade);outline?.material.uniforms.uC.value.set(INK);}
-    requestFrame();
+  // shared per-animal material variants (normal / golden lit / red wrong): a swap, no per-cell materials
+  function setBodyTone(cell,mode){cell.s.ck.tone(mode==='popped'?'normal':mode);requestFrame();}
+  // cookie motion: press squash, lean along the finger, spring back with a little wobble (replaces the gel solver)
+  function cookieLive(s){const p=s.press,t=s.tilt;return s.amplitude>.012||p.held||p.releaseQueued||p.compression!==0||p.velocity!==0||t.x!==0||t.z!==0||t.vx!==0||t.vz!==0;}
+  function updateCookie(s,dt){
+    const p=s.press,t=s.tilt;dt=Math.min(dt,1/30);
+    if(p.releaseQueued){p.held=false;p.releaseQueued=false;p.velocity-=1.4;s.amplitude=Math.max(s.amplitude,.3);}
+    const target=p.held?.11:0,K=p.held?320:210,C=p.held?30:10;
+    p.velocity+=(K*(target-p.compression)-C*p.velocity)*dt;p.compression+=p.velocity*dt;
+    if(!p.held&&Math.abs(p.compression)<.002&&Math.abs(p.velocity)<.02){p.compression=0;p.velocity=0;}
+    const lim=.28,tx=p.held?Math.max(-lim,Math.min(lim,p.dragZ*.45)):0,tz=p.held?Math.max(-lim,Math.min(lim,-p.dragX*.45)):0;
+    t.vx+=(170*(tx-t.x)-11*t.vx)*dt;t.vz+=(170*(tz-t.z)-11*t.vz)*dt;t.x+=t.vx*dt;t.z+=t.vz*dt;
+    if(!p.held&&Math.abs(t.x)+Math.abs(t.z)<.002&&Math.abs(t.vx)+Math.abs(t.vz)<.02){t.x=t.z=t.vx=t.vz=0;}
+    s.wt+=dt;s.amplitude=s.amplitude>.012?Math.min(1,s.amplitude)*Math.exp(-dt*5):0;
+    const w=s.amplitude*.09*Math.sin(s.wt*21),c=p.compression;
+    s.ck.inner.scale.set(1+c*.45+w*.6,Math.max(.5,1-c-w),1+c*.45+w*.6);
+    s.ck.inner.rotation.set(t.x+s.amplitude*.05*Math.sin(s.wt*17),0,t.z+s.amplitude*.05*Math.cos(s.wt*15));
   }
 
   function build(level,colorOf){
     const old=clear(true);
-    N=level.N;pitch=P.board.pitch*5/N*SPACING;k=5/N*BODY/.96;
+    N=level.N;pitch=P.board.pitch*5/N*SPACING;k=5/N*BODY/.96;size=pitch*.47;HU=COOKIE_TOP*size/1.2;
     for(let r=0;r<N;r++)for(let c=0;c<N;c++){
       const value=colorOf(level.regions[r].charCodeAt(c)-97);ensureColor(value);
-      const s=buildSquishy(value,comicBodyMaterial(value,null));initializeMotion(s);bindGelOptics(s);applyComic(s,value);
-      s.label.visible=false; // SquishDoku squishes carry no digits
+      // set F cookie of the region's animal (shared geometry/materials); `s` keeps the squish interface
+      const ck=makeCookie(value);
+      const s={ck,group:ck.group,body:ck.body,value,amplitude:0,wt:Math.random()*9,forceUpdate:false,label:{visible:false},tilt:{x:0,z:0,vx:0,vz:0},
+        press:{held:false,releaseQueued:false,age:0,compression:0,velocity:0,hasSwipe:false,dragX:0,dragZ:0,inputX:0,inputZ:0,swipeVX:0,swipeVZ:0,swipeX:0,swipeZ:0,directionX:0,directionZ:0}};
       s.group.name=`HUD_cell_${r}_${c}`;
-      s.group.position.copy(cellPos(r,c));
-      s.base=new THREE.Vector3(1.02*k,1.02*k/.92,1.02*k);s.group.scale.copy(s.base);
-      s.phase=Math.random()*Math.PI*2;
-      scene.add(s.group);setting.addHudShadow(s);
+      s.group.position.copy(cellPos(r,c));s.group.position.y=Y0;s.group.rotation.y=(Math.random()-.5)*.22;
+      s.base=new THREE.Vector3(size,size,size);s.group.scale.copy(s.base);
+      scene.add(s.group);
       const halo=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:haloTex,color:new THREE.Color('#ffae2b'),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,opacity:0}));
-      halo.material.depthTest=false;halo.rotation.x=-Math.PI/2;halo.position.copy(cellPos(r,c));halo.position.y=P.board.floor+P.gel.height*1.6*k;halo.scale.setScalar(pitch*1.55);halo.renderOrder=8;halo.visible=false;scene.add(halo);
+      halo.material.depthTest=false;halo.rotation.x=-Math.PI/2;halo.position.copy(cellPos(r,c));halo.position.y=Y0+HU*1.3;halo.scale.setScalar(pitch*1.55);halo.renderOrder=8;halo.visible=false;scene.add(halo);
       const spark=new THREE.Sprite(new THREE.SpriteMaterial({map:sparkTex,color:0xffffff,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));
       spark.visible=false;spark.renderOrder=9;scene.add(spark);
       const splat=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:splatTex,color:dull(comicColors(value).mid,.15),transparent:true,depthWrite:false,toneMapped:false,opacity:0}));
@@ -127,11 +139,14 @@ export function createBoard3D(host){
   function prewarm(){
     const glowOn=cells.length?cells[0]:null;
     if(glowOn){glowOn.halo.visible=glowOn.spark.visible=glowOn.splat.visible=true;}
-    try{if(!warmOn){fusion.warm(true);warmOn=true;}graphics.renderer.compile(scene,camera);graphics.render(0);}catch(e){console.warn('prewarm',e);}
-    finally{if(glowOn){glowOn.halo.visible=glowOn.spark.visible=glowOn.splat.visible=false;}}
+    // a hidden set of every cookie look (lit, wrong, crumbled) of this level's animals: links the
+    // programs and uploads the textures now; the materials are shared and kept, so it can go again.
+    let warm=null;
+    try{warm=warmSet([...new Set(cells.map(c=>c.value))]);scene.add(warm);graphics.renderer.compile(scene,camera);graphics.render(0);}catch(e){console.warn('prewarm',e);}
+    finally{if(warm)scene.remove(warm);if(glowOn){glowOn.halo.visible=glowOn.spark.visible=glowOn.splat.visible=false;}}
   }
   function disposeCells(list){
-    for(const cell of list){setting.removeHudShadow(cell.s);disposeGel(cell.s);scene.remove(cell.halo,cell.spark,cell.splat);cell.splat.geometry.dispose();cell.splat.material.dispose();cell.halo.geometry.dispose();cell.halo.material.dispose();cell.spark.material.dispose();}
+    for(const cell of list){scene.remove(cell.s.group);scene.remove(cell.halo,cell.spark,cell.splat);cell.splat.geometry.dispose();cell.splat.material.dispose();cell.halo.geometry.dispose();cell.halo.material.dispose();cell.spark.material.dispose();}
   }
   // keep=true: detach the old cells but free them only after the new level is built and compiled.
   // three.js releases a shader program with its last material, so disposing first made every
@@ -139,7 +154,7 @@ export function createBoard3D(host){
   function clear(keep=false){
     jobs.splice(0).forEach(j=>j.cancel?.());fusion.clear();
     const old=cells;cells=[];
-    if(keep){for(const cell of old){setting.removeHudShadow(cell.s);cell.s.group.visible=cell.halo.visible=cell.spark.visible=cell.splat.visible=false;}}
+    if(keep){for(const cell of old){cell.s.group.visible=cell.halo.visible=cell.spark.visible=cell.splat.visible=false;}}
     else disposeCells(old);
     requestFrame({shadows:true});
     return old;
@@ -150,7 +165,7 @@ export function createBoard3D(host){
   // The canvas rect is read fresh on every call (no cached rect), so rules bar folding, the tutorial
   // bubble or an iOS viewport change can never shift the touch mapping.
   function screenRay(x,y){const rc=graphics.renderer.domElement.getBoundingClientRect();pointer.set((x-rc.left)/rc.width*2-1,-(y-rc.top)/rc.height*2+1);ray.setFromCamera(pointer,camera);}
-  const pickPlane=()=>new THREE.Plane(new THREE.Vector3(0,1,0),-(P.board.floor+P.gel.height*1.1*k));
+  const pickPlane=()=>new THREE.Plane(new THREE.Vector3(0,1,0),-(Y0+HU*1.1));
   const glassPlane=()=>new THREE.Plane(new THREE.Vector3(0,1,0),-P.board.top);
   const cellOfPoint=p=>{if(!p)return null;const c=Math.round(p.x/pitch+(N-1)/2),r=Math.round(p.z/pitch+(N-1)/2);return r<0||c<0||r>=N||c>=N?null:cellAt(r,c);};
   const _hits=[],_box=new THREE.Box3(),_size=new THREE.Vector3(),_hp=new THREE.Vector3();
@@ -185,9 +200,9 @@ export function createBoard3D(host){
   function worldOf(x,y){screenRay(x,y);return ray.ray.intersectPlane(pickPlane(),new THREE.Vector3());}
   // lift: height in squish heights (1.2 = top); dz: offset toward the camera in cell pitches
   function screenOf(r,c,lift=1.2,dz=0){
-    const v=cellPos(r,c);v.y=P.board.floor+P.gel.height*lift*k;v.z+=dz*pitch;v.project(camera);
+    const v=cellPos(r,c);v.y=Y0+HU*lift;v.z+=dz*pitch;v.project(camera);
     const rc=graphics.renderer.domElement.getBoundingClientRect();
-    const v2=cellPos(r,c+1);v2.y=P.board.floor+P.gel.height*lift*k;v2.z+=dz*pitch;v2.project(camera);
+    const v2=cellPos(r,c+1);v2.y=Y0+HU*lift;v2.z+=dz*pitch;v2.project(camera);
     return {x:rc.left+(v.x+1)/2*rc.width,y:rc.top+(1-v.y)/2*rc.height,size:Math.abs(v2.x-v.x)/2*rc.width};
   }
   // screen rect of the chrome frame (outer edge) for the CSS glass plate under the canvas
@@ -235,13 +250,11 @@ export function createBoard3D(host){
     pop(r,c,{power=2.4,amount=1}={}){
       const cl=cellAt(r,c);if(cl.state==='popped')return false;
       cl.state='popped';cl.s.press.held=false;cl.s.press.releaseQueued=false;
-      try{fusion.popBody(cl.s,{value:cl.value,power,amount});}catch(e){console.warn('pop',e);}
       setBodyTone(cl,'popped');cl.s.value=cl.value;
       cl.halo.visible=false;cl.spark.visible=false;
-      // Sascha: a popped squish leaves NOTHING behind (no splat, no flat skin, no coloured glass
-      // reflection/contact glow of its old colour) – just empty glass. Tap brings it back.
-      setting.removeHudShadow(cl.s);
-      cl.anim=null;cl.s.group.visible=false;setScale(cl,.25,.25);requestFrame({shadows:true});
+      // the cookie crumbles: 4 broken pieces (showing the print) and crumbs stay lying in the cell; tap brings it back
+      const ck=cl.s.ck,run=crumbleOf(ck);ck.inner.visible=false;ck.crumble.visible=true;setScale(cl,1,1);run(0);
+      animate(cl,.36,t=>{run(t);requestFrame({shadows:true});},()=>requestFrame({shadows:true}));
       return true;
     },
     // Tap/swipe pop (Sascha's sequence): 1 squash flat under the finger, 2 spring back up with a
@@ -263,18 +276,18 @@ export function createBoard3D(host){
       return true;
     },
     // start state "already popped" (tutorial): empty glass without the burst
-    vanish(r,c){const cl=cellAt(r,c);cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;setting.removeHudShadow(cl.s);cl.anim=null;cl.s.group.visible=false;setScale(cl,.25,.25);requestFrame({shadows:true});},
+    vanish(r,c){const cl=cellAt(r,c);cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;cl.anim=null;const ck=cl.s.ck;ck.inner.visible=false;ck.crumble.visible=true;crumbleOf(ck)(1);setScale(cl,1,1);requestFrame({shadows:true});},
     restore(r,c){
       const cl=cellAt(r,c);
       if(cl.state==='popping'){cl.anim=null;cl.state='normal';setScale(cl,1,1);wobble(cl.s,.4);requestFrame();return;}
       if(cl.state!=='popped')return;
-      cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;setting.addHudShadow(cl.s);cl.s.group.visible=true;
+      cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;cl.anim=null;cl.s.ck.crumble.visible=false;cl.s.ck.inner.visible=true;cl.s.group.visible=true;setScale(cl,.25,.25);
       animate(cl,.3,t=>{const e=backOut(t);setScale(cl,.25+.75*e,.25+.75*e);},()=>{setScale(cl,1,1);wobble(cl.s,.6);});requestFrame({shadows:true});
     },
     glow(r,c,on){
       const cl=cellAt(r,c);
       if(on){cl.state='glow';setBodyTone(cl,'glow');cl.s.value=6; /* glass reflection/contact glow under it: gold, never the old region colour */requestFrame({shadows:true});cl.halo.visible=true;cl.spark.visible=true;
-        const top=cellPos(r,c);top.y=P.board.floor+P.gel.height*1.45*k;cl.spark.position.copy(top).add(new THREE.Vector3(-pitch*.22,0,-pitch*.22));
+        const top=cellPos(r,c);top.y=Y0+HU*1.45;cl.spark.position.copy(top).add(new THREE.Vector3(-pitch*.22,0,-pitch*.22));
         animate(cl,.5,t=>{const e=ease(t);cl.halo.material.opacity=.95*e;const s=1+.18*Math.sin(t*Math.PI);setScale(cl,s,s);cl.spark.scale.setScalar(pitch*.55*(t<.5?t*2:1+.2*Math.sin((t-.5)*Math.PI*2)));cl.spark.material.rotation=t*2;},()=>{setScale(cl,1,1);cl.halo.material.opacity=.95;});
         wobble(cl.s,.5);
       }else{cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;requestFrame({shadows:true});cl.halo.visible=false;cl.spark.visible=false;cl.halo.material.opacity=0;wobble(cl.s,.4);}
@@ -296,9 +309,8 @@ export function createBoard3D(host){
       let active=jobs.length>0;
       for(const cl of cells){
         if(cl.anim){const t=Math.min(1,(clock-cl.anim.t0)/cl.anim.dur);cl.anim.fn(t);if(t>=1){const d=cl.anim.done;cl.anim=null;d?.();}active=true;}
-        const s=cl.s,p=s.press;
-        const live=s.amplitude>.012||p.held||p.releaseQueued||p.compression!==0||p.velocity!==0||p.swipeX!==0||p.swipeZ!==0||s.forceUpdate;
-        if(live||cl.anim){s.forceUpdate=false;updateSquishy(s,clock,dt,false);active=true;}
+        const s=cl.s;
+        if(cookieLive(s)||s.forceUpdate){s.forceUpdate=false;updateCookie(s,dt);active=true;}
       }
       graphics.quality?.update?.(wall,now/1000,!active,renderedLast);
       if(active)dirty=true;
