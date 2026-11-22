@@ -40,21 +40,25 @@ def key(name, strip):
   return a, alpha
 
 def recolour(a, mode):
+  """Soft hue/saturation push toward the game's region colour; weight w fades in with saturation and hue distance (no banding)."""
   h, s, v = hsv(a)
-  if mode == 'pink':   # pale pig → game Pink (#f45bb8, hue ≈ 323°)
-    sel = ((h > 300) | (h < 25)) & (s > .08) & (v > .35)
-    nh = np.where(sel, 324 + (h - np.where(h > 180, 345, -15)) * .2, h); ns = np.where(sel, np.clip(s * 1.9 + .08, 0, .62), s); nv = np.where(sel, v * .98, v)
-  elif mode == 'red':  # orange fox fur → game Red (#e8263f, hue ≈ 352°) so it never reads as the orange lion
-    sel = (h > 2) & (h < 38) & (s > .45) & (v > .3)
-    nh = np.where(sel, (h - 24) % 360, h); ns = np.where(sel, np.clip(s * 1.05, 0, 1), s); nv = np.where(sel, v * .95, v)
-  elif mode == 'green':   # light lime frog → closer to game Green (#2fc24e)
-    sel = (h > 60) & (h < 160) & (s > .2)
-    nh = np.where(sel, h + (125 - h) * .35, h); ns = np.where(sel, np.clip(s * 1.3, 0, .9), s); nv = np.where(sel, v * .95, v)
-  elif mode == 'purple':  # lavender owl → a bit closer to game Purple (#8f45ff)
-    sel = (h > 245) & (h < 300) & (s > .12)
-    nh = np.where(sel, h + (268 - h) * .4, h); ns = np.where(sel, np.clip(s * 1.35, 0, .85), s); nv = nv = np.where(sel, v * .97, v)
+  band = lambda x, lo, hi, f: np.clip(np.minimum(x - lo, hi - x) / f, 0, 1)
+  hd = lambda c: (h - c + 180) % 360 - 180              # signed hue distance to c
+  if mode == 'pink':    # pale pig → game Pink (#f45bb8, hue ≈ 323°)
+    w = band(hd(345), -45, 45, 15) * np.clip((s - .03) / .12, 0, 1) * np.clip((v - .25) / .2, 0, 1)
+    nh, ns, nv = 324 + hd(345) * .2, np.clip(s * 1.9 + .08, 0, .62), v * .98
+  elif mode == 'red':   # orange fox fur → game Red (#e8263f, hue ≈ 352°), never confused with the orange lion
+    w = band(h, 2, 40, 6) * np.clip((s - .35) / .15, 0, 1) * np.clip((v - .25) / .15, 0, 1)
+    nh, ns, nv = h - 24, s * 1.05, v * .95
+  elif mode == 'green': # light lime frog → closer to game Green (#2fc24e)
+    w = band(h, 50, 175, 15) * np.clip((s - .1) / .25, 0, 1)
+    nh, ns, nv = h + (125 - h) * .35, np.clip(s * 1.3, 0, .9), v * .95
+  elif mode == 'purple':# lavender owl → closer to game Purple (#8f45ff)
+    w = band(h, 238, 305, 12) * np.clip((s - .06) / .15, 0, 1)
+    nh, ns, nv = h + (268 - h) * .4, np.clip(s * 1.35, 0, .85), v * .97
   else: return a
-  return from_hsv(nh, ns, nv)
+  out = from_hsv(nh % 360, np.clip(ns, 0, 1), np.clip(nv, 0, 1))
+  return a[..., :3] * (1 - w[..., None]) + out * w[..., None]
 
 def flood(passable):  # region of `passable` connected to the image border (iterative constrained dilation)
   r = np.zeros_like(passable); r[0, :] = passable[0, :]; r[-1, :] = passable[-1, :]; r[:, 0] = passable[:, 0]; r[:, -1] = passable[:, -1]
