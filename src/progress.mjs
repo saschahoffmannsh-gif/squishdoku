@@ -28,6 +28,7 @@ export const curStreak = (D, today, addDays) => (D.last === today || D.last === 
 export function recordDaily(D, key, { stars, ms, hearts }, today, addDays) {
   const prev = D.done[key], y = addDays(today, -1);
   D.done[key] = { stars: Math.max(prev?.stars || 0, stars), ms: Math.min(prev?.ms ?? Infinity, ms), hearts: Math.max(prev?.hearts || 0, hearts) };
+  if (!prev) D.total = Math.max((D.total || 0) + 1, Object.keys(D.done).length); // solved dailies ever (done{} is pruned)
   let grew = false;
   // only today's puzzle (or yesterday's, if started before midnight) moves the streak, once per day
   if (!prev && (key === today || key === y) && (!D.last || key > D.last)) {

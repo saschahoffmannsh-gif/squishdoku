@@ -1,4 +1,4 @@
-// SquishDoku – App: Menüs (Squish-Attack-Design), Levelauswahl, Spiel, Sieg.
+// SquishDoku – App: Menüs (Neon-Nacht-Design), Levelauswahl, Spiel, Sieg.
 import {createBoard3D as createSquishBoard} from './board3d.mjs';
 // Prototype look (tube.html sets window.SD_LOOK='tube'): neon silicone tubes instead of squishes.
 const LOOK=window.SD_LOOK||'squish',TUBE=LOOK==='tube';
@@ -6,7 +6,7 @@ const createBoard3D=TUBE?(await import('./tube3d.mjs')).createTubeBoard:createSq
 import {createGameSound} from '../vendor/squish-attack/game/sound.mjs?v=launch-26';
 import {createSdHaptics} from './haptics.mjs';
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
-import {installBackdrop} from '../vendor/squish-attack/game/home-menu.mjs?v=launch-26';
+import {I as NI} from './icons.mjs';
 import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=launch-26';
 import {createAdPacing} from '../vendor/squish-attack/game/ad-pacing.mjs';
 import {createAdUI,AD_ICON_SVG} from './ad-ui.mjs';
@@ -35,7 +35,7 @@ function migrate(d){
   if(d.v<3)d={...d,v:3,times:d.times||{}};
   return d;
 }
-const baseStore=()=>({v:3,unlocked:1,stars:{},times:{},seenRules:false,revealed:{},rulesCollapsed:false,daily:{done:{},streak:0,best:0,last:null},settings:{vibration:true}});
+const baseStore=()=>({v:3,unlocked:1,stars:{},times:{},seenRules:false,revealed:{},rulesCollapsed:false,daily:{done:{},streak:0,best:0,last:null},settings:{vibration:true,showTime:true}});
 function load(){
   const base=baseStore();
   try{const raw=localStorage.getItem(STORE);if(!raw)return base;const o=JSON.parse(raw),d=migrate(o);
@@ -52,7 +52,6 @@ const soundProxy=document.createElement('button');soundProxy.hidden=true;documen
 const sound=createGameSound(soundProxy);
 const haptics=createSdHaptics({isEnabled:()=>store.settings?.vibration!==false});
 const confetti=createConfetti();
-installBackdrop();
 const POP_DETUNE=[1,1.1,.95,1.15,.9,1.05,.85]; // each pop of a swipe sounds a little different
 const sfx=(kind,...a)=>{try{sound.play(kind,...a);}catch{}};
 const buzz=k=>{try{haptics.pulse(k);}catch{}};
@@ -163,88 +162,149 @@ async function dailyPuzzle(key){
 }
 const recordDaily=(key,stars,ms,hearts)=>P.recordDaily(store.daily,key,{stars,ms,hearts},todayKey(),SquishDaily.addDays);
 
-// ---------- Menüs ----------
-const home=$('home'),screenEl=$('home-screen');
+// ---------- Menüs (Neon-Nacht) ----------
+// Start / Levels / Statistik / Regeln are screens inside #home (tab bar below); Einstellungen is a bottom
+// sheet. Everything here only reads the store + progress rules and renders; no game logic lives here.
+const home=$('home'),screenEl=$('home-screen'),tabsEl=$('tabs');
+const BTN_KIND={'aw-green':'is-gold','aw-orange':'is-glass','aw-blue':'is-glass','aw-purple':'is-glass','aw-slate':'is-ghost','aw-red':'is-danger'};
 function button({label,icon,color='aw-green',size='',id,action}){
-  const b=document.createElement('button');b.type='button';b.className=`aw-btn ${color} ${size}`.trim();if(id)b.id=id;
-  b.innerHTML=`<span class="aw-ico">${ICONS[icon]||''}</span><span class="aw-label"><span></span></span>`;
-  b.querySelector('.aw-label>span').textContent=label;
+  const b=document.createElement('button');b.type='button';b.className=`nn-btn ${BTN_KIND[color]||'is-glass'}${size==='aw-small'?' is-small':''}`;if(id)b.id=id;
+  b.innerHTML=`<span class="nn-btn-ico">${NI[icon]?.()||ICONS[icon]||''}</span><span class="nn-btn-label"></span>`;
+  b.querySelector('.nn-btn-label').textContent=label;
   b.addEventListener('click',()=>{tap();action?.(b);});return b;
 }
-function ribbon(text,tone){const r=document.createElement('div');r.className=`aw-ribbon ${tone}`;r.textContent=text;r.setAttribute('role','heading');r.setAttribute('aria-level','2');return r;}
+function ribbon(text){const r=document.createElement('h2');r.className='nn-dlg-h';r.textContent=text;return r;}
 function tap(){try{sound.unlock?.();}catch{}buzz('tap');sfx('land',2);}
-function setItems(items){screenEl.replaceChildren(...items);items.forEach((el,i)=>el.style.setProperty('--i',i));}
-function renderStars(){$('home-stars').querySelector('b').textContent=`${totalStars()}/${levels.length*3}`;}
+const el=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;};
+function setItems(items){screenEl.replaceChildren(...items);items.forEach((e,i)=>e.style.setProperty('--i',i));}
 const nextLevel=()=>Math.min(levels.length,Math.max(1,...levels.filter(l=>store.stars[l.id]).map(l=>l.id+1),1));
-function showHome(screen='home'){
-  closeDialog();tut?.stop();
-  $('game').hidden=true;home.hidden=false;document.documentElement.classList.add('home-open');
-  home.dataset.screen=screen;renderStars();vibeBtn.hidden=!haptics.supported;
-  if(screen==='home'){
-    const n=nextLevel(),played=Object.keys(store.stars).length>0;
-    setItems([
-      button({label:played?`Level ${n} spielen`:'Spielen',icon:'play',color:'aw-green',size:'aw-big',id:'btn-play',action:()=>startLevel(n)}),
-      dailyCard(),
-      button({label:'Levels',icon:'grid',color:'aw-blue',id:'btn-levels',action:()=>showHome('levels')}),
-      button({label:'Regeln',icon:'cap',color:'aw-purple',id:'btn-rules',action:()=>showHome('rules')}),
-    ]);
-  }else if(screen==='levels'){
-    const grid=document.createElement('div');grid.className='sd-levels';
-    let band=null;
-    for(const l of levels){
-      if(l.label!==band){band=l.label;const h=document.createElement('div');h.className='sd-lv-band';h.textContent=band;grid.append(h);}
-      const locked=l.id>store.unlocked,stars=store.stars[l.id]||0;
-      const t=document.createElement('button');t.type='button';t.className='aw-tile'+(locked?' is-locked':'')+(l.id===nextLevel()&&!stars?' is-current':'');t.dataset.level=l.id;
-      t.innerHTML=`<span class="sd-lv-num">${l.id}</span><span class="sd-lv-size">${l.N}×${l.N}</span><span class="sd-lv-stars">${[1,2,3].map(i=>`<span class="${i<=stars?'':'off'}">${starIcon()}</span>`).join('')}</span>${locked?`<span class="sd-lock">${ICONS.lock}</span>`:''}`;
-      const bt=store.times[l.id];
-      t.setAttribute('aria-label',`Level ${l.id}, ${l.N} mal ${l.N}${locked?', gesperrt':`, ${stars} Sterne${bt?`, Bestzeit ${fmtTime(bt)}`:''}`}`);
-      t.addEventListener('click',()=>{tap();if(locked){t.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:260});return;}startLevel(l.id);});
-      grid.append(t);
-    }
-    const solved=levels.filter(l=>store.stars[l.id]).length;
-    const prog=document.createElement('div');prog.className='sd-lv-progress';prog.innerHTML=`${solved} / ${levels.length} gelöst<span class="sd-lv-total"><i>${starIcon()}</i>${totalStars()} / ${levels.length*3}</span>`;
-    const scroller=document.createElement('div');scroller.className='sd-levels-scroll';scroller.append(grid);
-    const card=document.createElement('div');card.className='aw-card sd-levels-card';card.append(prog,scroller);
-    // jump to the level you are on (the list is long now)
-    requestAnimationFrame(()=>{const cur=grid.querySelector(`[data-level="${nextLevel()}"]`);if(cur)scroller.scrollTop=Math.max(0,cur.offsetTop-scroller.clientHeight/2+cur.offsetHeight/2);});
-    setItems([ribbon('Levels','aw-r-blue'),card,button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',id:'btn-home',action:()=>showHome('home')})]);
-  }else if(screen==='rules'){
-    setItems([ribbon('So geht’s','aw-r-purple'),rulesCard(),button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',action:()=>showHome('home')})]);
-  }
+const solvedCount=()=>levels.filter(l=>store.stars[l.id]).length;
+const dayWord=n=>n===1?'Tag':'Tage';
+// numbers for the stats screen and the sheet's chips
+function stats(){
+  const solved=levels.filter(l=>store.stars[l.id]),times=solved.map(l=>store.times[l.id]).filter(t=>t!=null);
+  const D=store.daily,done=Object.values(D.done||{});
+  return {stars:totalStars(),maxStars:levels.length*3,solved:solved.length,perfect:solved.filter(l=>store.stars[l.id]===3).length,
+    avg:times.length?times.reduce((a,b)=>a+b,0)/times.length:null,best:times.length?Math.min(...times):null,
+    streak:curStreak(),bestStreak:D.best||0,daily:Math.max(D.total||0,done.length),dailyPerfect:done.filter(d=>d.stars===3).length,
+    bySize:[5,6,7,8].map(N=>{const ls=levels.filter(l=>sizeTab(l)===N),ok=ls.filter(l=>store.stars[l.id]),t=ok.map(l=>store.times[l.id]).filter(x=>x!=null);
+      return {N,total:ls.length,solved:ok.length,best:t.length?Math.min(...t):null,avg:t.length?t.reduce((a,b)=>a+b,0)/t.length:null};})};
 }
-// prominent Tagesrätsel card on the start screen: date, size, status, streak flame
+const starsChip=()=>{const t=totalStars(),m=levels.length*3;return `<span class="nn-chip nn-glass" id="home-stars" aria-label="${t} von ${m} Sternen"><i class="nn-chip-star">${NI.star()}</i><b>${t}</b><em>/${m}</em></span>`;};
+const streakChip=()=>{const s=curStreak();return `<span class="nn-chip nn-glass is-flame${s?'':' is-out'}" id="home-streak" aria-label="Serie: ${s} ${dayWord(s)}"><i class="nn-chip-flame">${NI.flame()}</i><b>${s}</b>${dayWord(s)}</span>`;};
+function showHome(screen='home'){
+  closeDialog();closeSheet(true);tut?.stop();
+  $('game').hidden=true;home.hidden=false;document.documentElement.classList.add('home-open');
+  home.dataset.screen=screen;
+  for(const b of tabsEl.children)b.classList.toggle('is-on',b.dataset.tab===screen);
+  if(screen==='home')setItems(homeScreen());
+  else if(screen==='levels')setItems(levelsScreen());
+  else if(screen==='stats')setItems(statsScreen());
+  else if(screen==='rules')setItems(rulesScreen());
+  screenEl.scrollTop=0;
+}
+for(const b of tabsEl.children){
+  b.querySelector('i').innerHTML={home:NI.play(),levels:NI.grid(),stats:NI.trophy(),settings:NI.gear()}[b.dataset.tab];
+  b.addEventListener('click',()=>{tap();const t=b.dataset.tab;if(t==='settings')openSheet();else if(home.dataset.screen!==t)showHome(t);});
+}
+// --- Start ---
+function homeScreen(){
+  const top=el('div','nn-top',`${starsChip()}${streakChip()}<span class="nn-gap"></span><button type="button" class="nn-rb nn-glass" id="btn-settings" aria-label="Einstellungen">${NI.gear()}</button>`);
+  top.querySelector('#btn-settings').addEventListener('click',()=>{tap();openSheet();});
+  const logo=el('div','nn-logo','<h1 aria-hidden="true">SquishDoku</h1><p id="tagline">Halten · Leuchten · Ploppen</p>');logo.setAttribute('role','img');logo.setAttribute('aria-label','SquishDoku – Halten, Leuchten, Ploppen');
+  // hero: a real board rendered by the game's own squish renderer (pre-rendered, so startup stays instant)
+  const stage=el('div','nn-stage','<div class="nn-stage-in"><div class="nn-halo"></div><img class="nn-board" src="src/img/hero-board.webp" alt="" decoding="async" draggable="false"><img class="nn-floaty is-glow" src="src/img/sq-glow.webp" alt="" decoding="async" draggable="false"><img class="nn-floaty is-pink" src="src/img/sq-pink.webp" alt="" decoding="async" draggable="false"></div>');
+  stage.setAttribute('aria-hidden','true');
+  return [top,logo,stage,dailyCard(),continueCard()];
+}
+function weekRow(today){
+  const mon=SquishDaily.addDays(today,-SquishDaily.weekday(today)),names=['Mo','Di','Mi','Do','Fr','Sa','So'];
+  return names.map((n,i)=>{const k=SquishDaily.addDays(mon,i),done=!!store.daily.done[k];
+    const cls=k===today?'is-today'+(done?' is-done':''):done?'is-on':k>today?'is-future':'is-off';
+    return `<span class="${cls}" title="${dayLabel(k,{weekday:'long',day:'numeric',month:'long'})}${done?': gelöst':''}">${k===today?NI.flame('#fff6b8','#ff6a1f','#c2410c','#2a1606'):NI.flame()}${n}</span>`;}).join('');
+}
+// Tagesrätsel: date, size + difficulty, record, Spielen, week row Mo–So (real solved days)
 function dailyCard(){
   const key=todayKey(),plan=dailyPlan(key),res=store.daily.done[key],streak=curStreak(),best=store.daily.best||0;
-  const b=document.createElement('button');b.type='button';b.id='btn-daily';b.className='aw-card sd-daily'+(res?' is-solved':'');
-  const wd=dayLabel(key,{weekday:'short'}).replace('.','').toUpperCase(),dd=dayLabel(key,{day:'numeric'}).replace('.','');
-  const status=res?`<span class="sd-daily-stars">${[1,2,3].map(i=>`<span class="${i<=res.stars?'':'off'}">${starIcon()}</span>`).join('')}</span><span class="sd-daily-time">${fmtTime(res.ms)}</span>`
-    :`<span class="sd-daily-size">${plan.N}×${plan.N} · ${plan.label}</span>`;
-  b.innerHTML=`<span class="sd-daily-cal" aria-hidden="true"><b>${wd}</b><i>${dd}</i></span>
-    <span class="sd-daily-main"><span class="sd-daily-title">Tagesrätsel</span><span class="sd-daily-sub">${status}</span></span>
-    <span class="sd-daily-flame${streak?'':' is-out'}" aria-hidden="true">${flameIcon(streak>0)}<b>${streak}</b></span>
-    ${res?'<span class="sd-daily-badge is-done" aria-hidden="true">✓</span>':'<span class="sd-daily-badge" aria-hidden="true">NEU</span>'}`;
-  b.setAttribute('aria-label',`Tagesrätsel vom ${dayLabel(key,{weekday:'long',day:'numeric',month:'long'})}, ${res?`gelöst in ${fmtTime(res.ms)}, ${res.stars} Sterne`:`${plan.N} mal ${plan.N}, ${plan.label}`}. Serie ${streak} Tage, Rekord ${best}.`);
+  const b=el('button','nn-daily nn-glass'+(res?' is-solved':''));b.type='button';b.id='btn-daily';
+  const meta=res?`Gelöst in ${fmtTime(res.ms)} <span class="nn-dstars">${[1,2,3].map(i=>`<i class="${i<=res.stars?'on':'off'}">${NI.starFlat()}</i>`).join('')}</span>`
+    :`${plan.N}×${plan.N} · ${plan.label}${best?` · Rekord ${best} ${dayWord(best)}`:''}`;
+  b.innerHTML=`<span class="nn-k">${NI.cal()}Tagesrätsel</span><span class="nn-daily-h">${dayLabel(key,{weekday:'short',day:'numeric',month:'long'})}</span>
+    <span class="nn-meta">${meta}</span><span class="nn-cta${res?' is-done':''}">${res?NI.check():NI.play()}${res?'Gelöst':'Spielen'}</span>
+    <span class="nn-week" aria-hidden="true">${weekRow(key)}</span>`;
+  b.setAttribute('aria-label',`Tagesrätsel vom ${dayLabel(key,{weekday:'long',day:'numeric',month:'long'})}, ${res?`gelöst in ${fmtTime(res.ms)}, ${res.stars} Sterne`:`${plan.N} mal ${plan.N}, ${plan.label}`}. Serie ${streak} ${dayWord(streak)}, Rekord ${best}.`);
   b.dataset.status=res?'solved':'new';
   b.addEventListener('click',()=>{tap();if(res)showDailyDone(key);else startDaily(key);});
   return b;
 }
-const msToMidnight=()=>{const now=new Date(),p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'numeric',minute:'numeric',second:'numeric',hourCycle:'h23'}).formatToParts(now),g=t=>+p.find(x=>x.type===t).value;return (24*3600-(g('hour')*3600+g('minute')*60+g('second')))*1000;};
-function fmtLeft(ms){const m=Math.max(1,Math.round(ms/60000)),h=Math.floor(m/60);return h?`${h} Std. ${m%60} Min.`:`${m} Min.`;}
-function streakBox(streak,best,grew){
-  const d=document.createElement('div');d.className='sd-streak'+(grew?' is-grew':'')+(streak?'':' is-out');
-  d.innerHTML=`<span class="sd-streak-flame">${flameIcon(streak>0)}</span><span class="sd-streak-text"><span><b>${streak} ${streak===1?'Tag':'Tage'}</b> in Folge</span><small>Rekord: ${best} ${best===1?'Tag':'Tage'}</small></span>`;
-  return d;
+function continueCard(){
+  const n=nextLevel(),L=levels[n-1],played=solvedCount()>0,frac=solvedCount()/levels.length,C=125.66;
+  const b=el('button','nn-cont nn-glass');b.type='button';b.id='btn-play';
+  b.innerHTML=`<svg class="nn-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="#ffffff1c" stroke-width="5"/><circle class="nn-ring-on" cx="24" cy="24" r="20" fill="none" stroke="#ffcf5a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${Math.max(.01,frac*C).toFixed(1)} ${C}" transform="rotate(-90 24 24)"/><text x="24" y="29.5" text-anchor="middle">${n}</text></svg>
+    <span class="nn-cont-t"><b>${played?'Weiterspielen':'Los geht’s'}</b><small>${L.guide?`Mission ${n}`:`Level ${n}`} · ${L.N}×${L.N} · ${L.label}</small></span><span class="nn-go" aria-hidden="true">${NI.play()}</span>`;
+  b.setAttribute('aria-label',`${played?'Weiterspielen':'Spielen'}: Level ${n}, ${L.N} mal ${L.N}, ${L.label}. ${solvedCount()} von ${levels.length} Leveln gelöst.`);
+  b.addEventListener('click',()=>{tap();startLevel(n);});
+  return b;
 }
-function showDailyDone(key){
-  const res=store.daily.done[key];
-  const st=document.createElement('div');st.className='sd-stars sd-stars-static';st.innerHTML=[0,1,2].map(i=>`<i class="${i<res.stars?'on':''}">${starIcon()}</i>`).join('');
-  const p=document.createElement('p');p.className='sd-center';p.innerHTML=`Heute schon gelöst – in <b>${fmtTime(res.ms)}</b>.<br>Neues Rätsel in ${fmtLeft(msToMidnight())}.`;
-  openDialog([ribbon('Tagesrätsel','aw-r-green'),st,streakBox(curStreak(),store.daily.best||0,false),p,
-    button({label:'Nochmal spielen',icon:'retry',color:'aw-orange',id:'btn-daily-again',action:()=>startDaily(key)}),
-    button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',id:'btn-daily-close',action:closeDialog})],'daily');
+// --- Levels: one tab per board size; the 4×4 Mission 1 opens chapter 1 together with the 5×5 levels ---
+const sizeTab=l=>Math.max(5,l.N);
+const CHAPTERS={5:{n:1,sq:'green'},6:{n:2,sq:'purple'},7:{n:3,sq:'blue'},8:{n:4,sq:'orange'}};
+let lvTab=null;
+function levelsScreen(){
+  const cur=nextLevel();lvTab??=sizeTab(levels[cur-1]);
+  const hdr=el('div','nn-hdr',`<button type="button" class="nn-rb nn-glass" id="btn-home" aria-label="Zurück zum Start">${NI.back()}</button><h2>Levels</h2>${starsChip()}`);
+  hdr.querySelector('#btn-home').addEventListener('click',()=>{tap();showHome('home');});
+  const seg=el('div','nn-seg nn-glass');seg.setAttribute('role','tablist');seg.setAttribute('aria-label','Brettgröße');
+  const chap=el('div','nn-chap nn-glass');
+  const scroller=el('div','nn-lv-scroll'),panes={};
+  for(const N of [5,6,7,8]){
+    const s=el('button','',`${N}×${N}`);s.type='button';s.dataset.n=N;s.setAttribute('role','tab');seg.append(s);
+    const g=el('div','nn-lv-grid');g.dataset.n=N;panes[N]=g;scroller.append(g);
+    for(const l of levels.filter(x=>sizeTab(x)===N))g.append(levelTile(l,cur));
+  }
+  const show=N=>{lvTab=N;
+    for(const s of seg.children){const on=+s.dataset.n===N;s.classList.toggle('is-on',on);s.setAttribute('aria-selected',String(on));}
+    for(const k in panes)panes[k].hidden=+k!==N;
+    const ls=levels.filter(l=>sizeTab(l)===N),ok=ls.filter(l=>store.stars[l.id]).length,st=ls.reduce((a,l)=>a+(store.stars[l.id]||0),0),C=CHAPTERS[N];
+    chap.innerHTML=`<h3>Kapitel ${C.n} · ${N}×${N}</h3><p>${ok} von ${ls.length} gelöst · ${st} von ${ls.length*3} Sternen</p><div class="nn-bar"><i style="width:${(100*ok/ls.length).toFixed(1)}%"></i></div><img src="src/img/sq-${C.sq}.webp" alt="" decoding="async" draggable="false">`;
+    chap.classList.toggle('is-done',ok===ls.length);
+    requestAnimationFrame(()=>{const t=panes[N].querySelector('.is-current');scroller.scrollTop=t?Math.max(0,t.offsetTop-scroller.clientHeight/2+t.offsetHeight/2):0;});
+  };
+  seg.addEventListener('click',e=>{const s=e.target.closest('button');if(!s||+s.dataset.n===lvTab)return;tap();show(+s.dataset.n);});
+  show(lvTab);
+  const prog=el('div','nn-legend sd-lv-progress',`<span><b>${solvedCount()} / ${levels.length}</b> gelöst</span><span><i class="nn-dot"></i>3 Sterne</span><span>Bestzeit unter der Kachel</span>`);
+  return [hdr,seg,chap,scroller,prog];
 }
+function levelTile(l,cur){
+  const locked=l.id>store.unlocked,stars=store.stars[l.id]||0,isCur=l.id===cur&&!stars,bt=store.times[l.id];
+  const t=el('button','nn-tile nn-glass'+(locked?' is-locked':'')+(isCur?' is-current':'')+(stars===3?' is-perfect':''));t.type='button';t.dataset.level=l.id;
+  t.innerHTML=locked?`<b>${l.id}</b><span class="nn-lock">${NI.lock()}</span>`
+    :`<b>${l.id}</b><span class="nn-ts">${[1,2,3].map(i=>`<i class="${i<=stars?'on':''}">${NI.starFlat()}</i>`).join('')}</span><small>${isCur?'Jetzt':bt!=null?fmtTime(bt):l.guide?'Mission':l.N!==sizeTab(l)?`${l.N}×${l.N}`:'–'}</small>`;
+  if(l.guide)t.classList.add('is-mission');
+  t.setAttribute('aria-label',`${l.guide?'Mission':'Level'} ${l.id}, ${l.N} mal ${l.N}${locked?', gesperrt':`, ${stars} Sterne${bt!=null?`, Bestzeit ${fmtTime(bt)}`:''}`}`);
+  t.addEventListener('click',()=>{tap();if(locked){t.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:260});return;}startLevel(l.id);});
+  return t;
+}
+// --- Statistik ---
+function statsScreen(){
+  const s=stats(),f=ms=>ms==null?'–':fmtTime(ms),C=125.66;
+  const hdr=el('div','nn-hdr',`<h2>Statistik</h2>${starsChip()}`);
+  const hero=el('div','nn-st-hero nn-glass',`<svg class="nn-ring is-big" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="#ffffff1c" stroke-width="4.5"/><circle class="nn-ring-on" cx="24" cy="24" r="20" fill="none" stroke="#ffcf5a" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="${Math.max(.01,s.stars/s.maxStars*C).toFixed(1)} ${C}" transform="rotate(-90 24 24)"/></svg><span class="nn-st-hero-ico">${NI.star()}</span>
+    <div><b>${s.stars}<em> / ${s.maxStars}</em></b><span>Sterne gesammelt</span><small>${s.solved} von ${levels.length} Leveln gelöst · ${s.perfect} perfekt</small></div>`);
+  const card=(ico,val,lab,cls='')=>`<div class="nn-st nn-glass ${cls}"><i>${ico}</i><b>${val}</b><span>${lab}</span></div>`;
+  const grid=el('div','nn-st-grid',
+    card(NI.check(),`${s.solved}<em>/${levels.length}</em>`,'Gelöst','is-green')+card(NI.starFlat(),s.perfect,'Perfekt (3★)','is-gold')+
+    card(NI.clock(),f(s.best),'Bestzeit','is-blue')+card(NI.clock(),f(s.avg),'Ø Zeit','is-purple')+
+    card(NI.flame(),s.streak,`Serie (${dayWord(s.streak)})`,'is-flame')+card(NI.trophy(),s.bestStreak,'Beste Serie','is-gold')+
+    card(NI.cal(),s.daily,'Tagesrätsel gelöst','is-blue')+card(NI.starFlat(),s.dailyPerfect,'Tagesrätsel 3★','is-gold'));
+  const sizes=el('div','nn-grp nn-st-sizes',`<div class="nn-st-sizes-h"><span>Größe</span><span>Gelöst</span><span>Ø Zeit</span><span>Best</span></div>`+
+    s.bySize.map(r=>`<div class="nn-st-size"><b>${r.N}×${r.N}</b><span>${r.solved}/${r.total}</span><span>${f(r.avg)}</span><span>${f(r.best)}</span></div>`).join(''));
+  const wrap=el('div','nn-scroll');wrap.append(hero,grid,sizes);
+  return [hdr,wrap];
+}
+// --- Regeln & Tipps ---
 function rulesCard(){
-  const c=document.createElement('div');c.className='aw-card sd-rules';
+  const c=el('div','nn-rules');
   const rows=[['✦','In jeder <b>Reihe</b>, jeder <b>Spalte</b> und jeder <b>Farbe</b> leuchtet genau <b>ein</b> Squish.'],
     ['✦','Leuchtende Squishs berühren sich <b>nie</b> – auch nicht schräg.'],
     ['●','Kurz <b>gedrückt halten</b>: Der Squish leuchtet.'],
@@ -253,20 +313,94 @@ function rulesCard(){
   c.innerHTML=rows.map(([i,t])=>`<p><span class="sd-rule-ico">${i}</span><span>${t}</span></p>`).join('');
   return c;
 }
-const soundBtn=$('sound-toggle');soundBtn.innerHTML=SPEAKER;
+function rulesScreen(){
+  const hdr=el('div','nn-hdr',`<button type="button" class="nn-rb nn-glass" id="btn-rules-back" aria-label="Zurück zum Start">${NI.back()}</button><h2>So geht’s</h2>`);
+  hdr.querySelector('button').addEventListener('click',()=>{tap();showHome('home');});
+  const card=el('div','nn-grp nn-pad');card.append(rulesCard());
+  const T=P.TARGET_S,tips=el('div','nn-grp nn-pad nn-tips',`<h3>Sterne &amp; Zeit</h3><p><b>3 Sterne:</b> ohne Fehler und unter der Zielzeit (5×5 ${fmtTime(T[5]*1000)}, 6×6 ${fmtTime(T[6]*1000)}, 7×7 ${fmtTime(T[7]*1000)}, 8×8 ${fmtTime(T[8]*1000)}).</p><p><b>Rückgängig</b> nimmt Züge zurück – verlorene Herzen bleiben weg.</p><p><b>Tagesrätsel:</b> Jeden Tag eins, für alle gleich. Löse es täglich für deine Serie.</p>`);
+  const ms=el('div','nn-grp nn-missions');
+  for(const l of levels.filter(x=>x.guide)){
+    const open=l.id<=store.unlocked,r=el('button','nn-row'+(open?'':' is-locked'),`<span class="nn-ic" style="--c:#ffcf5a;--b:#ffcf5a26">${open?NI.play():NI.lock()}</span><span class="nn-row-t">Mission ${l.id} spielen<small>${l.guide==='touch'?'Halten, ploppen, nicht berühren':'Reihen-Trick: Farben abhaken'}</small></span><small aria-hidden="true">›</small>`);
+    r.type='button';r.disabled=!open;r.addEventListener('click',()=>{tap();startLevel(l.id);});ms.append(r);
+  }
+  const wrap=el('div','nn-scroll');wrap.append(card,tips,ms);
+  return [hdr,wrap];
+}
+const msToMidnight=()=>{const now=new Date(),p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'numeric',minute:'numeric',second:'numeric',hourCycle:'h23'}).formatToParts(now),g=t=>+p.find(x=>x.type===t).value;return (24*3600-(g('hour')*3600+g('minute')*60+g('second')))*1000;};
+function fmtLeft(ms){const m=Math.max(1,Math.round(ms/60000)),h=Math.floor(m/60);return h?`${h} Std. ${m%60} Min.`:`${m} Min.`;}
+function streakBox(streak,best,grew){
+  const d=el('div','sd-streak'+(grew?' is-grew':'')+(streak?'':' is-out'));
+  d.innerHTML=`<span class="sd-streak-flame">${flameIcon(streak>0)}</span><span class="sd-streak-text"><span><b>${streak} ${dayWord(streak)}</b> in Folge</span><small>Rekord: ${best} ${dayWord(best)}</small></span>`;
+  return d;
+}
+function showDailyDone(key){
+  const res=store.daily.done[key];
+  const st=el('div','sd-stars sd-stars-static',[0,1,2].map(i=>`<i class="${i<res.stars?'on':''}">${starIcon()}</i>`).join(''));
+  const p=el('p','sd-center',`Heute schon gelöst – in <b>${fmtTime(res.ms)}</b>.<br>Neues Rätsel in ${fmtLeft(msToMidnight())}.`);
+  openDialog([ribbon('Tagesrätsel'),st,streakBox(curStreak(),store.daily.best||0,false),p,
+    button({label:'Nochmal spielen',icon:'retry',color:'aw-orange',id:'btn-daily-again',action:()=>startDaily(key)}),
+    button({label:'Zurück',icon:'back',color:'aw-slate',size:'aw-small',id:'btn-daily-close',action:closeDialog})],'daily');
+}
+// --- Einstellungen (Bottom-Sheet) ---
+const sheetVeil=$('sheet-veil'),sheet=$('sheet');
+$('sheet-close').innerHTML=NI.close();
+[['sound-toggle','sound'],['vibe-toggle','vibe'],['time-toggle','clock'],['btn-rules','cap'],['btn-share','share'],['btn-wipe','undo']].forEach(([id,ico])=>{$(id).querySelector('.nn-ic').innerHTML=NI[ico]();});
+function openSheet(){
+  const s=stats();
+  $('sheet-stats').innerHTML=`<div><b>${s.stars}</b><span>Sterne</span></div><div><b>${s.streak}</b><span>Serie</span></div><div><b>${s.avg==null?'–':fmtTime(s.avg)}</b><span>Ø Zeit</span></div>`;
+  $('vibe-toggle').hidden=!haptics.supported;syncSound();syncVibe();syncTime();
+  sheetVeil.hidden=false;sheetVeil.classList.remove('is-closing');tabsEl.querySelector('[data-tab="settings"]').classList.add('is-on');
+  requestAnimationFrame(()=>$('sheet-close').focus({preventScroll:true}));
+}
+function closeSheet(now){
+  if(sheetVeil.hidden)return;tabsEl.querySelector('[data-tab="settings"]').classList.remove('is-on');
+  if(now||reduceMotion.matches){sheetVeil.hidden=true;return;}
+  sheetVeil.classList.add('is-closing');setTimeout(()=>{if(sheetVeil.classList.contains('is-closing')){sheetVeil.hidden=true;sheetVeil.classList.remove('is-closing');}},200);
+}
+$('sheet-close').addEventListener('click',()=>{tap();closeSheet();});
+sheetVeil.addEventListener('pointerdown',e=>{if(e.target===sheetVeil){e.preventDefault();closeSheet();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheetVeil.hidden)closeSheet();});
+const soundBtn=$('sound-toggle');
 const syncSound=()=>soundBtn.setAttribute('aria-pressed',String(sound.enabled));
 soundBtn.addEventListener('click',()=>{soundProxy.click();syncSound();if(sound.enabled)tap();});
 syncSound();
 // Vibration an/aus (only where the device can vibrate: Android browsers, later the native shell; iOS Safari can't)
-const vibeBtn=$('vibe-toggle');vibeBtn.innerHTML=VIBE;vibeBtn.hidden=!haptics.supported;
+const vibeBtn=$('vibe-toggle');vibeBtn.hidden=!haptics.supported;
 const syncVibe=()=>{const on=store.settings.vibration!==false;vibeBtn.setAttribute('aria-pressed',String(on));vibeBtn.setAttribute('aria-label',on?'Vibration an':'Vibration aus');};
 vibeBtn.addEventListener('click',()=>{try{sound.unlock?.();}catch{}store.settings.vibration=store.settings.vibration===false;save();syncVibe();sfx('land',2);buzz('light');});
 syncVibe();
-$('home-stars').querySelector('i').innerHTML=starIcon();
+// Zeit anzeigen: hides the HUD timer only (time still counts for stars and best times)
+const timeBtn=$('time-toggle');
+const syncTime=()=>{const on=store.settings.showTime!==false;timeBtn.setAttribute('aria-pressed',String(on));document.documentElement.classList.toggle('sd-no-timer',!on);};
+timeBtn.addEventListener('click',()=>{tap();store.settings.showTime=store.settings.showTime===false;save();syncTime();});
+syncTime();
+$('btn-rules').addEventListener('click',()=>{tap();showHome('rules');});
+const SHARE_URL='https://saschahoffmannsh-gif.github.io/squishdoku/';
+let toastTimer=0;
+function toast(text){const t=$('toast');t.textContent=text;t.hidden=false;t.classList.remove('is-in');void t.offsetWidth;t.classList.add('is-in');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true;},2600);}
+async function copyText(text){
+  try{await navigator.clipboard.writeText(text);return true;}catch{}
+  try{const a=el('textarea');a.value=text;a.setAttribute('readonly','');a.style.cssText='position:fixed;opacity:0;top:0;left:0';document.body.append(a);a.select();const ok=document.execCommand('copy');a.remove();return ok;}catch{return false;}
+}
+$('btn-share').addEventListener('click',async()=>{
+  tap();const data={title:'SquishDoku',text:'Spiel mit mir SquishDoku – halten, leuchten, ploppen! Jeden Tag ein neues Tagesrätsel.',url:SHARE_URL};
+  if(navigator.share){try{await navigator.share(data);return;}catch(e){if(e?.name==='AbortError')return;}}
+  toast(await copyText(SHARE_URL)?'Link kopiert – schick ihn deinen Freunden!':SHARE_URL);
+});
+$('btn-wipe').addEventListener('click',()=>{
+  tap();closeSheet(true);
+  openDialog([ribbon('Zurücksetzen?'),el('p','sd-center','Alle Sterne, Bestzeiten, freigeschalteten Level und deine Tagesrätsel-Serie werden <b>gelöscht</b>. Das lässt sich nicht rückgängig machen.'),
+    button({label:'Ja, alles löschen',icon:'retry',color:'aw-red',id:'btn-wipe-yes',action:wipeProgress}),
+    button({label:'Abbrechen',icon:'back',color:'aw-slate',size:'aw-small',id:'btn-wipe-no',action:()=>{closeDialog();openSheet();}})],'confirm');
+});
+function wipeProgress(){
+  const keep={...store.settings};for(const k of Object.keys(store))delete store[k];Object.assign(store,baseStore(),{settings:keep});
+  save();lvTab=null;showHome('home');toast('Fortschritt zurückgesetzt');
+}
 
 // ---------- Spiel ----------
 const game=$('game'),stage=$('stage'),fx=$('fx');
-$('btn-back').innerHTML=ICONS.back;$('btn-reset').innerHTML=ICONS.retry;
+$('btn-back').innerHTML=NI.back();$('btn-reset').innerHTML=NI.retry();
 const undoBtn=$('btn-undo');undoBtn.innerHTML=UNDO;$('timer').querySelector('i').innerHTML=CLOCK;
 let board=null,S=null;
 let tut=null,rulesBar=null,tipTimer=0;
@@ -506,7 +640,7 @@ async function win(){
   const s0=S;await wait(1100);
   if(S!==s0||game.hidden)return; // left the level meanwhile
   const last=!daily&&id===levels.length;
-  const items=[ribbon(last?'Alles geschafft!':daily?'Tagesrätsel!':'Geschafft!','aw-r-green')];
+  const items=[ribbon(last?'Alles geschafft!':daily?'Tagesrätsel!':'Geschafft!')];
   const st=document.createElement('div');st.className='sd-stars';st.innerHTML=[0,1,2].map(()=>`<i>${starIcon()}</i>`).join('');items.push(st);
   // Zeit + Bestzeit
   const best=daily?store.daily.done[daily].ms:store.times[id];
@@ -531,12 +665,12 @@ async function win(){
   [...st.children].forEach((s,i)=>{if(i<stars)setTimeout(()=>{s.classList.add('on');sfx('star',i+1);buzz(i===2?'win':'light');},380+i*280);});
 }
 function showLose(){
-  openDialog([ribbon('Oh nein!',''),Object.assign(document.createElement('p'),{textContent:'Keine Herzen mehr. Versuch’s gleich nochmal!'}),
+  openDialog([ribbon('Oh nein!'),Object.assign(document.createElement('p'),{textContent:'Keine Herzen mehr. Versuch’s gleich nochmal!'}),
     button({label:'Nochmal',icon:'retry',color:'aw-orange',size:'aw-big',id:'btn-retry',action:restart}),
     S.L.daily?button({label:'Zum Start',icon:'back',color:'aw-slate',size:'aw-small',action:()=>showHome('home')}):button({label:'Levels',icon:'grid',color:'aw-slate',size:'aw-small',action:()=>showHome('levels')})],'lose');
 }
 function showRulesDialog(){
-  openDialog([ribbon('So geht’s','aw-r-purple'),rulesCard(),button({label:'Los geht’s',icon:'play',color:'aw-green',size:'aw-big',id:'btn-rules-ok',action:closeDialog})],'rules');
+  openDialog([ribbon('So geht’s'),rulesCard(),button({label:'Los geht’s',icon:'play',color:'aw-green',size:'aw-big',id:'btn-rules-ok',action:closeDialog})],'rules');
 }
 function openDialog(items,kind){tick();const v=$('veil'),d=$('dialog');d.replaceChildren(...items);d.dataset.kind=kind;v.hidden=false;}
 function closeDialog(){tick();$('veil').hidden=true;const d=$('dialog');d.replaceChildren();delete d.dataset.kind;}
