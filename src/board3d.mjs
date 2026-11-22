@@ -15,7 +15,7 @@ import {createContactSolver} from '../vendor/squish-attack/game/dense-contacts.m
 import {configureRenderQuality} from '../vendor/squish-attack/game/render-quality.mjs?v=launch-26';
 import {installCleanScreen} from '../vendor/squish-attack/game/clean-screen.mjs?v=launch-26';
 import {createFusion} from '../vendor/squish-attack/game/fusion.mjs?v=launch-26';
-import {makeCookie,crumbleOf,warmSet,COOKIE_TOP} from './cookies3d.mjs';
+import {makeCookie,createCrumbs,warmSet,COOKIE_TOP} from './cookies3d.mjs';
 
 const P=PARAMETERS;
 // Same press/drag/release/wobble springs as squish-graphics.js (Vh/Gh/Wh/bl),
@@ -64,11 +64,12 @@ export function createBoard3D(host){
     get paused(){return false;},get time(){return clock;},
     disposeGel,job(job){jobs.push(job);requestFrame();return job;},cancelJobs(){jobs.splice(0).forEach(j=>j.cancel?.());}};
   const fusion=createFusion({internals,graphics});
+  const crumbs=createCrumbs(scene,camera); // pooled crumb particles of popped cookies (in the scene from the start: linked by the prewarm)
 
   // ---------- board layout ----------
   let N=5,pitch=P.board.pitch,k=1,cells=[],size=1,Y0=P.board.top-.02,HU=.3;
   // cookies: Y0 = underside on the glass, HU = height unit (lift 1.2 = cookie top, like the old gel height)
-  const SPACING=1.0, BODY=.93; // body footprint relative to pitch (small glass gaps between squishes)
+  const SPACING=1.03, BODY=.93; // body footprint relative to pitch (small glass gaps between squishes)
   function cellPos(r,c){return new THREE.Vector3((c-(N-1)/2)*pitch,P.board.floor,(r-(N-1)/2)*pitch);}
   function disposeGel(s){s.group.traverse(o=>{o.geometry?.dispose?.();for(const m of [].concat(o.material||[]))m.dispose?.();o.customDepthMaterial?.dispose?.();});scene.remove(s.group);}
 
@@ -110,7 +111,7 @@ export function createBoard3D(host){
 
   function build(level,colorOf){
     const old=clear(true);
-    N=level.N;pitch=P.board.pitch*5/N*SPACING;k=5/N*BODY/.96;size=pitch*.47;HU=COOKIE_TOP*size/1.2;
+    N=level.N;pitch=P.board.pitch*5/N*SPACING;k=5/N*BODY/.96;size=pitch*.5;HU=COOKIE_TOP*size/1.2;
     for(let r=0;r<N;r++)for(let c=0;c<N;c++){
       const value=colorOf(level.regions[r].charCodeAt(c)-97);ensureColor(value);
       // set F cookie of the region's animal (shared geometry/materials); `s` keeps the squish interface
@@ -155,7 +156,7 @@ export function createBoard3D(host){
   // three.js releases a shader program with its last material, so disposing first made every
   // level start relink all squish/glow/splat programs (the bulk of a level start on a phone).
   function clear(keep=false){
-    jobs.splice(0).forEach(j=>j.cancel?.());fusion.clear();
+    jobs.splice(0).forEach(j=>j.cancel?.());fusion.clear();crumbs.clear();
     const old=cells;cells=[];
     if(keep){for(const cell of old){cell.s.group.visible=cell.halo.visible=cell.spark.visible=cell.splat.visible=false;}}
     else disposeCells(old);
@@ -255,9 +256,8 @@ export function createBoard3D(host){
       cl.state='popped';cl.s.press.held=false;cl.s.press.releaseQueued=false;
       setBodyTone(cl,'popped');cl.s.value=cl.value;
       cl.halo.visible=false;cl.spark.visible=false;
-      // the cookie crumbles: 4 broken pieces (showing the print) and crumbs stay lying in the cell; tap brings it back
-      const ck=cl.s.ck,run=crumbleOf(ck);calm(cl.s);ck.inner.visible=false;ck.crumble.visible=true;setScale(cl,1,1);run(0);
-      animate(cl,.36,t=>{run(t);requestFrame({shadows:true});},()=>requestFrame({shadows:true}));
+      // the cookie shatters into crumbs that fall out of the screen; the cell is empty glass, tap brings it back
+      const ck=cl.s.ck;calm(cl.s);setScale(cl,1,1);try{crumbs.emit(ck,{amount:Math.max(.6,Math.min(1.4,amount||1))});}catch(e){console.warn('crumbs',e);}ck.inner.visible=false;requestFrame({shadows:true});
       return true;
     },
     // Tap/swipe pop (Sascha's sequence): 1 squash flat under the finger, 2 spring back up with a
@@ -279,12 +279,12 @@ export function createBoard3D(host){
       return true;
     },
     // start state "already popped" (tutorial): empty glass without the burst
-    vanish(r,c){const cl=cellAt(r,c);cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;cl.anim=null;const ck=cl.s.ck;calm(cl.s);ck.inner.visible=false;ck.crumble.visible=true;crumbleOf(ck)(1);setScale(cl,1,1);requestFrame({shadows:true});},
+    vanish(r,c){const cl=cellAt(r,c);cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;cl.anim=null;const ck=cl.s.ck;calm(cl.s);ck.inner.visible=false;setScale(cl,1,1);requestFrame({shadows:true});},
     restore(r,c){
       const cl=cellAt(r,c);
       if(cl.state==='popping'){cl.anim=null;cl.state='normal';setScale(cl,1,1);wobble(cl.s,.4);requestFrame();return;}
       if(cl.state!=='popped')return;
-      cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;cl.anim=null;cl.s.ck.crumble.visible=false;cl.s.ck.inner.visible=true;cl.s.group.visible=true;setScale(cl,.25,.25);
+      cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;cl.anim=null;cl.s.ck.inner.visible=true;cl.s.group.visible=true;setScale(cl,.25,.25);
       animate(cl,.3,t=>{const e=backOut(t);setScale(cl,.25+.75*e,.25+.75*e);},()=>{setScale(cl,1,1);wobble(cl.s,.6);});requestFrame({shadows:true});
     },
     glow(r,c,on){
@@ -310,6 +310,7 @@ export function createBoard3D(host){
       const dt=Math.min(P.motion.maximumFrameDelta,Math.max(0,wall));clock+=dt;
       for(let i=jobs.length-1;i>=0;i--)if(jobs[i].update(clock,dt))jobs.splice(i,1);
       let active=jobs.length>0;
+      if(crumbs.alive){crumbs.update(dt);active=true;}
       for(const cl of cells){
         if(cl.anim){const t=Math.min(1,(clock-cl.anim.t0)/cl.anim.dur);cl.anim.fn(t);if(t>=1){const d=cl.anim.done;cl.anim=null;d?.();}active=true;}
         const s=cl.s;

@@ -1,7 +1,7 @@
 // SquishDoku cookie pieces (set F, approved by Sascha): a real 3D shortbread body cut in the animal's
 // silhouette (baked rim, rounded edge, crumb texture) with the Pixar-style animal printed flat on top.
-// Everything heavy is shared: one body/print geometry and one material set per animal, one crumble
-// kit per animal (built once), shared lit/"wrong" material variants. Textures are small WebPs that
+// Everything heavy is shared: one body/print geometry and one material set per animal, colour swatch
+// list per animal for its crumbs (built once), shared lit/"wrong" material variants. Textures are small WebPs that
 // start loading when this module is imported; `cookiesReady` resolves when all are decoded.
 import {THREE} from '../vendor/squish-attack/squish/squish-graphics.js?v=play-sharp-1';
 
@@ -69,26 +69,13 @@ export function kit(v){
   const printWrong=print.clone();printWrong.color=new THREE.Color('#ffb0b0');printWrong.emissive=new THREE.Color('#ff2a2a');printWrong.emissiveMap=map;printWrong.emissiveIntensity=.35;saturate(printWrong,1.3);
   return KIT[name]={name,pts,uv:{cx,cy,sc},bodyGeo,printGeo,print,printLit,printWrong,map,crumble:null};
 }
-// broken pieces + crumbs of one animal (built once, on first use)
-function crumbleKit(K){
-  if(K.crumble)return K.crumble;const S=shared();
-  let sd=K.name.length*977+13;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
-  // cap texture: the print on baked dough, mapped like the body's shape coordinates
-  const n=IMG[K.name].width,c=document.createElement('canvas');c.width=c.height=n;const x=c.getContext('2d');x.fillStyle='#e2b071';x.fillRect(0,0,n,n);x.drawImage(IMG[K.name],0,0);
-  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.repeat.set(.5/K.uv.sc,.5/K.uv.sc);t.offset.set(.5+K.uv.cx*.5,.5+K.uv.cy*.5);
-  const cap=new THREE.MeshStandardMaterial({map:t,roughness:.5});saturate(cap,1.3);
-  const ang=([px,py])=>(Math.atan2(py,px)+Math.PI*4)%(Math.PI*2),cuts=[],NP=rnd()<.5?3:4;for(let k=0;k<NP;k++)cuts.push(k/NP*Math.PI*2+.5+(rnd()-.5)*Math.PI*2/NP*.55);
-  const pieces=[];
-  for(let k=0;k<NP;k++){
-    const a0=cuts[k],a1=cuts[(k+1)%NP]+(k===NP-1?Math.PI*2:0),up=a=>{while(a<a0)a+=Math.PI*2;return a;};
-    const arc=K.pts.filter(p=>up(ang(p))<=a1).sort((p,q)=>up(ang(p))-up(ang(q)));if(arc.length<3)continue;
-    const jag=(a,out)=>{const L=[];for(let s=1;s<=5;s++){const r=s/6*.85,j=(rnd()-.5)*.16;L.push([Math.cos(a+j)*r,Math.sin(a+j)*r]);}return out?L:L.reverse();};
-    const geo=body(shapeFrom([[(rnd()-.5)*.08,(rnd()-.5)*.08],...jag(a0,true),...arc,...jag(a1,false)]),.15,.045,2,k+3);
-    const mid=(a0+a1)/2,push=.2+rnd()*.12;
-    pieces.push({geo,to:new THREE.Vector3(Math.cos(mid)*push,.03+rnd()*.05,-Math.sin(mid)*push),rot:new THREE.Euler((rnd()-.5)*.5,(rnd()-.5)*.6,(rnd()-.5)*.5)});
-  }
-  const crumbs=[];for(let k=0;k<12;k++){const a=rnd()*Math.PI*2,r=.45+rnd()*.55,s=.05+rnd()*.07;crumbs.push({s,to:new THREE.Vector3(Math.cos(a)*r,s*.6,Math.sin(a)*r),rot:new THREE.Euler(rnd()*3,rnd()*3,rnd()*3)});}
-  return K.crumble={cap,pieces,crumbs};
+// print colours of one animal (sampled once from its art): a crumb bit carries the colour of the spot it broke from
+function swatches(K){
+  if(K.sw)return K.sw;const img=IMG[K.name],n=64,c=document.createElement('canvas');c.width=c.height=n;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,n,n);
+  const d=x.getImageData(0,0,n,n).data,out=[];
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const o=(j*n+i)*4;if(d[o+3]<200)continue;
+    const ax=(i+.5)/n*2-1,ay=1-(j+.5)/n*2;out.push({x:(ax-K.uv.cx)*K.uv.sc,z:-(ay-K.uv.cy)*K.uv.sc,col:new THREE.Color().setRGB(d[o]/255,d[o+1]/255,d[o+2]/255,THREE.SRGBColorSpace)});}
+  return K.sw=out;
 }
 // ---------- one cookie instance ----------
 // group (position/anim scale) > inner (press/wobble/tilt) > body + print
@@ -97,30 +84,83 @@ export function makeCookie(v){
   const b=new THREE.Mesh(K.bodyGeo,S.dough);b.castShadow=true;b.receiveShadow=true;b.name='Cookie_body';
   const pr=new THREE.Mesh(K.printGeo,K.print);pr.renderOrder=1;pr.name='Cookie_print';
   inner.add(b,pr);
-  const crumble=new THREE.Group();crumble.visible=false;crumble.rotation.y=(Math.random()-.5)*.8;group.add(crumble);
-  return {group,inner,body:b,print:pr,crumble,K,tone(mode){b.material=mode==='glow'?S.doughLit:S.dough;pr.material=mode==='glow'?K.printLit:mode==='wrong'?K.printWrong:K.print;}};
+  return {group,inner,body:b,print:pr,K,tone(mode){b.material=mode==='glow'?S.doughLit:S.dough;pr.material=mode==='glow'?K.printLit:mode==='wrong'?K.printWrong:K.print;}};
 }
-// build the crumble meshes for a cookie (cheap: shared geometry/materials) and return an animator t∈[0,1]
-export function crumbleOf(ck){
-  const C=crumbleKit(ck.K),S=shared(),g=ck.crumble;
-  if(!g.children.length){
-    for(const p of C.pieces){const m=new THREE.Mesh(p.geo,[C.cap,S.dough]);m.castShadow=true;m.receiveShadow=true;m.scale.setScalar(.8);m.userData=p;g.add(m);}
-    for(const c of C.crumbs){const m=new THREE.Mesh(S.crumbGeo,S.crumb);m.castShadow=true;m.userData=c;g.add(m);}
+// ---------- crumble: pooled instanced particles ----------
+// A popped cookie shatters into many small pieces: dough crumbs and icing bits (top = the print colour
+// of the spot they came from, sides = dough). They burst up and toward the viewer, spin, and fall with
+// gravity out of the screen, then their slot is recycled. Two preallocated InstancedMeshes, one draw
+// call each, no allocation per pop.
+export function createCrumbs(scene,camera,{crumbs=480,bits=320}={}){
+  const S=shared();
+  const bitGeo=new THREE.BoxGeometry(1,.42,1,1,1,1),bp=bitGeo.attributes.position,mask=new Float32Array(bp.count*3);
+  for(let i=0;i<bp.count;i++){const top=bp.getY(i)>.2?1:0;mask[i*3]=mask[i*3+1]=mask[i*3+2]=top;bp.setXYZ(i,bp.getX(i)*(1+.25*hash3(i,1,2)),bp.getY(i),bp.getZ(i)*(1+.25*hash3(i,3,4)));}
+  bitGeo.setAttribute('color',new THREE.BufferAttribute(mask,3));bitGeo.computeVertexNormals();
+  const bitMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,map:null});
+  bitMat.onBeforeCompile=sh=>{sh.vertexShader=sh.vertexShader.replace('#include <color_vertex>',`#include <color_vertex>
+    #ifdef USE_INSTANCING_COLOR
+      vColor.xyz=mix(vec3(.80,.55,.30),instanceColor.xyz,color.r);
+    #endif`);};bitMat.customProgramCacheKey=()=>'crumbBit';
+  const crumbMat=new THREE.MeshStandardMaterial({map:S.crumb.map,bumpMap:S.crumb.bumpMap,bumpScale:3,roughness:.9});
+  const mk=(geo,mat,n)=>{const m=new THREE.InstancedMesh(geo,mat,n);m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);m.setColorAt(0,new THREE.Color(1,1,1));m.instanceColor.setUsage(THREE.DynamicDrawUsage);
+    m.count=0;m.frustumCulled=false;m.castShadow=false;m.receiveShadow=false;m.renderOrder=6;scene.add(m);return m;};
+  const pools=[{mesh:mk(S.crumbGeo,crumbMat,crumbs),n:crumbs},{mesh:mk(bitGeo,bitMat,bits),n:bits}];
+  for(const P of pools){const n=P.n;Object.assign(P,{p:new Float32Array(n*3),v:new Float32Array(n*3),r:new Float32Array(n*3),w:new Float32Array(n*3),sc:new Float32Array(n*3),age:new Float32Array(n),alive:new Uint8Array(n),next:0,live:0});}
+  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),pos=new THREE.Vector3(),scl=new THREE.Vector3(),pr=new THREE.Vector3(),col=new THREE.Color();
+  const tones=['#f2cf98','#e3ad66','#d18f45','#b8733a','#f6dcb0'].map(c=>new THREE.Color(c));
+  let rs=12345;const rnd=()=>(rs=(rs*16807)%2147483647)/2147483647;
+  function spawn(P,x,y,z,size,c,sx,sy,sz){
+    let i=P.next;P.next=(i+1)%P.n;if(!P.alive[i]){P.alive[i]=1;P.live++;} // ring buffer: the oldest piece gives its slot
+    const a=Math.atan2(z-P.cz,x-P.cx)+(rnd()-.5)*.9,out=(1.1+rnd()*2.2)*size;
+    P.p.set([x,y,z],i*3);P.v.set([Math.cos(a)*out,(2.4+rnd()*2.8)*size,Math.sin(a)*out+(1.4+rnd()*2.4)*size],i*3);
+    P.r.set([rnd()*6,rnd()*6,rnd()*6],i*3);P.w.set([(rnd()-.5)*14,(rnd()-.5)*10,(rnd()-.5)*14],i*3);P.sc.set([sx,sy,sz],i*3);P.age[i]=0;
+    P.mesh.setColorAt(i,c);P.mesh.count=Math.max(P.mesh.count,i+1);
   }
-  return t=>{const e=1-Math.pow(1-t,3),hop=4*t*(1-t);
-    for(const m of g.children){const d=m.userData;
-      if(d.geo){m.position.set(d.to.x*e,d.to.y*e+hop*.18,d.to.z*e);m.rotation.set(d.rot.x*e,d.rot.y*e,d.rot.z*e);}
-      else{m.position.set(d.to.x*e,d.to.y+hop*.3,d.to.z*e);m.rotation.set(d.rot.x*e,d.rot.y*e,d.rot.z*e);m.scale.setScalar(d.s*(.3+.7*Math.min(1,t*3)));}}};
+  return {
+    pools,
+    get alive(){return pools[0].live+pools[1].live;},
+    // ck: the cookie (its group gives position, yaw and size)
+    emit(ck,{amount=1}={}){
+      const g=ck.group;g.updateMatrixWorld(true);const size=g.scale.x,top=COOKIE_TOP,sw=swatches(ck.K);
+      for(const P of pools){P.cx=g.position.x;P.cz=g.position.z;}
+      const nb=Math.round(34*amount),nc=Math.round(44*amount);
+      for(let k=0;k<nb;k++){const s0=sw[(rnd()*sw.length)|0];pr.set(s0.x,top*(.75+rnd()*.25),s0.z).applyMatrix4(g.matrixWorld);
+        const b=size*(.12+rnd()*.13);spawn(pools[1],pr.x,pr.y,pr.z,size,s0.col,b,b*(.8+rnd()*.6),b*(.7+rnd()*.6));}
+      for(let k=0;k<nc;k++){const s0=sw[(rnd()*sw.length)|0];pr.set(s0.x*(.9+rnd()*.2),top*rnd(),s0.z*(.9+rnd()*.2)).applyMatrix4(g.matrixWorld);
+        const b=size*(.045+rnd()*.07);col.copy(tones[(rnd()*tones.length)|0]);spawn(pools[0],pr.x,pr.y,pr.z,size,col,b,b*.8,b);}
+      for(const P of pools)P.mesh.instanceColor.needsUpdate=true;
+    },
+    update(dt){
+      if(!this.alive)return 0;const G=26;
+      for(const P of pools){
+        if(!P.live)continue;let top=0;
+        for(let i=0;i<P.mesh.count;i++){
+          const o=i*3;
+          if(P.alive[i]){
+            P.age[i]+=dt;P.v[o+1]-=G*dt;const drag=Math.exp(-dt*.6);P.v[o]*=drag;P.v[o+2]*=drag;
+            P.p[o]+=P.v[o]*dt;P.p[o+1]+=P.v[o+1]*dt;P.p[o+2]+=P.v[o+2]*dt;
+            for(let a=0;a<3;a++)P.r[o+a]+=P.w[o+a]*dt;
+            pos.set(P.p[o],P.p[o+1],P.p[o+2]);pr.copy(pos).project(camera);
+            if(P.age[i]>4||pr.y<-1.15||Math.abs(pr.x)>1.3){P.alive[i]=0;P.live--;}
+          }
+          if(P.alive[i]){top=i+1;e.set(P.r[o],P.r[o+1],P.r[o+2]);q.setFromEuler(e);scl.set(P.sc[o],P.sc[o+1],P.sc[o+2]);m4.compose(pos,q,scl);}
+          else m4.makeScale(0,0,0);
+          P.mesh.setMatrixAt(i,m4);
+        }
+        P.mesh.count=top;P.mesh.instanceMatrix.needsUpdate=true;
+      }
+      return this.alive;
+    },
+    clear(){for(const P of pools){P.alive.fill(0);P.live=0;P.mesh.count=0;}},
+  };
 }
-// a hidden set (one cookie in each look + one crumble) so every program/texture is linked at level load
+// a hidden set (one cookie in each look) so every program/texture is linked at level load
 export function warmSet(values){
   const g=new THREE.Group();g.position.set(0,-80,0);
   for(const v of values){for(const mode of ['normal','glow','wrong']){const c=makeCookie(v);c.tone(mode);g.add(c.group);}}
-  // one crumbled cookie per animal: builds its broken pieces now, not on the first pop
-  for(const v of values){const c=makeCookie(v);c.inner.visible=false;c.crumble.visible=true;crumbleOf(c)(1);g.add(c.group);}
   g.traverse(o=>{o.frustumCulled=false;});return g;
 }
 // After the textures are in, build every animal's cookie + crumble pieces in idle time (one animal per idle
 // slice), so neither a level start nor the first crumble has to build geometry.
 const idle=f=>(globalThis.requestIdleCallback?requestIdleCallback(f,{timeout:3000}):setTimeout(f,60));
-cookiesReady.then(()=>{const todo=Object.keys(ANIMAL).map(Number);const step=()=>{const v=todo.shift();if(v==null)return;try{crumbleKit(kit(v));}catch(e){console.warn('cookie prep',e);}idle(step);};idle(step);}).catch(()=>{});
+cookiesReady.then(()=>{const todo=Object.keys(ANIMAL).map(Number);const step=()=>{const v=todo.shift();if(v==null)return;try{swatches(kit(v));}catch(e){console.warn('cookie prep',e);}idle(step);};idle(step);}).catch(()=>{});

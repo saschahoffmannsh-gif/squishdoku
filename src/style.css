@@ -31,7 +31,7 @@ button{font:inherit;}
 .sd-stage{position:absolute;inset:0;--top:calc(var(--safe-t) + 170px);--bottom:calc(var(--safe-b) + 58px);}
 .sd-host{position:absolute;inset:0;z-index:2;touch-action:none;}
 .sd-host canvas{touch-action:none;}
-.board-slot{position:absolute;--s:min(calc(100vw - 16px),calc(100svh - var(--top) - var(--bottom)),520px);left:calc(50% - var(--s) / 2);top:calc(var(--top) + (100svh - var(--top) - var(--bottom) - var(--s)) * .35);width:var(--s);height:var(--s);pointer-events:none;}
+.board-slot{position:absolute;--s:min(calc((100vw - 6px) * 1.028),calc(100svh - var(--top) - var(--bottom)),540px);left:calc(50% - var(--s) / 2);top:calc(var(--top) + (100svh - var(--top) - var(--bottom) - var(--s)) * .35);width:var(--s);height:var(--s);pointer-events:none;}
 .sd-plate{position:absolute;z-index:1;border-radius:7%;pointer-events:none;
   background:
     linear-gradient(118deg,transparent 0 18%,#ffffff0d 18% 26%,transparent 26% 31%,#ffffff08 31% 34%,transparent 34%),

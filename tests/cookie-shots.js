@@ -17,7 +17,8 @@ const OUT = __dirname + '/../shots', sleep = ms => new Promise(r => setTimeout(r
   await p.evaluate(() => { const S = SquishDoku.state; for (const r of [0, 2]) SquishDoku.act.hold(r, S.L.solution[r]);
     const c0 = S.L.solution[0]; for (let c = 0; c < S.N; c++) if (c !== c0) SquishDoku.act.swipe(0, c);
     const c1 = S.L.solution[1]; SquishDoku.act.swipe(1, (c1 + 2) % S.N); });
-  await sleep(3000); await p.screenshot({ path: `${OUT}/ck-lit-${sz}.png` });
+  for (const t of [1, 2, 3, 4, 5]) { await sleep(350); await p.screenshot({ path: `${OUT}/ck-crumble${t}-${sz}.png` }); }
+  await sleep(2500); await p.screenshot({ path: `${OUT}/ck-lit-${sz}.png` });
   console.log(sz, 'frames', await p.evaluate(() => SquishDoku.board.stats.frames), errs.length ? 'LOG: ' + errs.join(' | ') : 'no errors');
   await b.close();
 })();
