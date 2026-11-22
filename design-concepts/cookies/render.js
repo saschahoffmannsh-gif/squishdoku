@@ -5,7 +5,7 @@ const path = require('path');
 const sets = (process.argv[2] || 'A,B,C').split(','), views = (process.argv[3] || 'lineup,board').split(',');
 const extra = process.argv[4] || '';
 const BASE = process.env.BASE || 'http://localhost:8792/design-concepts/cookies/render.html';
-const SIZE = { lineup: [1600, 900], board: [900, 1100], single: [900, 700] };
+const SIZE = { lineup: [1600, 900], board: [900, 1100], single: [900, 700], closeups: [1800, 900] };
 (async () => {
   const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   for (const s of sets) for (const v of views) {

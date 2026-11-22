@@ -250,7 +250,11 @@ function icingMaterial(tex, alphaMap) {
   return new THREE.MeshPhysicalMaterial({ map: tex, alphaMap, alphaTest: .5, clearcoat: .7, roughness: .42, clearcoatRoughness: .12 });
 }
 
+export { canvas, heightMesh, crumbleGeometry, bodyGeometry, shapeFrom, polar };
+import { designD } from './cookies-d.mjs';
 export const DESIGN = {
+  // D: natürlicher Tier-Ausstecher mit mehrlagigem Royal Icing (siehe cookies-d.mjs)
+  D: P => designD(P),
   // A: runder Mürbeteig-Keks, oben glänzender Zuckerguss, Gesicht gespritzt
   A: P => ({ top: .3, build() {
     const pts = polar((x, y) => Math.hypot(x, y) <= .93, 160);

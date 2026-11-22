@@ -11,6 +11,7 @@ const q = new URLSearchParams(location.search), SET = q.get('set') || 'A', VIEW 
 const host = document.getElementById('host');
 const ready = () => document.documentElement.dataset.ready = '1';
 window.onerror = e => { document.documentElement.dataset.error = String(e); };
+globalThis.COOKIE_N = +(q.get('n') || (VIEW === 'board' ? 640 : 1024));
 if (VIEW === 'board') {
   // ---- the game's own board, table, lighting and camera (src/board3d.mjs), cookies instead of squishes ----
   const { createBoard3D } = await import('../../src/board3d.mjs');
@@ -60,7 +61,16 @@ if (VIEW === 'board') {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 26), new THREE.MeshStandardMaterial({ map: gt, roughness: .92 })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   const cam = new THREE.PerspectiveCamera(26, W / H, .1, 100);
   const items = [];
-  if (VIEW === 'single') {
+  if (VIEW === 'closeups') {
+    // hero shots: three cookies close up, lower camera, a few sugar pearls on the table
+    const keys = (q.get('keys') || '4,2,9').split(',').map(Number), xs = [-2.35, 0, 2.35];
+    keys.forEach((k, i) => { const ck = buildCookie(SET, k, { size: 1.05 }); ck.position.set(xs[i], 0, i === 1 ? -.15 : .12); ck.rotation.y = [.12, -.04, -.1][i]; scene.add(ck); });
+    const pearl = new THREE.SphereGeometry(1, 20, 14), pc = ['#ff8a1c', '#ffd23f', '#4a2416', '#fff4e6', '#f45bb8'];
+    let sd = 11; const rn = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 34; i++) { const m = new THREE.Mesh(pearl, new THREE.MeshPhysicalMaterial({ color: pc[i % pc.length], roughness: .25, clearcoat: 1, clearcoatRoughness: .05 })); const s = .035 + rn() * .025;
+      let x, z; do { x = (rn() * 2 - 1) * 4.6; z = (rn() * 2 - 1) * 2; } while (xs.some(cx => Math.hypot(x - cx, z) < 1.25)); m.scale.setScalar(s); m.position.set(x, s, z); m.castShadow = true; scene.add(m); }
+    cam.fov = 24; cam.position.set(0, 5.4, 6.1); cam.lookAt(0, .1, .05);
+  } else if (VIEW === 'single') {
     const key = +(q.get('key') || 1); const ck = buildCookie(SET, key, { state: q.get('state') || 'normal', size: 1 }); scene.add(ck); items.push([ck, PALETTE.find(p => p.key === key)]);
     cam.position.set(0, 4.2, 3.6); cam.lookAt(0, .15, 0);
   } else {
