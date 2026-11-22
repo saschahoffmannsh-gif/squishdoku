@@ -9,7 +9,7 @@ import {THREE} from '../vendor/squish-attack/squish/squish-graphics.js?v=play-sh
 export const ANIMAL={1:'pinguin',2:'fuchs',3:'frosch',4:'loewe',5:'eule',7:'schwein',8:'katze',9:'hase'};
 const NAMES=[...new Set(Object.values(ANIMAL))];
 export const animalOf=v=>ANIMAL[v]||ANIMAL[(v-1)%8+1]||'pinguin';
-const BASE=new URL('./cookies/',import.meta.url),V='?v=f1';
+const BASE=new URL('./cookies/',import.meta.url),V='?v=f2';
 const IMG={};let OUT=null;
 const loadImg=n=>new Promise((res,rej)=>{const i=new Image();i.decoding='async';i.onload=()=>(i.decode?i.decode().catch(()=>{}):Promise.resolve()).then(()=>res(i));i.onerror=rej;i.src=new URL(n+'.webp'+V,BASE).href;});
 export const cookiesReady=Promise.all([
