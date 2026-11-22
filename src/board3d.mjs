@@ -137,14 +137,15 @@ export function createBoard3D(host){
   // pop (fusion skin/drop/flash) programs at level load so the first glow or pop does not hitch.
   // The warm holder (tiny, 80 units under the table) stays in the scene: disposing it would free the
   // pop programs again (three.js releases a program with its last material), and the first real pop would relink.
-  let warmOn=false;
+  let warmOn=false;const warmed=new Set(); // animals whose looks are linked already (materials are shared and never freed)
   function prewarm(){
     const glowOn=cells.length?cells[0]:null;
     if(glowOn){glowOn.halo.visible=glowOn.spark.visible=glowOn.splat.visible=true;}
     // a hidden set of every cookie look (lit, wrong, crumbled) of this level's animals: links the
     // programs and uploads the textures now; the materials are shared and kept, so it can go again.
     let warm=null;
-    try{warm=warmSet([...new Set(cells.map(c=>c.value))]);scene.add(warm);graphics.renderer.compile(scene,camera);graphics.render(0);}catch(e){console.warn('prewarm',e);}
+    const fresh=[...new Set(cells.map(c=>c.value))].filter(v=>!warmed.has(v));
+    try{if(fresh.length){warm=warmSet(fresh);fresh.forEach(v=>warmed.add(v));scene.add(warm);}graphics.renderer.compile(scene,camera);graphics.render(0);}catch(e){console.warn('prewarm',e);}
     finally{if(warm)scene.remove(warm);if(glowOn){glowOn.halo.visible=glowOn.spark.visible=glowOn.splat.visible=false;}}
   }
   function disposeCells(list){

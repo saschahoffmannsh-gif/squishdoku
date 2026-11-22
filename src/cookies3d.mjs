@@ -120,3 +120,7 @@ export function warmSet(values){
   for(const v of values){const c=makeCookie(v);c.inner.visible=false;c.crumble.visible=true;crumbleOf(c)(1);g.add(c.group);}
   g.traverse(o=>{o.frustumCulled=false;});return g;
 }
+// After the textures are in, build every animal's cookie + crumble pieces in idle time (one animal per idle
+// slice), so neither a level start nor the first crumble has to build geometry.
+const idle=f=>(globalThis.requestIdleCallback?requestIdleCallback(f,{timeout:3000}):setTimeout(f,60));
+cookiesReady.then(()=>{const todo=Object.keys(ANIMAL).map(Number);const step=()=>{const v=todo.shift();if(v==null)return;try{crumbleKit(kit(v));}catch(e){console.warn('cookie prep',e);}idle(step);};idle(step);}).catch(()=>{});
