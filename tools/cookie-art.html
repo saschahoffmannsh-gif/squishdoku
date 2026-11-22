@@ -29,8 +29,10 @@ if(mode==='hero'){
   board.graphics.scene.traverse(o=>{if((o.isMesh||o.isSprite)&&!own.has(o))o.visible=false;});
 }
 await wait(1500);
-// hero: straight from above (the home screen tilts the picture with CSS perspective itself)
-if(mode==='hero'){const cam=board.graphics.camera,d=cam.position.length()*1.3;cam.position.set(0,d,.001);cam.up.set(0,0,-1);cam.lookAt(0,0,0);cam.updateProjectionMatrix();cam.updateMatrixWorld();}
+// the game's own tilted view for the hero (shows the baked cookie sides); singles from 52° and a little
+// from the side, so the thickness reads
+if(mode!=='hero'){const cam=board.graphics.camera,d=cam.position.length()*1.05,el=52*Math.PI/180,az=-.3;
+  cam.position.set(Math.sin(az)*Math.cos(el)*d,Math.sin(el)*d,Math.cos(az)*Math.cos(el)*d);cam.lookAt(0,1.2,0);cam.updateProjectionMatrix();cam.updateMatrixWorld();}
 if(mode!=='hero'){const cl=board.cells[0];cl.halo.scale.multiplyScalar(.72);cl.spark.scale.multiplyScalar(.5);}
 board.refresh();await wait(600);
 const a=board.screenOf(0,0,0,0),b=board.screenOf(board.N-1,board.N-1,0,0);
