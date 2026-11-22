@@ -268,7 +268,7 @@ function levelsScreen(){
   scroller.append(el('div','nn-legend sd-lv-progress',`<span><b>${solvedCount()} / ${levels.length}</b> gelöst</span><span><i class="nn-dot"></i>3 Sterne</span><span>Bestzeit unter der Kachel</span>`));
   let shown=0;const mark=N=>{if(N===shown)return;shown=N;for(const s of seg.children)s.classList.toggle('is-on',+s.dataset.n===N);};
   // highlight the chapter you are in (cheap: one read per frame while scrolling)
-  let raf=0;scroller.addEventListener('scroll',()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;const y=scroller.scrollTop+40;let n=5;for(const c of chaps)if(c.offsetTop<=y)n=+c.dataset.n;
+  let raf=0;scroller.addEventListener('scroll',()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;const y=scroller.scrollTop+scroller.clientHeight*.4;let n=5;for(const c of chaps)if(c.offsetTop<=y)n=+c.dataset.n;
     if(scroller.scrollTop+scroller.clientHeight>=scroller.scrollHeight-2)n=8;mark(n);});},{passive:true});
   seg.addEventListener('click',e=>{const s=e.target.closest('button');if(!s)return;tap();const c=chaps.find(x=>x.dataset.n===s.dataset.n);mark(+s.dataset.n);
     scroller.scrollTo({top:c.offsetTop-4,behavior:reduceMotion.matches?'auto':'smooth'});});
