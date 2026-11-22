@@ -14,7 +14,7 @@ window.onerror = e => { document.documentElement.dataset.error = String(e); };
 if (VIEW === 'board') {
   // ---- the game's own board, table, lighting and camera (src/board3d.mjs), cookies instead of squishes ----
   const { createBoard3D } = await import('../../src/board3d.mjs');
-  const { THREE, buildCookie, byKey } = await import('./cookies.mjs');
+  const { THREE, buildCookie, byKey, saturate } = await import('./cookies.mjs');
   const levels = await (await fetch('../../src/levels.json')).json();
   const L = levels.find(l => l.id === +(q.get('level') || 29));
   document.body.style.background = '#0b1030';
@@ -30,9 +30,10 @@ if (VIEW === 'board') {
     const ck = buildCookie(SET, cl.value, { state, size: pitch * .47, seed: cl.r * 7 + cl.c + 1 });
     ck.position.set((cl.c - (N - 1) / 2) * pitch, P.board.top - .02, (cl.r - (N - 1) / 2) * pitch);
     ck.rotation.y = state === 'normal' ? (Math.sin(cl.r * 3.1 + cl.c * 1.7) * .05) : 0;
-    ck.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    ck.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; for (const m of [].concat(o.material)) { if ('envMapIntensity' in m) m.envMapIntensity = +(q.get('env') || .5); if (m.isMeshPhysicalMaterial) saturate(m, +(q.get('sat') || 1.45)); } } });
     scene.add(ck);
   }
+  console.log('toneMapping', board.graphics.renderer.toneMapping, board.graphics.renderer.toneMappingExposure);
   board.requestFrame({ shadows: true });
   let n = 0; const tick = () => { board.refresh(); if (++n < 30) requestAnimationFrame(tick); else setTimeout(ready, 300); }; requestAnimationFrame(tick);
 } else {

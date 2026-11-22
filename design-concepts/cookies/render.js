@@ -10,7 +10,7 @@ const SIZE = { lineup: [1600, 900], board: [900, 1100], single: [900, 700] };
   const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   for (const s of sets) for (const v of views) {
     const [w, h] = SIZE[v]; const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2 });
-    const p = await ctx.newPage(); p.on('pageerror', e => console.log('ERR', e.message)); p.on('console', m => m.type() === 'error' && console.log('C', m.text()));
+    const p = await ctx.newPage(); p.on('pageerror', e => console.log('ERR', e.message)); p.on('console', m => (m.type() === 'error' || m.text().startsWith('toneMapping')) && console.log('C', m.text()));
     const t = Date.now(); await p.goto(`${BASE}?set=${s}&view=${v}${extra}`);
     await p.waitForFunction(() => document.documentElement.dataset.ready === '1' || document.documentElement.dataset.error, null, { timeout: 600000 });
     const err = await p.evaluate(() => document.documentElement.dataset.error); if (err) console.log('ERROR', err);

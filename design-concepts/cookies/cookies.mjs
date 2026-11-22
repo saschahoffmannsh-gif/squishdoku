@@ -345,8 +345,11 @@ function starTexture() {
 }
 function addGlow(g, def, P) {
   // icing glows from inside (emissive on the icing only), golden rim light, halo on the table, sparkle
-  g.children.forEach((m, i) => { if (i === 1 || (i > 0 && m.material.map)) { const mm = m.material.clone(); mm.emissive = new THREE.Color('#ffd36a'); mm.emissiveMap = mm.map; mm.emissiveIntensity = .22; m.material = mm; } });
-  const halo = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 2.9), new THREE.MeshBasicMaterial({ map: haloTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 1, toneMapped: false }));
+  g.children.forEach(m => { if (!m.isMesh) return; const mm = m.material.clone();
+    if (mm.map) { mm.color = new THREE.Color('#ffe7a0'); mm.emissive = new THREE.Color('#ffae3a'); mm.emissiveMap = mm.map; mm.emissiveIntensity = .38; }
+    else { mm.emissive = new THREE.Color('#ff9d2a'); mm.emissiveIntensity = .16; }
+    m.material = mm; });
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 3.3), new THREE.MeshBasicMaterial({ map: haloTexture(), color: new THREE.Color(1.6, 1.3, .8), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 1, toneMapped: false }));
   halo.rotation.x = -Math.PI / 2; halo.position.y = .02; g.add(halo);
   const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   star.material.toneMapped = false; star.material.opacity = .9; star.scale.set(.75, .75, 1); star.position.set(-.5, def.top + .3, -.45); g.add(star);
@@ -398,4 +401,12 @@ function crumbs(def, P, seed) {
     m.scale.setScalar(s); m.position.set(Math.cos(a) * r, s * .6, Math.sin(a) * r); m.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3); m.castShadow = true; g.add(m);
   }
   return g;
+}
+
+// Saturation boost for scenes whose tone mapping washes the colours out (e.g. the game's glass-table lighting)
+export function saturate(material, k = 1.4) {
+  if (material.userData.sat) return; material.userData.sat = k;
+  material.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+    diffuseColor.rgb = max(mix(vec3(dot(diffuseColor.rgb, vec3(.299, .587, .114))), diffuseColor.rgb, ${k.toFixed(2)}), 0.);`); };
+  material.customProgramCacheKey = () => 'sat' + k; material.needsUpdate = true;
 }
