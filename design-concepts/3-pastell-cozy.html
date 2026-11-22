@@ -1,0 +1,143 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Konzept 3 · Pastell Cozy</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root{--ink:#2b2945;--mut:#8b87a3;--bg:#fbf6ef;--peach:#ffe3d3;--mint:#d9f3e6;--lav:#e8e3fb;--sky:#dcecfb;--butter:#fff1c7;}
+.c{background:var(--bg);color:var(--ink);}
+.status{color:var(--ink)}
+.hd{position:absolute;top:58px;left:24px;right:24px;display:flex;align-items:flex-start;}
+.hd .d{font:500 14px/1 Fredoka;color:var(--mut);}
+.hd h1{margin:6px 0 0;font:400 34px/1 "Lilita One";letter-spacing:.3px;color:var(--ink);}
+.hd h1 span{color:#ff8f6b}
+.hd .gap{flex:1}
+.ib{width:42px;height:42px;border-radius:21px;display:grid;place-items:center;background:#fff;color:var(--ink);box-shadow:0 1px 2px #2b29450d,0 6px 14px -6px #2b294526;margin-left:8px;}
+.ib .ico{width:20px;height:20px}
+.card{position:absolute;left:20px;right:20px;border-radius:30px;}
+.dc{top:136px;height:330px;background:var(--peach);padding:22px;overflow:hidden;}
+.dc .kick{display:flex;align-items:center;gap:8px;font:600 13px/1 Fredoka;letter-spacing:.12em;text-transform:uppercase;color:#c0603f;}
+.dc .kick .ico{width:16px;height:16px}
+.dc h2{margin:10px 0 0;font:600 30px/1.05 Fredoka;}
+.dc p{margin:8px 0 0;font:500 15px/1.3 Fredoka;color:#9a6a58;}
+.streak{position:absolute;right:20px;top:20px;display:flex;align-items:center;gap:6px;height:36px;padding:0 13px 0 10px;border-radius:18px;background:#fff;font:600 16px/1 Fredoka;box-shadow:0 6px 14px -6px #c0603f55}
+.streak .ico{width:17px;height:21px}
+.pv{position:absolute;right:-26px;bottom:-30px;width:236px;height:236px;transform:rotate(-12deg);display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:10px;border-radius:30px;background:#fff8f3;box-shadow:0 20px 40px -14px #c0603f66;}
+.pv i{border-radius:7px;display:block}
+.pv i.g{background:#ffd76a!important;box-shadow:0 0 10px #ffc94a}
+.dc .cta{position:absolute;left:22px;bottom:22px;height:54px;padding:0 24px 0 20px;border-radius:27px;background:var(--ink);color:#fff;display:flex;align-items:center;gap:10px;font:600 17px/1 Fredoka;box-shadow:0 12px 20px -8px #2b2945aa}
+.dc .cta .ico{width:16px;height:16px}
+.dc .hero{position:absolute;left:120px;bottom:96px;width:84px;transform:rotate(-8deg);filter:drop-shadow(0 12px 12px #c0603f55)}
+.wk{top:484px;height:92px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 18px;box-shadow:0 1px 2px #2b29450a,0 10px 24px -12px #2b294522;}
+.day{display:flex;flex-direction:column;align-items:center;gap:8px;font:500 12px/1 Fredoka;color:var(--mut)}
+.day .o{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#f1ece4;color:#fff}
+.day .o .ico{width:16px;height:16px}
+.day.ok .o{background:#7fd1a8}
+.day.now .o{background:#fff;border:2.5px dashed #ff8f6b;color:#ff8f6b}
+.day.now{color:var(--ink);font-weight:600}
+.two{position:absolute;left:20px;right:20px;top:594px;display:flex;gap:12px}
+.mc{flex:1;height:120px;border-radius:28px;padding:18px;position:relative;overflow:hidden}
+.mc .k{font:500 13px/1 Fredoka;color:#6c6787}
+.mc b{display:block;margin-top:10px;font:600 26px/1 Fredoka}
+.mc small{display:block;margin-top:6px;font:500 13px/1 Fredoka;color:#6c6787}
+.mc img{position:absolute;right:-8px;bottom:-10px;width:66px;transform:rotate(14deg);filter:drop-shadow(0 8px 8px #0002)}
+.mc .ico{width:22px;height:22px}
+.nav{position:absolute;left:20px;right:20px;bottom:30px;height:66px;border-radius:33px;background:#fff;display:flex;align-items:center;justify-content:space-around;box-shadow:0 1px 2px #2b29450a,0 14px 30px -12px #2b294533}
+.nav div{display:flex;align-items:center;gap:8px;height:46px;padding:0 16px;border-radius:23px;font:600 15px/1 Fredoka;color:var(--mut)}
+.nav .ico{width:20px;height:20px}
+.nav .on{background:var(--ink);color:#fff}
+.home-ind{background:var(--ink);opacity:.25}
+/* levels */
+.lh{position:absolute;top:58px;left:20px;right:20px;display:flex;align-items:center;gap:12px}
+.lh h2{margin:0;flex:1;font:600 28px/1 Fredoka}
+.tot{display:flex;align-items:center;gap:6px;height:40px;padding:0 14px 0 10px;border-radius:20px;background:#fff;font:600 16px/1 Fredoka;box-shadow:0 6px 14px -8px #2b294544}
+.tot .ico{width:20px;height:20px}
+.sec{position:absolute;left:20px;right:20px;border-radius:30px;padding:18px 16px 16px}
+.sec .top{display:flex;align-items:center;gap:10px;margin:0 2px 14px}
+.sec h3{margin:0;font:600 18px/1 Fredoka}
+.sec .pr{margin-left:auto;font:500 13px/1 Fredoka;color:#6c6787}
+.sec .badge{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font:600 12px/1 Fredoka;background:#ffffffaa}
+.lg{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.lt{height:64px;border-radius:18px;background:#ffffffc0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font:600 19px/1 Fredoka}
+.lt .dots{display:flex;gap:3px}.lt .dots i{width:6px;height:6px;border-radius:50%;background:#2b294522;display:block}.lt .dots i.on{background:#f2a93b}
+.lt.cur{background:var(--ink);color:#fff;box-shadow:0 10px 18px -8px #2b2945aa}.lt.cur .dots i{background:#ffffff40}
+.lt.lock{background:#ffffff66;color:#2b294566}.lt.lock .ico{width:18px;height:18px;color:#b9a77a}
+.lt.done3{background:#fff}
+/* win */
+.wv{position:absolute;inset:0;background:#fbf6efa6;backdrop-filter:blur(6px)}
+.wc{position:absolute;left:20px;right:20px;top:150px;border-radius:36px;background:#fff;padding:30px 24px 24px;text-align:center;box-shadow:0 30px 60px -20px #2b294566}
+.wc .sq{width:110px;margin:-92px auto 0;filter:drop-shadow(0 14px 14px #c08a2a55)}
+.wc h2{margin:10px 0 0;font:600 30px/1 Fredoka}
+.wc .sub{margin:8px 0 0;font:500 15px/1 Fredoka;color:var(--mut)}
+.wc .stars{display:flex;justify-content:center;gap:10px;margin:20px 0 6px}.wc .stars .ico{width:38px;height:38px;color:#f2a93b}
+.time{margin:14px auto 0;display:inline-flex;align-items:baseline;gap:10px}
+.time b{font:600 56px/1 Fredoka;letter-spacing:-.02em}
+.time span{font:600 13px/1 Fredoka;padding:6px 10px;border-radius:12px;background:var(--mint);color:#2f8a5f}
+.wrow{display:flex;gap:10px;margin:18px 0 20px}
+.wrow div{flex:1;border-radius:20px;padding:14px 8px;background:#f7f2ea}
+.wrow b{display:flex;align-items:center;justify-content:center;gap:4px;font:600 20px/1 Fredoka}.wrow b .ico{width:16px;height:20px}
+.wrow span{display:block;margin-top:6px;font:500 12px/1 Fredoka;color:var(--mut)}
+.pb{height:58px;border-radius:29px;display:flex;align-items:center;justify-content:center;gap:10px;font:600 18px/1 Fredoka}
+.pb .ico{width:18px;height:18px}
+.pb.d{background:var(--ink);color:#fff;box-shadow:0 12px 22px -10px #2b2945bb}
+.pb.l{margin-top:10px;background:#f1ece4;color:var(--ink)}
+.cf{position:absolute;border-radius:4px;width:9px;height:14px}
+</style></head><body>
+
+<div class="screen c" id="home" data-label="Startseite">
+  <div class="status"></div>
+  <div class="hd"><div><div class="d">Sonntag, 22. November</div><h1>Squish<span>Doku</span></h1></div><div class="gap"></div><div class="ib"><i data-ico="sound"></i></div><div class="ib"><i data-ico="gear"></i></div></div>
+  <div class="card dc">
+    <div class="kick"><i data-ico="cal"></i>Tagesrätsel</div>
+    <h2>Das Sonntags-<br>Rätsel</h2>
+    <p>8×8 · knifflig · ca. 4 Min.</p>
+    <div class="streak"><i data-ico="flame"></i>5</div>
+    <div class="pv" id="pv"></div>
+    <img class="hero" src="assets/squish-glow.png">
+    <div class="cta"><i data-ico="play"></i>Jetzt spielen</div>
+  </div>
+  <div class="card wk" id="wk"></div>
+  <div class="two">
+    <div class="mc" style="background:var(--mint)"><div class="k">Weiter mit</div><b>Level 18</b><small>6×6 · Mittel</small><img src="assets/squish-green.png"></div>
+    <div class="mc" style="background:var(--lav)"><div class="k">Deine Sterne</div><b style="display:flex;align-items:center;gap:6px">41<span style="font-size:16px;color:#6c6787;font-weight:500">/ 150</span></b><small>9 Level perfekt</small><img src="assets/squish-purple.png"></div>
+  </div>
+  <div class="nav"><div class="on"><i data-ico="cal"></i>Heute</div><div><i data-ico="grid"></i>Levels</div><div><i data-ico="trophy"></i>Erfolge</div></div>
+  <div class="home-ind"></div>
+</div>
+
+<div class="screen c" id="levels" data-label="Level-Auswahl">
+  <div class="status"></div>
+  <div class="lh"><div class="ib" style="margin:0"><i data-ico="back"></i></div><h2>Levels</h2><div class="tot"><i data-ico="starFlat|#f2a93b"></i>41 / 150</div></div>
+  <div class="sec" style="top:122px;background:var(--mint)"><div class="top"><span class="badge">5×5</span><h3>Erste Schritte</h3><span class="pr">14 / 14 · ★ 33</span></div><div class="lg" id="s1"></div></div>
+  <div class="sec" style="top:424px;background:var(--butter)"><div class="top"><span class="badge">6×6</span><h3>Gut in Form</h3><span class="pr">3 / 13 · ★ 8</span></div><div class="lg" id="s2"></div></div>
+  <div class="sec" style="top:728px;background:var(--sky);height:140px"><div class="top"><span class="badge">7×7</span><h3>Knobelzeit</h3><span class="pr" style="display:flex;align-items:center;gap:5px"><i data-ico="lock" style="width:14px;height:14px"></i>ab Level 28</span></div><div class="lg" id="s3"></div></div>
+  <div class="home-ind"></div>
+</div>
+
+<div class="screen c" id="win" data-label="Sieg-Dialog">
+  <div class="status"></div>
+  <img src="assets/board-5x5.png" style="position:absolute;left:12px;top:200px;width:366px;opacity:.9">
+  <div class="wv"></div>
+  <div id="cf"></div>
+  <div class="wc"><img class="sq" src="assets/squish-glow.png">
+    <h2>Schön gelöst!</h2><div class="sub">Level 18 · 6×6 · ohne Fehler</div>
+    <div class="stars"><i data-ico="starFlat"></i><i data-ico="starFlat"></i><i data-ico="starFlat"></i></div>
+    <div class="time"><b>1:42</b><span>Neue Bestzeit</span></div>
+    <div class="wrow"><div><b>1:35</b><span>Bestzeit vorher</span></div><div><b>5<i data-ico="flame"></i></b><span>Tage Serie</span></div><div><b>42</b><span>Sterne gesamt</span></div></div>
+    <div class="pb d"><i data-ico="play"></i>Weiter zu Level 19</div>
+    <div class="pb l"><i data-ico="share"></i>Ergebnis teilen</div>
+  </div>
+  <div class="home-ind"></div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+// pastel 8x8 daily preview (decorative pattern)
+const pal=['#bfe0ff','#ffc9c2','#c9efc9','#e2d4ff','#ffe1b8','#c7f0ee','#ffd6ea','#e9e4dc'];
+const R=['aabbbccc','aabbdccc','eeabddcf','eeaddfff','egggdfhf','eegghhhf','egghhhff','eggghhff'];
+const pv=document.getElementById('pv');R.forEach((row,r)=>[...row].forEach((ch,c)=>{const i=document.createElement('i');i.style.background=pal[ch.charCodeAt(0)-97];if([[0,1],[2,7],[4,4]].some(([a,b])=>a===r&&b===c))i.className='g';pv.append(i);}));
+const wk=document.getElementById('wk');['Mo','Di','Mi','Do','Fr','Sa','So'].forEach((d,i)=>{const e=document.createElement('div');e.className='day '+(i===0?'':i<6?'ok':'now');e.innerHTML=`<span class="o">${i>0&&i<6?'<i data-ico="check"></i>':i===6?'<i data-ico="flame|#ffd7c4|#ffab8a|#ff8f6b|#ff8f6b" style="width:16px;height:20px"></i>':''}</span>${d}`;wk.append(e);});
+const tile=(n,s,cls='')=>`<div class="lt ${cls}">${cls.includes('lock')?'<i data-ico="lock"></i>':n}${cls.includes('lock')?'':`<span class="dots">${[1,2,3].map(k=>`<i class="${k<=s?'on':''}"></i>`).join('')}</span>`}</div>`;
+document.getElementById('s1').innerHTML=[[1,3],[2,3],[3,2],[4,3],[5,3],[6,2],[7,3],[8,1],[9,3],[10,2],[11,3],[12,2],[13,3],[14,3]].map(([n,s])=>tile(n,s,s===3?'done3':'')).join('');
+document.getElementById('s2').innerHTML=[[15,3],[16,3],[17,2],[18,0,'cur'],...[19,20,21,22,23,24,25,26,27].map(n=>[n,0,'lock'])].map(([n,s,c])=>tile(n,s,c||(s===3?'done3':''))).join('');
+document.getElementById('s3').innerHTML='';
+const cf=document.getElementById('cf'),cc=['#ffc9c2','#c9efc9','#bfe0ff','#ffe1b8','#e2d4ff'];
+[[30,80,20],[80,130,-30],[330,90,40],[350,150,-15],[50,700,60],[300,720,10],[200,90,-50],[340,690,30],[20,180,-20],[260,130,70],[120,760,30]].forEach(([x,y,r],i)=>{const e=document.createElement('i');e.className='cf';e.style.cssText=`left:${x}px;top:${y}px;transform:rotate(${r}deg);background:${cc[i%5]}`;cf.append(e);});
+</script></body></html>

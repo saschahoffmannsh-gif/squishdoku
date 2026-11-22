@@ -1,0 +1,181 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Konzept 1 · Squish-Welt</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root{--ink:#16204a;--gold:#ffc83a;--grass:#5fd34a;--grass2:#38b02a;}
+.w{background:linear-gradient(180deg,#58c4ff 0%,#8fdcff 38%,#d6f5ff 62%,#bdf0a0 63%);color:var(--ink);}
+.status{color:#0d2a5a;}
+.sun{position:absolute;right:-60px;top:40px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,#fff7c2 0 30%,#fff3a066 46%,transparent 70%);}
+.cloud{position:absolute;height:44px;border-radius:30px;background:#fff;box-shadow:0 4px 0 #b9e6ff;}
+.cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%;}
+.cloud::before{width:56%;height:150%;left:14%;bottom:30%;}.cloud::after{width:38%;height:120%;right:12%;bottom:30%;}
+.hills{position:absolute;left:0;right:0;bottom:0;height:420px;}
+.topbar{position:absolute;z-index:5;top:54px;left:18px;right:18px;display:flex;align-items:center;gap:10px;}
+.pill{display:flex;align-items:center;gap:6px;height:40px;padding:0 16px 0 8px;border-radius:22px;background:#fff;border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink);font:700 18px/1 Fredoka;}
+.pill .ico{width:28px;height:28px;}
+.gap{flex:1}
+.rbtn{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;background:#fff;border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink);color:var(--ink);}
+.rbtn .ico{width:26px;height:26px;}
+.logo{position:absolute;z-index:4;left:0;right:0;top:104px;text-align:center;}
+.logo svg{width:370px;overflow:visible;}
+.logo text{font-family:"Lilita One";font-size:74px;letter-spacing:1px;}
+.tag{position:absolute;z-index:4;top:218px;left:0;right:0;text-align:center;font:700 15px/1 Fredoka;letter-spacing:.12em;color:#0d3d7a;text-transform:uppercase;}
+.char{position:absolute;z-index:3;}
+.char img{width:100%;}
+.char .face{position:absolute;left:18%;right:18%;top:30%;height:34%;}
+.shadow{position:absolute;z-index:2;height:18px;border-radius:50%;background:#1a6e1a55;filter:blur(2px);}
+/* daily sign */
+.daily{position:absolute;z-index:6;left:18px;right:18px;top:520px;height:112px;border-radius:26px;background:#fff;border:3.5px solid var(--ink);box-shadow:0 6px 0 var(--ink),0 14px 26px #0a3a1a40;display:flex;align-items:center;padding:0 14px 0 16px;gap:14px;}
+.daily .rib{position:absolute;left:18px;top:-17px;height:30px;padding:0 14px;border-radius:12px;background:#ff5a5f;border:3px solid var(--ink);color:#fff;font:700 13px/24px Fredoka;letter-spacing:.12em;box-shadow:0 3px 0 var(--ink);transform:rotate(-3deg);}
+.cal{flex:none;width:58px;height:64px;border-radius:14px;border:3px solid var(--ink);overflow:hidden;background:#fffaf0;display:flex;flex-direction:column;box-shadow:0 3px 0 var(--ink);}
+.cal b{background:#ff5a5f;color:#fff;font:700 12px/20px Fredoka;text-align:center;letter-spacing:.1em;}
+.cal i{flex:1;display:grid;place-items:center;font:400 30px/1 "Lilita One";font-style:normal;}
+.dmain{flex:1;min-width:0}
+.dmain h3{margin:0;font:400 25px/1 "Lilita One";}
+.dmain p{margin:6px 0 0;font:600 14px/1.2 Fredoka;color:#4a5684;}
+.mini{display:flex;gap:4px;margin-top:8px}.mini span{width:13px;height:13px;border-radius:4px;border:2px solid var(--ink);}
+.flame{flex:none;position:relative;width:52px;height:64px;}
+.flame .ico{width:100%;height:100%;filter:drop-shadow(0 0 10px #ff9a2466);}
+.flame b{position:absolute;left:0;right:0;bottom:3px;text-align:center;font:400 22px/1 "Lilita One";color:#fff;-webkit-text-stroke:4px var(--ink);paint-order:stroke;}
+.play{position:absolute;z-index:6;left:18px;right:18px;top:654px;height:76px;border-radius:28px;border:3.5px solid var(--ink);background:linear-gradient(180deg,#9df25a,#3cc41f 60%,#2ea414);box-shadow:inset 0 3px 0 #ffffffaa,inset 0 -6px 0 #23860f,0 6px 0 var(--ink);display:flex;align-items:center;justify-content:center;gap:12px;color:#fff;font:400 30px/1 "Lilita One";letter-spacing:.5px;text-shadow:0 3px 0 #1d6e0d;}
+.play .ico{width:30px;height:30px;filter:drop-shadow(0 3px 0 #1d6e0d);}
+.play small{position:absolute;right:20px;top:-14px;padding:5px 10px;border-radius:12px;background:#fff;border:3px solid var(--ink);font:700 13px/1 Fredoka;color:var(--ink);text-shadow:none;transform:rotate(4deg);}
+.nav{position:absolute;z-index:6;left:18px;right:18px;top:748px;display:flex;gap:12px;}
+.nav div{flex:1;height:60px;border-radius:22px;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);display:flex;align-items:center;justify-content:center;gap:8px;font:700 16px/1 Fredoka;color:#fff;text-shadow:0 2px 0 #0004;}
+.nav .ico{width:22px;height:22px;}
+.nav .b{background:linear-gradient(180deg,#6fc8ff,#2f8ff0);}.nav .p{background:linear-gradient(180deg,#c49bff,#8a4cf0);}.nav .o{background:linear-gradient(180deg,#ffc06a,#ff8a1f);}
+.home-ind{background:#0d2a5a;opacity:.5}
+/* map */
+.map{background:#ffe3a0;}
+.map .hdr{position:absolute;z-index:9;left:0;right:0;top:0;height:118px;padding:52px 18px 0;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#ffffffee,#ffffffcc 70%,#ffffff00);}
+.map .hdr h2{flex:1;margin:0;text-align:center;font:400 28px/1 "Lilita One";color:var(--ink);}
+.zone{position:absolute;z-index:3;left:16px;padding:7px 14px;border-radius:14px;border:3px solid var(--ink);background:#fff;font:700 13px/1 Fredoka;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 3px 0 var(--ink);}
+.zone b{font:400 15px/1 "Lilita One";letter-spacing:.02em;margin-right:6px;}
+.node{position:absolute;z-index:4;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:3.5px solid var(--ink);display:grid;place-items:center;font:400 26px/1 "Lilita One";color:#fff;-webkit-text-stroke:0;box-shadow:inset 0 -6px 0 #0003,inset 0 3px 0 #fff8,0 5px 0 var(--ink);text-shadow:0 2px 0 #0005;}
+.node.done{background:linear-gradient(180deg,#ffe36b,#ffb21f);color:#7a3e06;text-shadow:0 2px 0 #fff8;}
+.node.cur{width:80px;height:80px;margin:-40px 0 0 -40px;background:linear-gradient(180deg,#6fc8ff,#2f8ff0);font-size:32px;box-shadow:inset 0 -6px 0 #0003,inset 0 3px 0 #fff8,0 5px 0 var(--ink),0 0 0 8px #ffffff88,0 0 30px 10px #fff9;}
+.node.lock{background:#c5cbe0;color:#7a82a6;text-shadow:none;}
+.node.lock .ico{width:26px;height:26px;color:#6a7398;}
+.node .st{position:absolute;left:50%;top:-22px;transform:translateX(-50%);display:flex;gap:0;}
+.node .st .ico{width:20px;height:20px;}.node .st .ico:nth-child(2){transform:translateY(-6px);}
+.node .st .off{filter:grayscale(1) brightness(1.6);opacity:.65;}
+.here{position:absolute;z-index:6;padding:6px 12px;border-radius:12px;background:var(--ink);color:#fff;font:700 13px/1 Fredoka;white-space:nowrap;}
+.here::after{content:"";position:absolute;right:-7px;top:50%;margin-top:-7px;border:7px solid transparent;border-right:0;border-left-color:var(--ink);}
+.mapbar{position:absolute;z-index:9;left:14px;right:14px;bottom:26px;height:74px;border-radius:24px;background:#fff;border:3.5px solid var(--ink);box-shadow:0 5px 0 var(--ink);display:flex;align-items:center;gap:12px;padding:0 12px 0 10px;}
+.mapbar .cal{width:46px;height:50px;}.mapbar .cal i{font-size:22px}.mapbar .cal b{font-size:10px;line-height:16px}
+.mapbar h4{margin:0;font:400 19px/1 "Lilita One";}.mapbar p{margin:4px 0 0;font:600 13px/1 Fredoka;color:#4a5684;}
+.mapbar .go{margin-left:auto;height:46px;padding:0 16px;border-radius:16px;border:3px solid var(--ink);background:linear-gradient(180deg,#9df25a,#3cc41f);box-shadow:inset 0 2px 0 #fff9,0 3px 0 var(--ink);display:flex;align-items:center;gap:6px;color:#fff;font:400 18px/1 "Lilita One";text-shadow:0 2px 0 #1d6e0d;}
+.mapbar .flame{width:34px;height:42px}.mapbar .flame b{font-size:16px;-webkit-text-stroke:3px var(--ink)}
+.palm{position:absolute;z-index:2;font-size:0}
+/* win */
+.win .veil{position:absolute;inset:0;z-index:7;background:#16204a77;backdrop-filter:blur(3px);}
+.card{position:absolute;z-index:8;left:22px;right:22px;top:190px;padding:84px 20px 22px;border-radius:32px;background:#fff;border:4px solid var(--ink);box-shadow:0 8px 0 var(--ink),0 30px 60px #0007;text-align:center;}
+.card .rib{position:absolute;left:50%;top:-30px;transform:translateX(-50%);height:58px;padding:0 34px;display:grid;place-items:center;border-radius:18px;border:4px solid var(--ink);background:linear-gradient(180deg,#9df25a,#3cc41f);color:#fff;font:400 32px/1 "Lilita One";text-shadow:0 3px 0 #1d6e0d;box-shadow:0 5px 0 var(--ink);white-space:nowrap;}
+.bigstars{position:absolute;left:0;right:0;top:-120px;display:flex;justify-content:center;align-items:flex-end;gap:0;}
+.bigstars .ico{width:84px;height:84px;filter:drop-shadow(0 4px 0 #16204a);}
+.bigstars .ico:nth-child(2){width:108px;height:108px;margin:0 -6px 26px;}
+.res{display:flex;justify-content:center;gap:10px;margin:6px 0 16px;}
+.res div{flex:1;padding:12px 6px;border-radius:18px;background:#eef6ff;border:2.5px solid #c9dcf7;}
+.res b{display:block;font:400 26px/1 "Lilita One";}
+.res span{display:block;margin-top:5px;font:600 12px/1 Fredoka;color:#5a6690;letter-spacing:.06em;text-transform:uppercase;}
+.res .best{background:#fff6d6;border-color:#ffd77a;}
+.btn{height:66px;border-radius:24px;border:3.5px solid var(--ink);display:flex;align-items:center;justify-content:center;gap:10px;font:400 26px/1 "Lilita One";color:#fff;box-shadow:inset 0 3px 0 #ffffffaa,inset 0 -6px 0 #0002,0 5px 0 var(--ink);margin-top:12px;}
+.btn .ico{width:24px;height:24px}
+.btn.g{background:linear-gradient(180deg,#9df25a,#3cc41f);text-shadow:0 3px 0 #1d6e0d;}
+.btn.o{background:linear-gradient(180deg,#ffc06a,#ff8a1f);text-shadow:0 3px 0 #b4560a;height:56px;font-size:22px;}
+.confetti{position:absolute;z-index:9;width:10px;height:16px;border-radius:3px;border:2px solid var(--ink);}
+</style></head><body>
+
+<!-- (a) Start -->
+<div class="screen w" id="home" data-label="Startseite">
+  <div class="status"></div>
+  <div class="sun"></div>
+  <div class="cloud" style="left:-20px;top:150px;width:130px"></div>
+  <div class="cloud" style="left:250px;top:280px;width:110px;transform:scale(.8)"></div>
+  <div class="cloud" style="left:40px;top:330px;width:80px;transform:scale(.6);opacity:.9"></div>
+  <svg class="hills" viewBox="0 0 390 420" preserveAspectRatio="none"><path d="M-10 150 C 60 90 140 100 210 140 S 330 110 400 90 L400 420 L-10 420Z" fill="#8be86a" stroke="#16204a" stroke-width="3.5"/><path d="M-10 210 C 90 160 190 190 260 215 S 360 200 400 185 L400 420 L-10 420Z" fill="#5fd34a" stroke="#16204a" stroke-width="3.5"/><g fill="#fff" stroke="#16204a" stroke-width="2"><circle cx="40" cy="190" r="5"/><circle cx="350" cy="168" r="4"/><circle cx="300" cy="232" r="5"/></g><g fill="#ffd23f"><circle cx="40" cy="190" r="2"/><circle cx="300" cy="232" r="2"/></g></svg>
+  <div class="topbar"><div class="pill"><i data-ico="star"></i>41 / 150</div><div class="gap"></div><div class="rbtn"><i data-ico="gear"></i></div></div>
+  <div class="logo"><svg viewBox="0 0 420 120"><defs><linearGradient id="lg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6b8"/><stop offset=".45" stop-color="#ffd25a"/><stop offset="1" stop-color="#ff8a1f"/></linearGradient><path id="arc" d="M20 100 Q210 40 400 100"/></defs>
+    <text text-anchor="middle" fill="#16204a" stroke="#16204a" stroke-width="18" stroke-linejoin="round"><textPath href="#arc" startOffset="50%">SquishDoku</textPath></text>
+    <text text-anchor="middle" fill="url(#lg1)" stroke="#a04a08" stroke-width="3" paint-order="stroke"><textPath href="#arc" startOffset="50%">SquishDoku</textPath></text></svg></div>
+  <div class="tag">Halten · Leuchten · Ploppen</div>
+  <!-- hero squishes on the hill -->
+  <div class="shadow" style="left:24px;width:110px;top:470px"></div>
+  <div class="char" style="left:20px;top:356px;width:120px;transform:rotate(-8deg)"><img class="sq" src="assets/squish-blue.png"><svg class="face" viewBox="0 0 60 30"><ellipse cx="18" cy="12" rx="6" ry="8" fill="#16204a"/><ellipse cx="42" cy="12" rx="6" ry="8" fill="#16204a"/><circle cx="20" cy="9" r="2.4" fill="#fff"/><circle cx="44" cy="9" r="2.4" fill="#fff"/><path d="M24 23 Q30 29 36 23" fill="none" stroke="#16204a" stroke-width="3" stroke-linecap="round"/></svg></div>
+  <div class="shadow" style="left:128px;width:150px;top:488px"></div>
+  <div class="char" style="left:106px;top:296px;width:190px;"><img class="sq" src="assets/squish-glow.png"><svg class="face" viewBox="0 0 60 30" style="top:34%"><path d="M12 13 Q18 5 24 13" fill="none" stroke="#5a2a04" stroke-width="3.4" stroke-linecap="round"/><path d="M36 13 Q42 5 48 13" fill="none" stroke="#5a2a04" stroke-width="3.4" stroke-linecap="round"/><path d="M21 19 Q30 31 39 19 Z" fill="#5a2a04"/><path d="M25 23 Q30 27 35 23" fill="#ff6a7a"/><ellipse cx="9" cy="20" rx="4" ry="2.4" fill="#ff8a5a" opacity=".7"/><ellipse cx="51" cy="20" rx="4" ry="2.4" fill="#ff8a5a" opacity=".7"/></svg></div>
+  <div class="shadow" style="left:272px;width:100px;top:476px"></div>
+  <div class="char" style="left:268px;top:384px;width:104px;transform:rotate(9deg)"><img class="sq" src="assets/squish-white-press.png"><svg class="face" viewBox="0 0 60 30"><ellipse cx="18" cy="13" rx="5.5" ry="7" fill="#16204a"/><ellipse cx="42" cy="13" rx="5.5" ry="7" fill="#16204a"/><circle cx="20" cy="10" r="2.2" fill="#fff"/><circle cx="44" cy="10" r="2.2" fill="#fff"/><ellipse cx="30" cy="24" rx="4" ry="3.4" fill="#16204a"/></svg></div>
+  <div class="char" style="left:236px;top:446px;width:62px;transform:rotate(-12deg)"><img class="sq" src="assets/squish-pink.png"><svg class="face" viewBox="0 0 60 30"><circle cx="19" cy="13" r="5" fill="#16204a"/><circle cx="41" cy="13" r="5" fill="#16204a"/><path d="M24 22 Q30 27 36 22" fill="none" stroke="#16204a" stroke-width="3.4" stroke-linecap="round"/></svg></div>
+
+  <div class="daily"><span class="rib">TAGESRÄTSEL · HEUTE</span>
+    <div class="cal"><b>SO</b><i>22</i></div>
+    <div class="dmain"><h3>8×8 Knifflig</h3><p>Serie 5 Tage · Rekord 9</p><div class="mini"><span style="background:#3a8de0"></span><span style="background:#e8291f"></span><span style="background:#ffd23f;box-shadow:0 0 8px #ffd23f"></span><span style="background:#38b81c"></span><span style="background:#8a3cf0"></span><span style="background:#ff8a1f"></span></div></div>
+    <div class="flame"><i data-ico="flame"></i><b>5</b></div>
+  </div>
+  <div class="play"><i data-ico="play"></i>Level 18 spielen<small>6×6</small></div>
+  <div class="nav"><div class="b"><i data-ico="grid"></i>Weltkarte</div><div class="p"><i data-ico="cap"></i>Regeln</div><div class="o"><i data-ico="trophy"></i>Erfolge</div></div>
+  <div class="home-ind"></div>
+</div>
+
+<!-- (b) Weltkarte -->
+<div class="screen map" id="levels" data-label="Level-Auswahl (Weltkarte)">
+  <div class="status"></div>
+  <svg id="mapsvg" style="position:absolute;inset:0;z-index:1" viewBox="0 0 390 844">
+    <path d="M0 0H390V178 Q 330 166 270 178 T 150 178 T 0 176Z" fill="#53c3ff"/>
+    <path d="M0 176 Q 75 168 150 178 T 270 178 T 390 178" fill="none" stroke="#fff" stroke-width="5" opacity=".9"/>
+    <path d="M0 196 Q 75 188 150 198 T 270 198 T 390 196" fill="none" stroke="#fff" stroke-width="2.5" opacity=".6"/>
+    <path d="M0 600 Q 100 560 200 590 T 390 575 V844 H0Z" fill="#6ad44c" stroke="#16204a" stroke-width="3.5"/>
+    <g id="roadg" fill="none" stroke-linecap="round"></g>
+    <g stroke="#16204a" stroke-width="3"><circle cx="352" cy="616" r="20" fill="#3cc41f"/><circle cx="334" cy="628" r="14" fill="#5fd34a"/><circle cx="30" cy="700" r="16" fill="#3cc41f"/></g>
+    <g fill="#fff" stroke="#16204a" stroke-width="2"><circle cx="200" cy="720" r="5"/><circle cx="340" cy="700" r="4"/><circle cx="60" cy="640" r="4"/></g>
+    <g fill="#ffd23f"><circle cx="200" cy="720" r="2"/></g>
+    <g stroke="#16204a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M58 330 L 50 266"/><path d="M14 276 Q 46 226 88 256 Z" fill="#ff5a5f"/><path d="M36 266 Q 48 240 62 260 Z" fill="#fff"/><ellipse cx="56" cy="334" rx="30" ry="7" fill="#f5d27c"/>
+      <path d="M52 500 l8 -14 8 14 14 2 -10 10 3 15 -15 -7 -15 7 3 -15 -10 -10z" fill="#ff9a5a"/><path d="M350 330 q10 -22 24 0 q-12 8 -24 0z" fill="#ffe0c2"/></g>
+  </svg>
+  <div class="hdr"><div class="rbtn"><i data-ico="back"></i></div><h2>Weltkarte</h2><div class="pill" style="height:40px"><i data-ico="star"></i>41</div></div>
+  <div class="zone" style="top:612px;background:#e9ffd9"><b>Wiese</b>5×5 · 14 / 14</div>
+  <div class="zone" style="top:404px;left:auto;right:16px;background:#fff6dc"><b>Sandstrand</b>6×6 · 4 / 13</div>
+  <div id="nodes"></div>
+  <div class="mapbar"><div class="cal"><b>SO</b><i>22</i></div><div><h4>Tagesrätsel</h4><p>8×8 · Knifflig</p></div><div class="flame"><i data-ico="flame"></i><b>5</b></div><div class="go"><i data-ico="play" style="width:16px;height:16px"></i>Los</div></div>
+  <div class="home-ind" style="background:#16204a;opacity:.4"></div>
+</div>
+
+<!-- (c) Sieg -->
+<div class="screen w win" id="win" data-label="Sieg-Dialog">
+  <div class="status"></div>
+  <div class="sun"></div>
+  <img src="assets/board-5x5.png" style="position:absolute;left:12px;top:220px;width:366px;z-index:1">
+  <div class="veil"></div>
+  <div class="card"><div class="bigstars"><i data-ico="star"></i><i data-ico="star"></i><i data-ico="star"></i></div>
+    <div class="rib">Geschafft!</div>
+    <p style="margin:4px 0 14px;font:600 16px/1.35 Fredoka;color:#4a5684">Level 18 · ohne Fehler und flott!</p>
+    <div class="res"><div><b>1:42</b><span>Zeit</span></div><div class="best"><b>1:35</b><span>Bestzeit</span></div><div><b style="color:#ff6a1f;display:flex;justify-content:center;align-items:center;gap:2px">5<i data-ico="flame" style="width:20px;height:25px"></i></b><span>Serie</span></div></div>
+    <div class="btn g"><i data-ico="play"></i>Weiter</div>
+    <div class="btn o">Nochmal</div>
+  </div>
+  <div class="char" style="z-index:9;left:250px;top:610px;width:120px;transform:rotate(10deg)"><img class="sq" src="assets/squish-glow.png"><svg class="face" viewBox="0 0 60 30" style="top:34%"><path d="M12 13 Q18 5 24 13" fill="none" stroke="#5a2a04" stroke-width="3.6" stroke-linecap="round"/><path d="M36 13 Q42 5 48 13" fill="none" stroke="#5a2a04" stroke-width="3.6" stroke-linecap="round"/><path d="M21 19 Q30 31 39 19 Z" fill="#5a2a04"/></svg></div>
+  <div class="char" style="z-index:9;left:10px;top:640px;width:96px;transform:rotate(-12deg)"><img class="sq" src="assets/squish-purple.png"><svg class="face" viewBox="0 0 60 30"><path d="M13 14 Q19 6 25 14" fill="none" stroke="#16204a" stroke-width="3.6" stroke-linecap="round"/><path d="M35 14 Q41 6 47 14" fill="none" stroke="#16204a" stroke-width="3.6" stroke-linecap="round"/><path d="M22 20 Q30 30 38 20 Z" fill="#16204a"/></svg></div>
+  <div id="conf"></div>
+  <div class="home-ind" style="background:#fff;opacity:.6"></div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+// level nodes + a smooth road through them
+const host=document.getElementById('nodes');
+const P=[[120,960],[120,690],[265,632],[300,540],[175,482],[88,400],[190,318],[305,262],[255,190],[130,150],[60,40]];
+const cr=(p)=>{let d=`M${p[0]}`;for(let i=0;i<p.length-1;i++){const a=p[i-1]||p[i],b=p[i],c=p[i+1],e=p[i+2]||c;d+=` C${b[0]+(c[0]-a[0])/6},${b[1]+(c[1]-a[1])/6} ${c[0]-(e[0]-b[0])/6},${c[1]-(e[1]-b[1])/6} ${c[0]},${c[1]}`;}return d;};
+const d=cr(P),g=document.getElementById('roadg');g.innerHTML=`<path d="${d}" stroke="#16204a" stroke-width="40"/><path d="${d}" stroke="#fff3cf" stroke-width="33"/><path d="${d}" stroke="#e9c97a" stroke-width="4" stroke-dasharray="2 14"/>`;
+const lv=[[13,3],[14,2],[15,3],[16,3],[17,1],[18,'cur'],[19,'lock'],[20,'lock'],[21,'lock']];
+lv.forEach(([n,s],i)=>{const pt={x:P[i+1][0],y:P[i+1][1]};const d=document.createElement('div');
+  d.className='node '+(s==='cur'?'cur':s==='lock'?'lock':'done');d.style.left=pt.x+'px';d.style.top=pt.y+'px';
+  d.innerHTML=s==='lock'?'<i data-ico="lock"></i>':n;
+  if(typeof s==='number')d.innerHTML+=`<span class="st">${[1,2,3].map(k=>`<i data-ico="star" class="${k>s?'off':''}"></i>`).join('')}</span>`;
+  host.append(d);
+  if(s==='cur'){const c=document.createElement('div');c.className='char';c.style.cssText=`z-index:7;left:${pt.x-38}px;top:${pt.y-122}px;width:76px`;c.innerHTML=`<img class="sq" src="assets/squish-blue.png"><svg class="face" viewBox="0 0 60 30"><ellipse cx="18" cy="12" rx="6" ry="8" fill="#16204a"/><ellipse cx="42" cy="12" rx="6" ry="8" fill="#16204a"/><circle cx="20" cy="9" r="2.4" fill="#fff"/><circle cx="44" cy="9" r="2.4" fill="#fff"/><path d="M24 23 Q30 29 36 23" fill="none" stroke="#16204a" stroke-width="3" stroke-linecap="round"/></svg>`;host.append(c);
+    const h=document.createElement('div');h.className='here';h.textContent='Du bist hier!';h.style.cssText=`left:${pt.x-150}px;top:${pt.y-14}px`;h.classList.add('l');host.append(h);}
+});
+// confetti
+const cf=document.getElementById('conf'),cols=['#ffd23f','#ff5a5f','#5fd34a','#3a8de0','#c49bff'];
+[[40,120,20],[90,70,-30],[300,96,40],[340,150,-15],[60,170,60],[250,60,10],[180,40,-50],[320,560,30],[30,520,-20],[200,150,70]].forEach(([x,y,r],i)=>{const e=document.createElement('i');e.className='confetti';e.style.cssText=`left:${x}px;top:${y}px;transform:rotate(${r}deg);background:${cols[i%5]}`;cf.append(e);});
+</script></body></html>
