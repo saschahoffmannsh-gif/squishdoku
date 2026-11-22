@@ -255,6 +255,8 @@ import { designD } from './cookies-d.mjs';
 export const DESIGN = {
   // D: natürlicher Tier-Ausstecher mit mehrlagigem Royal Icing (siehe cookies-d.mjs)
   D: P => designD(P),
+  // E: wie D, aber mit wechselnden Posen (Profil, Dreiviertel, Blickrichtung, Zwinkern)
+  E: P => designD(P, 'E'),
   // A: runder Mürbeteig-Keks, oben glänzender Zuckerguss, Gesicht gespritzt
   A: P => ({ top: .3, build() {
     const pts = polar((x, y) => Math.hypot(x, y) <= .93, 160);
@@ -378,6 +380,7 @@ function crumbs(def, P, seed) {
   const iceCol = new THREE.Color(P.hex);
   const capMat = new THREE.MeshPhysicalMaterial({ map: topTexture(def, P), roughness: .45, clearcoat: .6, clearcoatRoughness: .15 });
   if (def.ice.normalCanvas) { const n = new THREE.CanvasTexture(def.ice.normalCanvas); n.repeat.set(.5, .5); n.offset.set(.5, .5); capMat.normalMap = n; capMat.clearcoat = .85; capMat.roughness = .38; }
+  if (def.uv) for (const t of [capMat.map, capMat.normalMap]) if (t) { t.repeat.set(.5 / def.uv.sc, .5 / def.uv.sc); t.offset.set(.5 + def.uv.cx * .5, .5 + def.uv.cy * .5); }
   const iceMat = new THREE.MeshPhysicalMaterial({ color: iceCol, roughness: .35, clearcoat: .7 });
   const crumbMat = new THREE.MeshPhysicalMaterial({ color: def.base ? def.base.clone().lerp(new THREE.Color('#c98a4a'), .35) : new THREE.Color('#d9a15c'), map: def.base ? null : doughTextures().map, bumpMap: doughTextures().bump, bumpScale: 3, roughness: .9 });
   const side = def.base ? new THREE.MeshPhysicalMaterial({ color: def.base, bumpMap: doughTextures().bump, bumpScale: 2, roughness: .8 }) : doughMaterial();
