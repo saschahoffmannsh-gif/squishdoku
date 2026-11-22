@@ -35,6 +35,11 @@ Gelb bleibt die Leuchtfarbe.
   - Es schreibt Texturen mit 512 px (`*.webp` für Mobilgeräte, `*.png`) und `outlines.json` (Umriss = Motiv + Backrand).
   - Vor `buildCookie('F', …)` muss `await loadArt()` laufen.
 
+- **F · Bedruckte Kekse** (`cookies-f.mjs`, `art/`): ein echter 3D-Mürbeteigkeks mit Höhe, gerundeter, gebräunter Kante und Krümel-Textur. Der Umriss folgt der Silhouette des Tiers und lässt einen schmalen Backrand frei. Das Pixar-Motiv liegt flach als Aufdruck auf der Oberseite.
+  - `art/src/*.jpg` sind die erzeugten Originale.
+  - `art/prepare.py` stellt sie frei, entfernt gezeichnete Keksränder und schiebt die Farben zu den Regionsfarben. Das Skript schreibt `art/<tier>.png|webp` (512²) und `art/outlines.json` mit den Keksumrissen.
+  - Vor `buildCookie('F', …)` einmal `await loadArt()` aus `cookies-f.mjs` aufrufen.
+
 ## Dateien
 - `cookies.mjs`: die Bibliothek, mit dem `three` aus `vendor/squish-attack`, also dieselbe Version wie im Spiel. Mit `buildCookie(set, farbe, {state, size})` bekommst du eine `THREE.Group`, die sich direkt ins Spiel setzen lässt.
   - `set`: `'A' | 'B' | 'C' | 'D' | 'E' | 'F'`
