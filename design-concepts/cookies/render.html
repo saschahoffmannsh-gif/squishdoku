@@ -1,0 +1,80 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><title>SquishDoku · Kekse</title>
+<style>html,body{margin:0;background:#0b1030;overflow:hidden}#host{position:fixed;inset:0}
+#labels{position:fixed;inset:0;pointer-events:none;font:600 22px/1.1 Fredoka,system-ui,sans-serif;color:#e9ecff}
+#labels div{position:absolute;transform:translate(-50%,0);text-align:center;white-space:nowrap;text-shadow:0 2px 8px #0008}
+#labels small{display:block;font-weight:500;font-size:15px;color:#8f97c9;margin-top:4px;letter-spacing:.04em}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap"></head>
+<body><div id="stage" style="position:fixed;inset:0"><div id="host"></div><div class="board-slot" id="slot" style="position:absolute;left:30px;top:150px;width:840px;height:840px;pointer-events:none"></div></div><div id="labels"></div>
+<script type="module">
+// render.html?set=A|B|C&view=lineup|board|single[&key=1][&state=lit|crumbled]
+const q = new URLSearchParams(location.search), SET = q.get('set') || 'A', VIEW = q.get('view') || 'lineup';
+const host = document.getElementById('host');
+const ready = () => document.documentElement.dataset.ready = '1';
+window.onerror = e => { document.documentElement.dataset.error = String(e); };
+if (VIEW === 'board') {
+  // ---- the game's own board, table, lighting and camera (src/board3d.mjs), cookies instead of squishes ----
+  const { createBoard3D } = await import('../../src/board3d.mjs');
+  const { THREE, buildCookie, byKey } = await import('./cookies.mjs');
+  const levels = await (await fetch('../../src/levels.json')).json();
+  const L = levels.find(l => l.id === +(q.get('level') || 29));
+  document.body.style.background = '#0b1030';
+  const board = createBoard3D(host);
+  board.build(L, g => L.colors[g]);
+  const { scene } = board.graphics, N = L.N;
+  const P = board.graphics.parameters, pitch = P.board.pitch * 5 / N;
+  const lit = (q.get('lit') || '2,3').split(',').map(Number), pop = (q.get('pop') || '4,1').split(',').map(Number);
+  for (const cl of board.cells) {
+    board.vanish(cl.r, cl.c); // hide the squish (and its HUD shadow)
+    cl.splat.visible = false;
+    const state = cl.r === lit[0] && cl.c === lit[1] ? 'lit' : cl.r === pop[0] && cl.c === pop[1] ? 'crumbled' : 'normal';
+    const ck = buildCookie(SET, cl.value, { state, size: pitch * .47, seed: cl.r * 7 + cl.c + 1 });
+    ck.position.set((cl.c - (N - 1) / 2) * pitch, P.board.top - .02, (cl.r - (N - 1) / 2) * pitch);
+    ck.rotation.y = state === 'normal' ? (Math.sin(cl.r * 3.1 + cl.c * 1.7) * .05) : 0;
+    ck.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    scene.add(ck);
+  }
+  board.requestFrame({ shadows: true });
+  let n = 0; const tick = () => { board.refresh(); if (++n < 30) requestAnimationFrame(tick); else setTimeout(ready, 300); }; requestAnimationFrame(tick);
+} else {
+  const { THREE, buildCookie, PALETTE } = await import('./cookies.mjs');
+  const W = innerWidth, H = innerHeight;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(devicePixelRatio); renderer.setSize(W, H); host.appendChild(renderer.domElement);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95; renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene(); scene.background = new THREE.Color('#0b1030');
+  // studio environment: dark room, warm key panel, cool rim panel, gold accent (gives the icing its gloss)
+  const env = new THREE.Scene(); env.background = new THREE.Color('#05081a');
+  const panel = (w, h, c, i, pos, look) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(i), side: THREE.DoubleSide })); m.position.set(...pos); m.lookAt(...look); env.add(m); };
+  panel(8, 5, '#fff1dc', 6, [4, 9, -2], [0, 0, 0]); panel(10, 3, '#9fb4ff', 2.5, [-9, 4, -6], [0, 0, 0]); panel(6, 2, '#ffcf6a', 3, [-3, 3, 10], [0, 0, 0]); panel(20, 2, '#ffffff', 1.2, [0, 12, 4], [0, 0, 0]);
+  const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(env, .02).texture; scene.environmentIntensity = .55;
+  const key = new THREE.DirectionalLight('#fff0dc', 2.6); key.position.set(5, 11, 6); key.castShadow = true;
+  Object.assign(key.shadow.camera, { left: -12, right: 12, top: 8, bottom: -8, near: 1, far: 40 }); key.shadow.mapSize.set(4096, 4096); key.shadow.radius = 6; key.shadow.bias = -.0004; key.shadow.normalBias = .02; scene.add(key);
+  const rim = new THREE.DirectionalLight('#8fa6ff', 1.1); rim.position.set(-6, 5, -8); scene.add(rim);
+  scene.add(new THREE.HemisphereLight('#b9c3ff', '#1a1430', .35));
+  // navy velvet table with a soft spotlight pool
+  const gc = document.createElement('canvas'); gc.width = gc.height = 1024; const gx = gc.getContext('2d'), gr = gx.createRadialGradient(512, 470, 40, 512, 512, 620);
+  gr.addColorStop(0, '#1d2558'); gr.addColorStop(.55, '#11173d'); gr.addColorStop(1, '#0b1030'); gx.fillStyle = gr; gx.fillRect(0, 0, 1024, 1024);
+  const gt = new THREE.CanvasTexture(gc); gt.colorSpace = THREE.SRGBColorSpace;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 26), new THREE.MeshStandardMaterial({ map: gt, roughness: .92 })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+  const cam = new THREE.PerspectiveCamera(26, W / H, .1, 100);
+  const items = [];
+  if (VIEW === 'single') {
+    const key = +(q.get('key') || 1); const ck = buildCookie(SET, key, { state: q.get('state') || 'normal', size: 1 }); scene.add(ck); items.push([ck, PALETTE.find(p => p.key === key)]);
+    cam.position.set(0, 4.2, 3.6); cam.lookAt(0, .15, 0);
+  } else {
+    const cols = 4, dx = 2.55, dz = 2.75;
+    PALETTE.forEach((p, i) => {
+      const r = Math.floor(i / cols), c = i % cols, ck = buildCookie(SET, p.key, { size: 1 });
+      ck.position.set((c - (cols - 1) / 2) * dx, 0, (r - .5) * dz); ck.rotation.y = (i % 2 ? -1 : 1) * .06; scene.add(ck); items.push([ck, p]);
+    });
+    cam.position.set(0, 11.2, 9.4); cam.lookAt(0, -.1, .25);
+  }
+  renderer.render(scene, cam);
+  // labels under each cookie
+  const lab = document.getElementById('labels');
+  if (VIEW === 'lineup') for (const [ck, p] of items) { const v = ck.position.clone().add(new THREE.Vector3(0, 0, 1.16)).project(cam); const d = document.createElement('div');
+    d.style.left = (v.x + 1) / 2 * W + 'px'; d.style.top = (1 - v.y) / 2 * H + 'px'; d.innerHTML = `${p.tier}<small>${p.name.toUpperCase()}</small>`; lab.appendChild(d); }
+  await document.fonts.ready; setTimeout(ready, 200);
+}
+</script></body></html>
