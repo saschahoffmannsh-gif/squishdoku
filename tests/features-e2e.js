@@ -190,6 +190,8 @@ async function run(vp) {
   const tiles = await p.evaluate(() => ({ l5: document.querySelectorAll('[data-level="5"] .nn-ts i.on').length, l4: document.querySelectorAll('[data-level="4"] .nn-ts i.on').length, aria: document.querySelector('[data-level="5"]').getAttribute('aria-label'), time: document.querySelector('[data-level="5"] small').textContent, perfect: document.querySelector('[data-level="5"]').classList.contains('is-perfect'), prog: document.getElementById('home-stars').textContent }));
   ok(tiles.l5 === 3 && tiles.l4 === 1 && tiles.aria.includes('Bestzeit') && /^\d:\d\d$/.test(tiles.time) && tiles.perfect, `level tiles show best stars, best time (${tiles.time}) and the 3-star dot`);
   ok(tiles.prog === '12/150', `levels header shows the total star count (${tiles.prog})`);
+  ok(await p.evaluate(() => { const sc = document.querySelector('.nn-lv-scroll'), t = sc.querySelector('.nn-tile.is-current') || sc.querySelector('.nn-tile:not(.is-locked):last-of-type'), a = sc.getBoundingClientRect(), r = t.getBoundingClientRect(); return r.top >= a.top && r.bottom <= a.bottom; }), 'levels open scrolled to the current level');
+  ok(await p.evaluate(() => { const sc = document.querySelector('.nn-lv-scroll'), h = document.querySelector('.nn-hdr').getBoundingClientRect(); sc.scrollTop = 99999; const after = document.querySelector('.nn-hdr').getBoundingClientRect(), last = sc.querySelector('.nn-legend').getBoundingClientRect(), tabs = document.getElementById('tabs').getBoundingClientRect(); return h.top === after.top && last.bottom <= tabs.top + 1; }), 'levels: header stays put while the list scrolls, end of list clears the tab bar');
   await shot('08-levels');
 
   // ---------- 4. Rückgängig ----------

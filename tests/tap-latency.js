@@ -73,7 +73,7 @@ async function run(vp) {
   await tap('Zahnrad → Einstellungen', '#btn-settings', `!document.getElementById('sheet-veil').hidden`);
   await tap('Einstellungen → Regeln', '#btn-rules', `${screen('rules')}&&document.getElementById('sheet-veil').hidden`);
   await tap('Regeln → Zurück', '#btn-rules-back', `${screen('home')}`);
-  await tap('Home → Spielen (1st 3D setup)', '#btn-play', `!document.getElementById('game').hidden&&document.getElementById('lvl-num').textContent==='4'`, { settle: 1500 });
+  await tap('Home → Spielen-Knopf (1st 3D setup)', '#btn-play', `!document.getElementById('game').hidden&&document.getElementById('lvl-num').textContent==='4'`, { settle: 1500 });
   await tap('Regel-Chip', '.sd-rb-chip[data-rule="touch"]', `document.querySelector('.sd-rb-chip[data-rule="touch"]').classList.contains('is-demo')`);
   await tap('Regeln einklappen', '.sd-rb-toggle', `document.getElementById('rulesbar').classList.contains('is-collapsed')`);
   await tap('Regeln ausklappen', '.sd-rb-toggle', `!document.getElementById('rulesbar').classList.contains('is-collapsed')`);
@@ -82,8 +82,8 @@ async function run(vp) {
   await p.evaluate(() => { window.__s0 = SquishDoku.state; });
   await tap('Neustart', '#btn-reset', `SquishDoku.state!==window.__s0&&!document.getElementById('game').hidden`, { settle: 1500 });
   await tap('Zurück (Spiel → Levels)', '#btn-back', `${screen('levels')}&&document.getElementById('game').hidden`);
-  await tap('Levels: Größe 6×6', '.nn-seg [data-n="6"]', `document.querySelector('.nn-seg [data-n="6"]').classList.contains('is-on')`);
-  await tap('Levels: Größe 5×5', '.nn-seg [data-n="5"]', `!document.querySelector('.nn-lv-grid[data-n="5"]').hidden`);
+  await tap('Levels: Sprung zu 6×6', '.nn-seg [data-n="6"]', `document.querySelector('.nn-seg [data-n="6"]').classList.contains('is-on')`);
+  await tap('Levels: Sprung zu 5×5', '.nn-seg [data-n="5"]', `document.querySelector('.nn-seg [data-n="5"]').classList.contains('is-on')`);
   await tap('Level-Kachel 12', '.nn-tile[data-level="12"]', `!document.getElementById('game').hidden&&SquishDoku.state.id===12`, { settle: 1500 });
   // win dialog: solve by setting glows through the real hold path is slow; use the solution with real holds
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });

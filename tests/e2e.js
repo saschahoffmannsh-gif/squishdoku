@@ -39,10 +39,8 @@ async function run(vp, dpr) {
   const st = () => p.evaluate(() => { const S = SquishDoku.state; return { id: S.id, N: S.N, hearts: S.hearts, glow: S.glow, grid: S.state.map(r => r.slice()), sol: S.L.solution, regions: S.L.regions, locked: S.locked }; });
   const dialog = () => p.evaluate(() => { const v = document.getElementById('veil'); return v.hidden ? null : document.getElementById('dialog').dataset.kind; });
   const shot = async name => { if (SHOTS) await p.screenshot({ path: `${OUT}/${name}-${vp.width}x${vp.height}.png` }); };
-  // level tiles live in one pane per board size: open the right size tab, then tap the tile
+  // level tiles: scroll the tile into view inside the list, then tap it
   async function pickLevel(lvl, shotIt) {
-    const n = await p.evaluate(l => document.querySelector(`.nn-tile[data-level="${l}"]`).closest('.nn-lv-grid').dataset.n, lvl);
-    if (!(await p.evaluate(n => document.querySelector(`.nn-seg [data-n="${n}"]`).classList.contains('is-on'), n))) { await p.click(`.nn-seg [data-n="${n}"]`); await sleep(250); }
     await p.locator(`.nn-tile[data-level="${lvl}"]`).scrollIntoViewIfNeeded(); await sleep(150); if (shotIt) await shot(`08-levels-${lvl}`);
     await p.click(`.nn-tile[data-level="${lvl}"]`);
   }
@@ -58,11 +56,12 @@ async function run(vp, dpr) {
   ok(await p.locator('.nn-lv-grid .nn-tile').count() === 50, 'level select: 50 levels');
   ok(await p.locator('.nn-lv-grid .nn-tile.is-locked').count() === 49, 'level select: levels 2-50 locked');
   ok(await p.evaluate(() => [...document.querySelectorAll('.nn-seg button')].map(b => b.textContent + (b.classList.contains('is-on') ? '*' : '')).join(' ') === '5×5* 6×6 7×7 8×8'), 'levels: size tabs 5×5–8×8, 5×5 open for a new player');
-  ok(await p.evaluate(() => { const g = document.querySelector('.nn-lv-grid:not([hidden])'); return g.dataset.n === '5' && g.querySelector('[data-level="1"]').classList.contains('is-current') && g.querySelectorAll('.nn-tile').length === 14; }), 'levels: Kapitel 1 = Mission 1 (4×4) + the 5×5 levels, L1 marked current');
-  ok((await p.textContent('.nn-chap h3')) === 'Kapitel 1 · 5×5', 'levels: chapter card');
-  await p.click('.nn-seg [data-n="7"]'); await sleep(250);
-  ok(await p.evaluate(() => document.querySelector('.nn-lv-grid:not([hidden])').dataset.n === '7' && document.querySelector('.nn-chap h3').textContent === 'Kapitel 3 · 7×7'), 'levels: switching the size tab shows chapter 3');
-  await p.click('.nn-seg [data-n="5"]'); await sleep(250);
+  ok(await p.evaluate(() => { const g = document.querySelector('.nn-lv-grid'); return g.dataset.n === '5' && g.querySelector('[data-level="1"]').classList.contains('is-current') && g.querySelectorAll('.nn-tile').length === 14; }), 'levels: Kapitel 1 = Mission 1 (4×4) + the 5×5 levels, L1 marked current');
+  ok(await p.evaluate(() => [...document.querySelectorAll('.nn-lv-scroll .nn-chap h3')].map(h => h.textContent.split(' mit')[0]).join('|') === 'Kapitel 1 · 5×5|Kapitel 2 · 6×6|Kapitel 3 · 7×7|Kapitel 4 · 8×8'), 'levels: one scrolling list, all 4 chapter cards stacked');
+  await p.click('.nn-seg [data-n="7"]'); await sleep(1200);
+  ok(await p.evaluate(() => { const sc = document.querySelector('.nn-lv-scroll'), c = sc.querySelector('.nn-lv-chap[data-n="7"]'); return Math.abs(sc.scrollTop - (c.offsetTop - 4)) < 6 && document.querySelector('.nn-seg [data-n="7"]').classList.contains('is-on'); }), 'levels: quick-jump chip scrolls to chapter 3');
+  await p.evaluate(() => { const sc = document.querySelector('.nn-lv-scroll'); sc.scrollTop = 0; }); await sleep(300);
+  ok(await p.evaluate(() => document.querySelector('.nn-seg [data-n="5"]').classList.contains('is-on')), 'levels: scrolling back up marks 5×5 again');
   ok(await noScroll(), 'levels: page itself does not scroll');
   ok(await p.evaluate(() => { const sc = document.querySelector('.nn-lv-scroll'), r = sc.getBoundingClientRect(), t = document.getElementById('tabs').getBoundingClientRect(); return getComputedStyle(sc).overflowY === 'auto' && r.top >= 0 && r.bottom <= t.top + 1; }), 'levels: tile list scrolls in its own box above the tab bar');
   ok(await p.evaluate(() => { const b = document.querySelector('#btn-home').getBoundingClientRect(); return b.bottom <= innerHeight && b.top > 0; }), 'levels: back button visible');
@@ -70,6 +69,8 @@ async function run(vp, dpr) {
   await p.click('#btn-home'); await sleep(400);
   ok(!(await p.isVisible('#btn-tutorial')), 'home: no separate "Tutorial" button any more');
   ok(await p.isVisible('#tabs') && await p.evaluate(() => document.querySelector('#tab-home').classList.contains('is-on')), 'home: tab bar with "Start" active');
+  ok(await p.evaluate(() => { const b = document.getElementById('btn-play').getBoundingClientRect(), t = document.getElementById('tabs').getBoundingClientRect(); return b.height >= 60 && b.width > innerWidth * .85 && b.bottom <= t.top && b.top > innerHeight / 2; }), 'home: big gold play button right above the tab bar');
+  ok((await p.textContent('#btn-play')).includes('Mission 1 spielen'), 'home: play button names the next level');
   await p.click('#btn-play');
   await p.waitForFunction(() => SquishDoku.board && SquishDoku.board.stats.frames > 1, null, { timeout: 30000 });
   await sleep(900);

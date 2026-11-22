@@ -215,7 +215,8 @@ function homeScreen(){
   // hero: a real board rendered by the game's own squish renderer (pre-rendered, so startup stays instant)
   const stage=el('div','nn-stage','<div class="nn-stage-in"><div class="nn-halo"></div><img class="nn-board" src="src/img/hero-board.webp" alt="" decoding="async" draggable="false"><img class="nn-floaty is-glow" src="src/img/sq-glow.webp" alt="" decoding="async" draggable="false"><img class="nn-floaty is-pink" src="src/img/sq-pink.webp" alt="" decoding="async" draggable="false"></div>');
   stage.setAttribute('aria-hidden','true');
-  return [top,logo,stage,dailyCard(),continueCard()];
+  const sc=el('div','nn-home-scroll');sc.append(top,logo,stage,dailyCard());
+  return [sc,playButton()];
 }
 function weekRow(today){
   const mon=SquishDaily.addDays(today,-SquishDaily.weekday(today)),names=['Mo','Di','Mi','Do','Fr','Sa','So'];
@@ -237,43 +238,45 @@ function dailyCard(){
   b.addEventListener('click',()=>{tap();if(res)showDailyDone(key);else startDaily(key);});
   return b;
 }
-function continueCard(){
-  const n=nextLevel(),L=levels[n-1],played=solvedCount()>0,frac=solvedCount()/levels.length,C=125.66;
-  const b=el('button','nn-cont nn-glass');b.type='button';b.id='btn-play';
-  b.innerHTML=`<svg class="nn-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="#ffffff1c" stroke-width="5"/><circle class="nn-ring-on" cx="24" cy="24" r="20" fill="none" stroke="#ffcf5a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${Math.max(.01,frac*C).toFixed(1)} ${C}" transform="rotate(-90 24 24)"/><text x="24" y="29.5" text-anchor="middle">${n}</text></svg>
-    <span class="nn-cont-t"><b>${played?'Weiterspielen':'Los geht’s'}</b><small>${L.guide?`Mission ${n}`:`Level ${n}`} · ${L.N}×${L.N} · ${L.label}</small></span><span class="nn-go" aria-hidden="true">${NI.play()}</span>`;
-  b.setAttribute('aria-label',`${played?'Weiterspielen':'Spielen'}: Level ${n}, ${L.N} mal ${L.N}, ${L.label}. ${solvedCount()} von ${levels.length} Leveln gelöst.`);
+// big gold primary button above the tab bar: "▶ Level 18 spielen" + size/difficulty
+function playButton(){
+  const n=nextLevel(),L=levels[n-1],frac=solvedCount()/levels.length;
+  const b=el('button','nn-play');b.type='button';b.id='btn-play';
+  b.innerHTML=`<span class="nn-play-ico">${NI.play()}</span><span class="nn-play-t"><b>${L.guide?`Mission ${n}`:`Level ${n}`} spielen</b><small>${L.N}×${L.N} · ${L.label}</small></span><span class="nn-play-prog" aria-hidden="true"><i style="width:${(100*frac).toFixed(1)}%"></i></span>`;
+  b.setAttribute('aria-label',`Level ${n} spielen, ${L.N} mal ${L.N}, ${L.label}. ${solvedCount()} von ${levels.length} Leveln gelöst.`);
   b.addEventListener('click',()=>{tap();startLevel(n);});
   return b;
 }
 // --- Levels: one tab per board size; the 4×4 Mission 1 opens chapter 1 together with the 5×5 levels ---
 const sizeTab=l=>Math.max(5,l.N);
 const CHAPTERS={5:{n:1,sq:'green'},6:{n:2,sq:'purple'},7:{n:3,sq:'blue'},8:{n:4,sq:'orange'}};
-let lvTab=null;
 function levelsScreen(){
-  const cur=nextLevel();lvTab??=sizeTab(levels[cur-1]);
+  const cur=nextLevel();
   const hdr=el('div','nn-hdr',`<button type="button" class="nn-rb nn-glass" id="btn-home" aria-label="Zurück zum Start">${NI.back()}</button><h2>Levels</h2>${starsChip()}`);
   hdr.querySelector('#btn-home').addEventListener('click',()=>{tap();showHome('home');});
-  const seg=el('div','nn-seg nn-glass');seg.setAttribute('role','tablist');seg.setAttribute('aria-label','Brettgröße');
-  const chap=el('div','nn-chap nn-glass');
-  const scroller=el('div','nn-lv-scroll'),panes={};
+  // one continuous list: every chapter = chapter card + its tiles; the size chips only jump to a chapter
+  const seg=el('div','nn-seg nn-glass');seg.setAttribute('aria-label','Zu Kapitel springen');
+  const scroller=el('div','nn-lv-scroll'),chaps=[];
   for(const N of [5,6,7,8]){
-    const s=el('button','',`${N}×${N}`);s.type='button';s.dataset.n=N;s.setAttribute('role','tab');seg.append(s);
-    const g=el('div','nn-lv-grid');g.dataset.n=N;panes[N]=g;scroller.append(g);
-    for(const l of levels.filter(x=>sizeTab(x)===N))g.append(levelTile(l,cur));
-  }
-  const show=N=>{lvTab=N;
-    for(const s of seg.children){const on=+s.dataset.n===N;s.classList.toggle('is-on',on);s.setAttribute('aria-selected',String(on));}
-    for(const k in panes)panes[k].hidden=+k!==N;
+    const s=el('button','',`${N}×${N}`);s.type='button';s.dataset.n=N;seg.append(s);
     const ls=levels.filter(l=>sizeTab(l)===N),ok=ls.filter(l=>store.stars[l.id]).length,st=ls.reduce((a,l)=>a+(store.stars[l.id]||0),0),C=CHAPTERS[N];
-    chap.innerHTML=`<h3>Kapitel ${C.n} · ${N}×${N}</h3><p>${ok} von ${ls.length} gelöst · ${st} von ${ls.length*3} Sternen</p><div class="nn-bar"><i style="width:${(100*ok/ls.length).toFixed(1)}%"></i></div><img src="src/img/sq-${C.sq}.webp" alt="" decoding="async" draggable="false">`;
-    chap.classList.toggle('is-done',ok===ls.length);
-    requestAnimationFrame(()=>{const t=panes[N].querySelector('.is-current');scroller.scrollTop=t?Math.max(0,t.offsetTop-scroller.clientHeight/2+t.offsetHeight/2):0;});
-  };
-  seg.addEventListener('click',e=>{const s=e.target.closest('button');if(!s||+s.dataset.n===lvTab)return;tap();show(+s.dataset.n);});
-  show(lvTab);
-  const prog=el('div','nn-legend sd-lv-progress',`<span><b>${solvedCount()} / ${levels.length}</b> gelöst</span><span><i class="nn-dot"></i>3 Sterne</span><span>Bestzeit unter der Kachel</span>`);
-  return [hdr,seg,chap,scroller,prog];
+    const sec=el('section','nn-lv-chap');sec.dataset.n=N;
+    const chap=el('div','nn-chap nn-glass'+(ok===ls.length?' is-done':''),`<h3>Kapitel ${C.n} · ${N}×${N}${N===5?' <em>mit Missionen</em>':''}</h3><p>${ok} von ${ls.length} gelöst · ${st} von ${ls.length*3} Sternen</p><div class="nn-bar"><i style="width:${(100*ok/ls.length).toFixed(1)}%"></i></div><img src="src/img/sq-${C.sq}.webp" alt="" decoding="async" loading="lazy" draggable="false">`);
+    const g=el('div','nn-lv-grid');g.dataset.n=N;ls.forEach((l,k)=>{const t=levelTile(l,cur);t.style.setProperty('--k',k);g.append(t);});
+    sec.append(chap,g);scroller.append(sec);chaps.push(sec);
+  }
+  scroller.append(el('div','nn-legend sd-lv-progress',`<span><b>${solvedCount()} / ${levels.length}</b> gelöst</span><span><i class="nn-dot"></i>3 Sterne</span><span>Bestzeit unter der Kachel</span>`));
+  let shown=0;const mark=N=>{if(N===shown)return;shown=N;for(const s of seg.children)s.classList.toggle('is-on',+s.dataset.n===N);};
+  // highlight the chapter you are in (cheap: one read per frame while scrolling)
+  let raf=0;scroller.addEventListener('scroll',()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;const y=scroller.scrollTop+40;let n=5;for(const c of chaps)if(c.offsetTop<=y)n=+c.dataset.n;
+    if(scroller.scrollTop+scroller.clientHeight>=scroller.scrollHeight-2)n=8;mark(n);});},{passive:true});
+  seg.addEventListener('click',e=>{const s=e.target.closest('button');if(!s)return;tap();const c=chaps.find(x=>x.dataset.n===s.dataset.n);mark(+s.dataset.n);
+    scroller.scrollTo({top:c.offsetTop-4,behavior:reduceMotion.matches?'auto':'smooth'});});
+  mark(sizeTab(levels[cur-1]));
+  // open at the level you are on ("Jetzt" visible, roughly centred)
+  requestAnimationFrame(()=>{const t=scroller.querySelector('.nn-tile.is-current')||scroller.querySelector(`[data-level="${cur}"]`);
+    if(t)scroller.scrollTop=Math.max(0,t.offsetTop-scroller.clientHeight/2+t.offsetHeight/2);});
+  return [hdr,seg,scroller];
 }
 function levelTile(l,cur){
   const locked=l.id>store.unlocked,stars=store.stars[l.id]||0,isCur=l.id===cur&&!stars,bt=store.times[l.id];
@@ -395,7 +398,7 @@ $('btn-wipe').addEventListener('click',()=>{
 });
 function wipeProgress(){
   const keep={...store.settings};for(const k of Object.keys(store))delete store[k];Object.assign(store,baseStore(),{settings:keep});
-  save();lvTab=null;showHome('home');toast('Fortschritt zurückgesetzt');
+  save();showHome('home');toast('Fortschritt zurückgesetzt');
 }
 
 // ---------- Spiel ----------
@@ -478,7 +481,7 @@ function tick(){
 }
 function renderTimer(force){if(!S)return;const sec=Math.floor(S.ms/1000);if(sec===tShown&&!force)return;tShown=sec;$('timer-text').textContent=fmtTime(S.ms);}
 setInterval(tick,250);
-document.addEventListener('visibilitychange',tick);
+document.addEventListener('visibilitychange',()=>{tick();document.documentElement.classList.toggle('nn-paused',document.hidden);});
 
 // ---------- Rückgängig ----------
 // One step = one player action: lighting a squish, switching it off again, a whole swipe (all squishes it
@@ -661,6 +664,9 @@ async function win(){
     items.push(button({label:'Nochmal',icon:'retry',color:'aw-orange',id:'btn-again',action:()=>startLevel(id)}));
     items.push(button({label:'Levels',icon:'grid',color:'aw-slate',size:'aw-small',id:'btn-to-levels',action:()=>showHome('levels')}));
   }
+  // a few sparks around the stars (CSS only, positions fixed so it looks placed, not random)
+  if(stars>0){const sp=document.createElement('div');sp.className='nn-sparks';sp.setAttribute('aria-hidden','true');
+    sp.innerHTML=[[8,20,.5],[22,-2,.9],[48,-14,1.2],[74,-2,.7],[90,22,1.4],[34,70,1.7],[64,72,1.1],[96,60,.3]].map(([x,y,d])=>`<i style="--x:${x}%;--y:${y}%;--dl:${d}s"></i>`).join('');st.append(sp);}
   openDialog(items,'win');st.dataset.stars=stars;
   [...st.children].forEach((s,i)=>{if(i<stars)setTimeout(()=>{s.classList.add('on');sfx('star',i+1);buzz(i===2?'win':'light');},380+i*280);});
 }
