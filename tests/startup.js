@@ -17,7 +17,7 @@ const med = a => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s
     await p.addInitScript(() => { window.__lt = []; window.__lcp = 0;
       new PerformanceObserver(l => l.getEntries().forEach(e => window.__lt.push(e.duration))).observe({ type: 'longtask', buffered: true });
       new PerformanceObserver(l => l.getEntries().forEach(e => { window.__lcp = e.startTime; })).observe({ type: 'largest-contentful-paint', buffered: true });
-      new MutationObserver(() => { if (document.documentElement.dataset.ready === '1' && !window.__ready) window.__ready = performance.now(); }).observe(document.documentElement, { attributes: true }); });
+      const iv = setInterval(() => { if (document.documentElement?.dataset.ready === '1') { window.__ready = performance.now(); clearInterval(iv); } }, 4); });
     await p.goto(BASE); await p.waitForFunction(() => window.__ready); await sleep(1500);
     const m = await p.evaluate(() => ({ fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime, lcp: window.__lcp, ready: window.__ready, long: Math.max(0, ...window.__lt) }));
     R.fcp.push(m.fcp); R.lcp.push(m.lcp); R.ready.push(m.ready); R.long.push(m.long); R.kb.push(bytes / 1024);
