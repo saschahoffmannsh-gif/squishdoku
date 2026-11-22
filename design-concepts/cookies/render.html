@@ -63,13 +63,13 @@ if (VIEW === 'board') {
   const items = [];
   if (VIEW === 'closeups') {
     // hero shots: three cookies close up, lower camera, a few sugar pearls on the table
-    const keys = (q.get('keys') || '4,2,9').split(',').map(Number), xs = [-2.5, 0, 2.5];
-    keys.forEach((k, i) => { const ck = buildCookie(SET, k, { size: 1.18 }); ck.position.set(xs[i], 0, i === 1 ? -.15 : .12); ck.rotation.y = [.12, -.04, -.1][i]; scene.add(ck); });
+    const keys = (q.get('keys') || '4,2,9').split(',').map(Number), xs = [-2.4, 0, 2.4];
+    keys.forEach((k, i) => { const ck = buildCookie(SET, k, { size: 1.1 }); ck.position.set(xs[i], 0, i === 1 ? -.15 : .12); ck.rotation.y = [.12, -.04, -.1][i]; scene.add(ck); });
     const pearl = new THREE.SphereGeometry(1, 20, 14), pc = ['#ff8a1c', '#ffd23f', '#4a2416', '#fff4e6', '#f45bb8'];
     let sd = 11; const rn = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 34; i++) { const m = new THREE.Mesh(pearl, new THREE.MeshPhysicalMaterial({ color: pc[i % pc.length], roughness: .25, clearcoat: 1, clearcoatRoughness: .05 })); const s = .035 + rn() * .025;
       let x, z; do { x = (rn() * 2 - 1) * 4.6; z = (rn() * 2 - 1) * 2; } while (xs.some(cx => Math.hypot(x - cx, z) < 1.25)); m.scale.setScalar(s); m.position.set(x, s, z); m.castShadow = true; scene.add(m); }
-    cam.fov = 24; cam.position.set(0, 5.0, 5.9); cam.lookAt(0, .15, .1); key.color.set('#ffe6c4'); key.intensity = 3;
+    cam.fov = 24; cam.position.set(0, 5.2, 6.4); cam.lookAt(0, .12, .1); key.color.set('#ffe6c4'); key.intensity = 3;
   } else if (VIEW === 'single') {
     const key = +(q.get('key') || 1); const ck = buildCookie(SET, key, { state: q.get('state') || 'normal', size: 1 }); scene.add(ck); items.push([ck, PALETTE.find(p => p.key === key)]);
     cam.position.set(0, 4.2, 3.6); cam.lookAt(0, .15, 0);

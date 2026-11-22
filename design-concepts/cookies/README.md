@@ -20,9 +20,11 @@ Gelb bleibt die Leuchtfarbe.
 - **B · Tier-Ausstecher**: der Keks hat die Kopfform des Tiers und ist ganz glasiert
 - **C · Kissen-Kekse**: gewölbtes Quadrat aus gefärbtem Teig in Squish-Form, mit Streuseln
 
+- **D · Back-Ausstecher** (`cookies-d.mjs`): natürlicher Mürbeteig-Ausstecher mit gebackenem Rand und mehrlagigem, glänzendem Royal Icing. Jedes Tier besteht aus einzelnen gewölbten Guss-Flächen (Mähne, Ohren, Schnauze …) und dünnen gespritzten Linien. Daraus entstehen ein Höhenfeld für das Mesh, eine Normal-Map für die feinen Linien, eine Farbkarte mit leichter Farbvariation und der Keksumriss (Guss-Umriss plus Backrand). `view=closeups` rendert die Nahaufnahmen (`&keys=4,2,9`).
+
 ## Dateien
 - `cookies.mjs`: die Bibliothek, mit dem `three` aus `vendor/squish-attack`, also dieselbe Version wie im Spiel. Mit `buildCookie(set, farbe, {state, size})` bekommst du eine `THREE.Group`, die sich direkt ins Spiel setzen lässt.
-  - `set`: `'A' | 'B' | 'C'`
+  - `set`: `'A' | 'B' | 'C' | 'D'`
   - `state`: `'normal' | 'lit' | 'crumbled'`
   - Prozedural erzeugt: Teig-Textur, Bräunung über Vertex-Farben, Guss als Höhenfeld aus gezeichneten Gesichtern (`FACES`), Umrisse (`SILHOUETTE`), Bruchstücke und Krümel.
 - `render.html?set=A&view=lineup|board|single[&key=2&state=lit]`: die Render-Seite.
