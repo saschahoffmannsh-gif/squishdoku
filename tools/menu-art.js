@@ -6,7 +6,7 @@ const B = 'http://localhost:8792/tools/cookie-art.html';
 const OUT = __dirname + '/../src/img', TMP = '/tmp/menu-art'; require('fs').mkdirSync(TMP, { recursive: true });
 const ONLY = process.argv.slice(2);
 let jobs = [
-  { name: 'hero-board', q: 'mode=hero', w: 640 },
+  { name: 'hero-board', q: 'mode=hero', w: 600, q2: 68 },
   { name: 'sq-glow', q: 'mode=single&v=4&lit=1', w: 240 },
   { name: 'sq-pink', q: 'mode=single&v=7', w: 140 },
   { name: 'sq-blue', q: 'mode=single&v=1', w: 180 }, { name: 'sq-red', q: 'mode=single&v=2', w: 180 },
@@ -25,7 +25,7 @@ if (ONLY.length) jobs = jobs.filter(j => ONLY.includes(j.name));
     execFileSync('python3', ['-c', `
 from PIL import Image
 im=Image.open('${png}').convert('RGBA');a=im.split()[3].point(lambda v:255 if v>8 else 0);bb=a.getbbox();im=im.crop(bb)
-w=${j.w};im=im.resize((w,round(im.height*w/im.width)),Image.LANCZOS);im.save('${OUT}/${j.name}.webp',quality=82,method=6);print('${j.name}',im.size)`], { stdio: 'inherit' });
+w=${j.w};im=im.resize((w,round(im.height*w/im.width)),Image.LANCZOS);im.save('${OUT}/${j.name}.webp',quality=${j.q2 || 82},method=6);print('${j.name}',im.size)`], { stdio: 'inherit' });
     await p.close();
   }
   await b.close();

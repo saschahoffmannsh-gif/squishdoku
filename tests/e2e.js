@@ -17,7 +17,7 @@ async function run(vp, dpr) {
   const errors = [], warnings = [];
   p.on('pageerror', e => errors.push('pageerror: ' + e.message));
   p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); if (m.type() === 'warning') warnings.push(m.text()); });
-  const cdp = await ctx.newCDPSession(p);
+  const cdp = await ctx.newCDPSession(p); if (+process.env.THROTTLE > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: +process.env.THROTTLE }); // THROTTLE=4: CPU x4
   const touch = (type, x, y, timestamp) => cdp.send('Input.dispatchTouchEvent', { type, ...(timestamp ? { timestamp } : {}), touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1, radiusX: 4, radiusY: 4, force: 1 }] });
   const pos = (r, c) => p.evaluate(([r, c]) => { const s = SquishDoku.board.screenOf(r, c); return { x: s.x, y: s.y + s.size * .1 }; }, [r, c]);
   async function hold(r, c, ms = 650) { const q = await pos(r, c); await touch('touchStart', q.x, q.y); await sleep(ms); await touch('touchEnd'); await sleep(120); }

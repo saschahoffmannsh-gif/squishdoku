@@ -116,6 +116,7 @@ export function crumbleOf(ck){
 export function warmSet(values){
   const g=new THREE.Group();g.position.set(0,-80,0);
   for(const v of values){for(const mode of ['normal','glow','wrong']){const c=makeCookie(v);c.tone(mode);g.add(c.group);}}
-  const c=makeCookie(values[0]);c.inner.visible=false;c.crumble.visible=true;crumbleOf(c)(1);g.add(c.group);
+  // one crumbled cookie per animal: builds its broken pieces now, not on the first pop
+  for(const v of values){const c=makeCookie(v);c.inner.visible=false;c.crumble.visible=true;crumbleOf(c)(1);g.add(c.group);}
   g.traverse(o=>{o.frustumCulled=false;});return g;
 }

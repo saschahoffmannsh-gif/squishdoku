@@ -15,7 +15,7 @@ async function session(vp, { standalone = false } = {}) {
   const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const ctx = await b.newContext({ viewport: vp, screen: standalone ? { width: vp.width, height: standalone } : vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, locale: 'de-DE' });
   if (standalone) await ctx.addInitScript(() => Object.defineProperty(navigator, 'standalone', { get: () => true }));
-  const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p);
+  const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p); if (+process.env.THROTTLE > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: +process.env.THROTTLE }); // THROTTLE=4: CPU x4
   const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await p.goto(BASE); await p.evaluate(() => localStorage.setItem('squishdoku-v1', JSON.stringify({ v: 2, unlocked: 50, stars: { 1: 3, 2: 3, 3: 3 }, seenRules: true, revealed: {} })));
   await p.reload(); await p.waitForFunction(() => document.documentElement.dataset.ready === '1');
