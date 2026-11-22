@@ -58,7 +58,7 @@ const union = (...f) => (x, y) => f.some(g => g(x, y));
 const roundRect = (h, r) => (x, y) => { const qx = Math.max(Math.abs(x) - (h - r), 0), qy = Math.max(Math.abs(y) - (h - r), 0); return qx * qx + qy * qy <= r * r; };
 export const SILHOUETTE = {
   fox: union(ell(0, -.1, .74, .66), ell(0, -.3, .9, .5), tri(-.78, .2, -.18, .5, -.62, .95), tri(.78, .2, .18, .5, .62, .95)),
-  penguin: union(ell(0, -.04, .8, .9)),
+  penguin: union(ell(0, -.04, .76, .9), ell(-.7, -.28, .2, .32), ell(.7, -.28, .2, .32), ell(-.2, -.86, .2, .1), ell(.2, -.86, .2, .1)),
   frog: union(ell(0, -.14, .93, .7), ell(-.46, .42, .34, .32), ell(.46, .42, .34, .32)),
   lion: (x, y) => { const r = Math.hypot(x, y), a = Math.atan2(y, x); return r <= .84 + .08 * Math.cos(12 * a); },
   owl: union(roundRect(.82, .45), tri(-.82, .45, -.3, .7, -.78, 1), tri(.82, .45, .3, .7, .78, 1)),

@@ -30,7 +30,7 @@ if (VIEW === 'board') {
     const ck = buildCookie(SET, cl.value, { state, size: pitch * .47, seed: cl.r * 7 + cl.c + 1 });
     ck.position.set((cl.c - (N - 1) / 2) * pitch, P.board.top - .02, (cl.r - (N - 1) / 2) * pitch);
     ck.rotation.y = state === 'normal' ? (Math.sin(cl.r * 3.1 + cl.c * 1.7) * .05) : 0;
-    ck.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; for (const m of [].concat(o.material)) { if ('envMapIntensity' in m) m.envMapIntensity = +(q.get('env') || .5); if (m.isMeshPhysicalMaterial) saturate(m, +(q.get('sat') || 1.45)); } } });
+    ck.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; for (const m of [].concat(o.material)) { if ('envMapIntensity' in m) m.envMapIntensity = +(q.get('env') || .5); if (m.isMeshPhysicalMaterial) saturate(m, m.map && !m.alphaMap ? 1.05 : +(q.get('sat') || 1.4)); } } });
     scene.add(ck);
   }
   console.log('toneMapping', board.graphics.renderer.toneMapping, board.graphics.renderer.toneMappingExposure);
