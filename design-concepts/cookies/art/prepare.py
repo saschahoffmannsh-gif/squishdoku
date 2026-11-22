@@ -39,26 +39,25 @@ def key(name, strip):
   alpha = np.asarray(m.filter(ImageFilter.GaussianBlur(1.3))).astype(float)
   return a, alpha
 
+def ramp(x, a, b): return np.clip((x - a) / (b - a), 0, 1)
+def hue_win(h, lo, hi, soft=12):  # soft window [lo, hi] on the hue circle (lo may be > hi to wrap)
+  if lo > hi: return np.maximum(hue_win(h, lo, 360 + soft, soft), hue_win(h, -soft, hi, soft))
+  return ramp(h, lo - soft, lo) * (1 - ramp(h, hi, hi + soft))
+
+# (hue window, min saturation, target hue, pull toward it, saturation gain, sat offset, sat cap, value gain)
+RECOLOUR = {
+  'pink':   ((300, 25), .06, 324, .85, 1.9, .08, .62, .98),   # pale pig → game Pink #f45bb8
+  'red':    ((3, 38), .4, 356, 1.0, 1.05, 0, 1, .95),         # orange fox → game Red #e8263f (never reads as the lion)
+  'green':  ((60, 160), .15, 125, .35, 1.3, 0, .9, .95),       # lime frog → game Green #2fc24e
+  'purple': ((245, 300), .1, 268, .4, 1.35, 0, .85, .97),     # lavender owl → game Purple #8f45ff
+}
 def recolour(a, mode):
-  """Soft hue/saturation push toward the game's region colour; weight w fades in with saturation and hue distance (no banding)."""
-  h, s, v = hsv(a)
-  band = lambda x, lo, hi, f: np.clip(np.minimum(x - lo, hi - x) / f, 0, 1)
-  hd = lambda c: (h - c + 180) % 360 - 180              # signed hue distance to c
-  if mode == 'pink':    # pale pig → game Pink (#f45bb8, hue ≈ 323°)
-    w = band(hd(345), -45, 45, 15) * np.clip((s - .03) / .12, 0, 1) * np.clip((v - .25) / .2, 0, 1)
-    nh, ns, nv = 324 + hd(345) * .2, np.clip(s * 1.9 + .08, 0, .62), v * .98
-  elif mode == 'red':   # orange fox fur → game Red (#e8263f, hue ≈ 352°), never confused with the orange lion
-    w = band(h, 2, 40, 6) * np.clip((s - .35) / .15, 0, 1) * np.clip((v - .25) / .15, 0, 1)
-    nh, ns, nv = h - 24, s * 1.05, v * .95
-  elif mode == 'green': # light lime frog → closer to game Green (#2fc24e)
-    w = band(h, 50, 175, 15) * np.clip((s - .1) / .25, 0, 1)
-    nh, ns, nv = h + (125 - h) * .35, np.clip(s * 1.3, 0, .9), v * .95
-  elif mode == 'purple':# lavender owl → closer to game Purple (#8f45ff)
-    w = band(h, 238, 305, 12) * np.clip((s - .06) / .15, 0, 1)
-    nh, ns, nv = h + (268 - h) * .4, np.clip(s * 1.35, 0, .85), v * .97
-  else: return a
-  out = from_hsv(nh % 360, np.clip(ns, 0, 1), np.clip(nv, 0, 1))
-  return a[..., :3] * (1 - w[..., None]) + out * w[..., None]
+  if mode not in RECOLOUR: return a
+  (lo, hi), smin, th, pull, sg, so, cap, vg = RECOLOUR[mode]
+  h, s, v = hsv(a); w = hue_win(h, lo, hi) * ramp(s, smin, smin + .15) * ramp(v, .25, .4)
+  dh = ((th - h + 180) % 360) - 180
+  out = from_hsv(h + dh * pull, np.clip(s * sg + so, 0, cap), np.clip(v * vg, 0, 1))
+  return a + (out - a) * w[..., None]
 
 def flood(passable):  # region of `passable` connected to the image border (iterative constrained dilation)
   r = np.zeros_like(passable); r[0, :] = passable[0, :]; r[-1, :] = passable[-1, :]; r[:, 0] = passable[:, 0]; r[:, -1] = passable[:, -1]
