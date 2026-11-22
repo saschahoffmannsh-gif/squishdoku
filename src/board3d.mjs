@@ -90,7 +90,9 @@ export function createBoard3D(host){
   // shared per-animal material variants (normal / golden lit / red wrong): a swap, no per-cell materials
   function setBodyTone(cell,mode){cell.s.ck.tone(mode==='popped'?'normal':mode);requestFrame();}
   // cookie motion: press squash, lean along the finger, spring back with a little wobble (replaces the gel solver)
-  function cookieLive(s){const p=s.press,t=s.tilt;return s.amplitude>.012||p.held||p.releaseQueued||p.compression!==0||p.velocity!==0||t.x!==0||t.z!==0||t.vx!==0||t.vz!==0;}
+  // a crumbled cookie has nothing left to wobble: stop its springs so idle frames end with the crumble
+  function calm(s){const p=s.press,t=s.tilt;s.amplitude=0;p.held=p.releaseQueued=false;p.compression=p.velocity=0;t.x=t.z=t.vx=t.vz=0;s.ck.inner.scale.set(1,1,1);s.ck.inner.rotation.set(0,0,0);}
+  function cookieLive(s){const p=s.press,t=s.tilt;return s.amplitude>.02||p.held||p.releaseQueued||p.compression!==0||p.velocity!==0||t.x!==0||t.z!==0||t.vx!==0||t.vz!==0;}
   function updateCookie(s,dt){
     const p=s.press,t=s.tilt;dt=Math.min(dt,1/30);
     if(p.releaseQueued){p.held=false;p.releaseQueued=false;p.velocity-=1.4;s.amplitude=Math.max(s.amplitude,.3);}
@@ -100,7 +102,7 @@ export function createBoard3D(host){
     const lim=.28,tx=p.held?Math.max(-lim,Math.min(lim,p.dragZ*.45)):0,tz=p.held?Math.max(-lim,Math.min(lim,-p.dragX*.45)):0;
     t.vx+=(170*(tx-t.x)-11*t.vx)*dt;t.vz+=(170*(tz-t.z)-11*t.vz)*dt;t.x+=t.vx*dt;t.z+=t.vz*dt;
     if(!p.held&&Math.abs(t.x)+Math.abs(t.z)<.002&&Math.abs(t.vx)+Math.abs(t.vz)<.02){t.x=t.z=t.vx=t.vz=0;}
-    s.wt+=dt;s.amplitude=s.amplitude>.012?Math.min(1,s.amplitude)*Math.exp(-dt*5):0;
+    s.wt+=dt;s.amplitude=s.amplitude>.02?Math.min(1,s.amplitude)*Math.exp(-dt*6):0;
     const w=s.amplitude*.09*Math.sin(s.wt*21),c=p.compression;
     s.ck.inner.scale.set(1+c*.45+w*.6,Math.max(.5,1-c-w),1+c*.45+w*.6);
     s.ck.inner.rotation.set(t.x+s.amplitude*.05*Math.sin(s.wt*17),0,t.z+s.amplitude*.05*Math.cos(s.wt*15));
@@ -253,7 +255,7 @@ export function createBoard3D(host){
       setBodyTone(cl,'popped');cl.s.value=cl.value;
       cl.halo.visible=false;cl.spark.visible=false;
       // the cookie crumbles: 4 broken pieces (showing the print) and crumbs stay lying in the cell; tap brings it back
-      const ck=cl.s.ck,run=crumbleOf(ck);ck.inner.visible=false;ck.crumble.visible=true;setScale(cl,1,1);run(0);
+      const ck=cl.s.ck,run=crumbleOf(ck);calm(cl.s);ck.inner.visible=false;ck.crumble.visible=true;setScale(cl,1,1);run(0);
       animate(cl,.36,t=>{run(t);requestFrame({shadows:true});},()=>requestFrame({shadows:true}));
       return true;
     },
@@ -276,7 +278,7 @@ export function createBoard3D(host){
       return true;
     },
     // start state "already popped" (tutorial): empty glass without the burst
-    vanish(r,c){const cl=cellAt(r,c);cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;cl.anim=null;const ck=cl.s.ck;ck.inner.visible=false;ck.crumble.visible=true;crumbleOf(ck)(1);setScale(cl,1,1);requestFrame({shadows:true});},
+    vanish(r,c){const cl=cellAt(r,c);cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;cl.anim=null;const ck=cl.s.ck;calm(cl.s);ck.inner.visible=false;ck.crumble.visible=true;crumbleOf(ck)(1);setScale(cl,1,1);requestFrame({shadows:true});},
     restore(r,c){
       const cl=cellAt(r,c);
       if(cl.state==='popping'){cl.anim=null;cl.state='normal';setScale(cl,1,1);wobble(cl.s,.4);requestFrame();return;}
