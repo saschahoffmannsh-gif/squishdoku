@@ -52,11 +52,34 @@ sind kein Schritt; das verlorene Herz bleibt weg (sonst wären Fehler gratis). E
 Squish ist kein Schritt. Aus, wenn nichts da ist, das Level vorbei ist oder in den Missionen L1–2.
 
 **Vibration** – kurze Muster (`src/haptics.mjs`): tap [6] · pop [9] · light [14,40,22] · wrong [40,60,40] ·
-win [20,50,20,50,70] · undo [8,30,8]. Schalter oben neben dem Ton (nur sichtbar, wo das Gerät vibrieren
+win [20,50,20,50,70] · undo [8,30,8]. Schalter in den Einstellungen (nur sichtbar, wo das Gerät vibrieren
 kann; iOS Safari hat keine Vibration → still). Eine native Hülle setzt `window.SquishNative.haptic(kind)`
 (`native/haptics-bridge.mjs`), dann gehen die Momente an die Taptic Engine.
 
 Speicher: `localStorage['squishdoku-v1']`, Version 3 (`times`, `daily`, `settings` neu; Migration aus v1/v2).
+`settings.showTime` („Zeit anzeigen“, Standard an) und `daily.total` (gelöste Tagesrätsel insgesamt) kommen
+ohne Versionssprung dazu – fehlende Felder bekommen beim Laden ihren Standardwert.
+
+## Design „Neon-Nacht“ (Menüs, HUD, Dialoge)
+Umsetzung von `design-concepts/2-neon-nacht.html`: dunkles Navy-Glas, Gold-Akzente, Fredoka + Lilita One.
+Das Brett und die Squishs (`src/board3d.mjs`) sind unverändert.
+* `index.html` – Menü-Rahmen `#home` (Screens in `#home-screen`, Tab-Leiste `#tabs`), Einstellungen als
+  Bottom-Sheet `#sheet`, Toast. `src/neon.css` – das komplette Design (Menüs, Sheet, HUD, Dialoge, Werbung),
+  `src/style.css` – Spiel-Layout. `src/icons.mjs` – Icon-Set. `src/img/` – vorgerenderte Bilder.
+* **Start**: Sterne- und Serien-Pill, Zahnrad, Logo, Brett-Hero (ein echtes Brett aus dem eigenen Renderer,
+  vorgerendert als WebP, 59 KB – kein zweiter WebGL-Kontext, startet sofort), Tagesrätsel-Karte (Datum,
+  Größe/Schwierigkeit, Rekord, Spielen, Wochenreihe Mo–So aus den gelösten Tagen), Weiterspielen mit Ring
+  (gelöste Level / 50).
+* **Levels**: Tabs nach Brettgröße 5×5 · 6×6 · 7×7 · 8×8 = Kapitel 1–4. Mission 1 (4×4) und Mission 2
+  stehen am Anfang von Kapitel 1 (kleines „M“). Kachel: Nummer, Sterne, Bestzeit („Jetzt“ beim aktuellen
+  Level, Goldrand), Punkt = 3 Sterne, Schloss = gesperrt.
+* **Statistik**: Sterne, gelöste/perfekte Level, Bestzeit, Ø Zeit (über die Bestzeiten), Serie, beste Serie,
+  gelöste Tagesrätsel, Tagesrätsel mit 3★, Tabelle je Größe.
+* **Einstellungen** (Zahnrad oder Tab „Optionen“): Sterne/Serie/Ø Zeit, Ton, Vibration, Zeit anzeigen (blendet
+  nur die Uhr im HUD aus, Sterne zählen weiter), Regeln & Tipps, Freunde einladen (Web Share, sonst Link
+  kopieren), Fortschritt zurücksetzen (mit Rückfrage; Einstellungen bleiben).
+* Screens neu gestalten: nur `src/neon.css` + die kleinen Render-Funktionen im Abschnitt „Menüs“ von
+  `src/main.mjs` (`homeScreen`, `levelsScreen`, `statsScreen`, `rulesScreen`); Regeln in `src/progress.mjs`.
 
 ## Starten
     python3 -m http.server 8792     # im Projektordner
@@ -73,7 +96,9 @@ Farbfelder, genau **eine** Lösung (Brute-Force), und vollständig lösbar mit r
     NODE_PATH=<playwright-core> node tests/e2e.js [--shots]
     NODE_PATH=<playwright-core> node tests/touch-hit.js     # Touch trifft den gezeichneten Squish, kein Seitenversatz
     NODE_PATH=<playwright-core> node tests/tap-latency.js   # Knopf-Reaktionszeit (CPU 4x gedrosselt)
-    NODE_PATH=<playwright-core> node tests/features-e2e.js  # Tagesrätsel/Serie, Sterne & Zeit, Rückgängig, Vibration (CPU 4x)
+    NODE_PATH=<playwright-core> node tests/features-e2e.js  # Tagesrätsel/Serie, Sterne & Zeit, Rückgängig, Vibration, Optionen (CPU 4x)
+    NODE_PATH=<playwright-core> node tests/startup.js       # Kaltstart + Menü-Renderzeit (CPU 4x)
+    NODE_PATH=<playwright-core> node tests/neon-shots.js    # Kontroll-Screenshots aller Screens → shots/
 
 Wiederverwendete Squish-Attack-Teile: siehe VENDOR.md.
 
