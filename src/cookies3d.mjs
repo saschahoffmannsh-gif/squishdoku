@@ -131,7 +131,7 @@ export function createCrumbs(scene,camera,{crumbs=1600,bits=640,dust=8000}={}){
     #endif`);};bitMat.customProgramCacheKey=()=>'crumbBit';
   const crumbMat=new THREE.MeshStandardMaterial({map:S.crumb.map,bumpMap:S.crumb.bumpMap,bumpScale:3,roughness:.9});
   const mk=(geo,mat,n)=>{const m=new THREE.InstancedMesh(geo,mat,n);m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);m.setColorAt(0,new THREE.Color(1,1,1));m.instanceColor.setUsage(THREE.DynamicDrawUsage);
-    m.count=0;m.frustumCulled=false;m.castShadow=false;m.receiveShadow=false;m.renderOrder=6;scene.add(m);return m;};
+    m.instanceMatrix.array.fill(0); /* unused slots draw nothing (identity = a cell-sized crumb at the board centre) */m.count=0;m.frustumCulled=false;m.castShadow=false;m.receiveShadow=false;m.renderOrder=6;scene.add(m);return m;};
   const pools=[{mesh:mk(S.crumbGeo,crumbMat,crumbs),n:crumbs},{mesh:mk(bitGeo,bitMat,bits),n:bits}];
   for(const P of pools){const n=P.n;Object.assign(P,{p:new Float32Array(n*3),v:new Float32Array(n*3),r:new Float32Array(n*3),w:new Float32Array(n*3),sc:new Float32Array(n*3),age:new Float32Array(n),alive:new Uint8Array(n),next:0,live:0});}
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),pos=new THREE.Vector3(),scl=new THREE.Vector3(),pr=new THREE.Vector3(),col=new THREE.Color();
@@ -140,10 +140,15 @@ export function createCrumbs(scene,camera,{crumbs=1600,bits=640,dust=8000}={}){
   function spawn(P,x,y,z,size,c,sx,sy,sz,soft){
     let i=P.next;P.next=(i+1)%P.n;if(!P.alive[i]){P.alive[i]=1;P.live++;} // ring buffer: the oldest piece gives its slot
     const a=Math.atan2(z-P.cz,x-P.cx)+(rnd()-.5)*.9,out=(soft?.15+rnd()*.6:1.1+rnd()*2.2)*size;
-    P.p.set([x,y,z],i*3);P.v.set([Math.cos(a)*out,(soft?.3+rnd()*1.3:2.4+rnd()*2.8)*size,Math.sin(a)*out+(soft?.4+rnd()*1.1:1.4+rnd()*2.4)*size],i*3);
+    P.p.set([x,y,z],i*3);P.v.set([Math.cos(a)*out*(soft?.5:1),(soft?-rnd()*.6:2.4+rnd()*2.8)*size,Math.sin(a)*out*(soft?.5:1)+(soft?1.2+rnd()*2:1.4+rnd()*2.4)*size],i*3);
     P.r.set([rnd()*6,rnd()*6,rnd()*6],i*3);P.w.set([(rnd()-.5)*14,(rnd()-.5)*10,(rnd()-.5)*14],i*3);P.sc.set([sx,sy,sz],i*3);P.age[i]=0;
-    P.mesh.setColorAt(i,c);P.mesh.count=Math.max(P.mesh.count,i+1);stat.spawned++;
+    P.mesh.setColorAt(i,c);writeM(P,i);P.mesh.instanceMatrix.needsUpdate=true;P.mesh.count=Math.max(P.mesh.count,i+1);stat.spawned++;
   }
+  // instance matrix written in place: R = Ry(r1)·Rx(r0) (tumble + yaw, 4 trig) × scale, + position.
+  // Also at spawn: a pop can happen after this frame's update, and the fresh slot is drawn in that same frame.
+  function writeM(P,i){const o=i*3,M=P.mesh.instanceMatrix.array,j=i*16,cx=Math.cos(P.r[o]),sx=Math.sin(P.r[o]),cy=Math.cos(P.r[o+1]),sy=Math.sin(P.r[o+1]),a=P.sc[o],b=P.sc[o+1],c=P.sc[o+2];
+    M[j]=cy*a;M[j+1]=0;M[j+2]=-sy*a;M[j+3]=0;M[j+4]=sy*sx*b;M[j+5]=cx*b;M[j+6]=cy*sx*b;M[j+7]=0;
+    M[j+8]=sy*cx*c;M[j+9]=-sx*c;M[j+10]=cy*cx*c;M[j+11]=0;M[j+12]=P.p[o];M[j+13]=P.p[o+1];M[j+14]=P.p[o+2];M[j+15]=1;}
   // dust: fine grains as one Points draw (position + colour only, no matrices) for the dense trickle
   const dot=(()=>{const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d'),g=x.createRadialGradient(16,16,0,16,16,16);g.addColorStop(0,'#fff');g.addColorStop(.55,'#fff');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,32,32);return new THREE.CanvasTexture(c);})();
   const D={n:dust,p:new Float32Array(dust*3),v:new Float32Array(dust*3),age:new Float32Array(dust),alive:new Uint8Array(dust),next:0,live:0,top:0};
@@ -154,7 +159,7 @@ export function createCrumbs(scene,camera,{crumbs=1600,bits=640,dust=8000}={}){
   const dPts=new THREE.Points(dGeo,dMat);dPts.frustumCulled=false;dPts.renderOrder=6;scene.add(dPts);
   function grain(x,y,z,size,c){
     const i=D.next;D.next=(i+1)%D.n;if(!D.alive[i]){D.alive[i]=1;D.live++;}const o=i*3,a=rnd()*6.283,out=(.04+rnd()*.4)*size;
-    D.p[o]=x;D.p[o+1]=y;D.p[o+2]=z;D.v[o]=Math.cos(a)*out;D.v[o+1]=(rnd()*.9-.1)*size;D.v[o+2]=Math.sin(a)*out+(.1+rnd()*.6)*size;D.age[i]=0;
+    D.p[o]=x;D.p[o+1]=y;D.p[o+2]=z;D.v[o]=Math.cos(a)*out;D.v[o+1]=-rnd()*.4*size;D.v[o+2]=Math.sin(a)*out+(1+rnd()*2.2)*size;D.age[i]=0;
     D.col.array[o]=c.r;D.col.array[o+1]=c.g;D.col.array[o+2]=c.b;if(i+1>D.top)D.top=i+1;stat.spawned++;stat.dust++;
   }
   const stat={spawned:0,dust:0};
@@ -186,16 +191,16 @@ export function createCrumbs(scene,camera,{crumbs=1600,bits=640,dust=8000}={}){
     update(dt){
       if(!this.alive)return 0;
       VP.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);const m=VP.elements;
-      const {y:PY,hx,hz}=plate,G=26,A=4.2,fr=Math.exp(-dt*1.7),air=Math.exp(-dt*.4),J=1.6;
+      const {y:PY,hx,hz}=plate,G=30,A=34,fr=Math.exp(-dt*.5),air=Math.exp(-dt*.4),J=5; // A: downhill pull along the table plane (fast: off screen in ~1 s)
       // off screen (below / beside) or old → recycle. ndc = clip.xy / clip.w from the view-projection rows
-      const gone=(x,y,z,age)=>{const w=m[3]*x+m[7]*y+m[11]*z+m[15],cy=(m[1]*x+m[5]*y+m[9]*z+m[13])/w,cx=(m[0]*x+m[4]*y+m[8]*z+m[12])/w;return age>9||cy<-1.1||cx<-1.25||cx>1.25;};
+      const gone=(x,y,z,age)=>{const w=m[3]*x+m[7]*y+m[11]*z+m[15],cy=(m[1]*x+m[5]*y+m[9]*z+m[13])/w,cx=(m[0]*x+m[4]*y+m[8]*z+m[12])/w;return age>3.5||cy<-1.1||cx<-1.25||cx>1.25;};
       // one step: fall onto the plate, bounce a little, then slide downhill (+z) with friction and sideways
       // jitter; past the plate's edge it falls away. Returns 1 while it lies on the plate (for rolling).
       const step=(p,v,o,rad)=>{
         const x=p[o],z=p[o+2],on=x>-hx&&x<hx&&z>-hz&&z<hz,floor=PY+rad;
         let ground=0;const vy=v[o+1];
         // landing speed is judged before this frame's gravity (frame-rate independent): hard → small bounce, soft → rests
-        if(on&&p[o+1]<=floor+.002&&vy<=0){p[o+1]=floor;if(vy<-1.6){v[o+1]=-vy*.3;v[o]*=.8;v[o+2]*=.8;}else{v[o+1]=0;ground=1;}}
+        if(on&&p[o+1]<=floor+.002&&vy<=0){p[o+1]=floor;v[o+1]=0;ground=1;/* flat on the table: no bounce, no lift-off */}
         else{v[o+1]-=G*dt;if(on&&p[o+1]+v[o+1]*dt<floor){v[o+1]=(floor-p[o+1])/dt;}}
         if(ground){v[o]=v[o]*fr+(rnd()-.5)*J*dt;v[o+2]=v[o+2]*fr+A*dt;}else{v[o]*=air;v[o+2]*=air;}
         p[o]+=v[o]*dt;p[o+1]+=v[o+1]*dt;p[o+2]+=v[o+2]*dt;return ground;
@@ -214,12 +219,7 @@ export function createCrumbs(scene,camera,{crumbs=1600,bits=640,dust=8000}={}){
             const k=g?Math.min(1,(Math.abs(P.v[o])+Math.abs(P.v[o+2]))*.6):1;P.r[o]+=P.w[o]*dt*k;P.r[o+1]+=P.w[o+1]*dt*k;
             const M=P.mesh.instanceMatrix.array,j=i*16;
             if(gone(P.p[o],P.p[o+1],P.p[o+2],P.age[i])){P.alive[i]=0;P.live--;M.fill(0,j,j+16);continue;}
-            // matrix written in place: R = Ry(r1)·Rx(r0) (tumble + yaw, 4 trig) × scale, + position
-            top=i+1;const cx=Math.cos(P.r[o]),sx=Math.sin(P.r[o]),cy=Math.cos(P.r[o+1]),sy=Math.sin(P.r[o+1]),a=P.sc[o],b=P.sc[o+1],c=P.sc[o+2];
-            M[j]=cy*a;M[j+1]=0;M[j+2]=-sy*a;M[j+3]=0;
-            M[j+4]=sy*sx*b;M[j+5]=cx*b;M[j+6]=cy*sx*b;M[j+7]=0;
-            M[j+8]=sy*cx*c;M[j+9]=-sx*c;M[j+10]=cy*cx*c;M[j+11]=0;
-            M[j+12]=P.p[o];M[j+13]=P.p[o+1];M[j+14]=P.p[o+2];M[j+15]=1;
+            top=i+1;writeM(P,i);
           }
         }
         P.mesh.count=top;P.mesh.instanceMatrix.needsUpdate=true;
