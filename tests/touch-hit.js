@@ -59,7 +59,7 @@ async function session(vp, { standalone = false } = {}) {
   }
   const noGap = () => p.evaluate(() => {
     const H = document.documentElement.classList.contains('is-standalone') ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-h')) : innerHeight;
-    const g = document.getElementById('game').getBoundingClientRect(), bg = document.getElementById('aw-bg').getBoundingClientRect(), cv = document.querySelector('#host canvas').getBoundingClientRect();
+    const g = document.getElementById('game').getBoundingClientRect(), bg = document.body.getBoundingClientRect(), cv = document.querySelector('#host canvas').getBoundingClientRect();
     return { ok: scrollY === 0 && document.scrollingElement.scrollTop === 0 && g.top === 0 && Math.abs(g.bottom - H) < 1 && Math.abs(bg.bottom - H) < 1 && Math.abs(cv.bottom - H) < 1, H, g: [g.top, g.bottom], bg: bg.bottom, cv: cv.bottom, sy: scrollY };
   });
   return { b, p, cdp, start, sweep, noGap, errors };
@@ -103,6 +103,9 @@ async function session(vp, { standalone = false } = {}) {
   await s.start(12);
   const g = await s.noGap(); ok(g.ok && g.H === 844, `standalone: game, backdrop and canvas reach the real screen bottom (${JSON.stringify(g)})`);
   await s.sweep('standalone L12');
+  await s.p.evaluate(() => SquishDoku.showHome('home')); await sleep(600);
+  const hm = await s.p.evaluate(() => { const h = document.getElementById('home').getBoundingClientRect(), t = document.getElementById('tabs').getBoundingClientRect(); return { h: h.bottom, t: t.bottom }; });
+  ok(Math.abs(hm.h - 844) < 1 && hm.t <= 844 && hm.t > 797, `standalone: menu + tab bar sit at the real screen bottom (${JSON.stringify(hm)})`);
   ok(!s.errors.length, 'no console errors');
   await s.b.close();
   console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED');

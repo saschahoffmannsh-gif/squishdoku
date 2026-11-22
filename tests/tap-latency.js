@@ -33,7 +33,7 @@ async function run(vp) {
     await p.waitForSelector(sel, { state: 'visible', timeout: 10000 });
     await sleep(150);
     // keep the target inside its scroll box (level list)
-    await p.evaluate(sel => { const el = document.querySelector(sel), sc = el.closest('.sd-levels-scroll'); if (sc) sc.scrollTop = Math.max(0, el.offsetTop - sc.clientHeight / 2); }, sel); await sleep(150);
+    await p.evaluate(sel => { const el = document.querySelector(sel), sc = el.closest('.nn-lv-scroll'); if (sc) sc.scrollTop = Math.max(0, el.offsetTop - sc.clientHeight / 2); }, sel); await sleep(150);
     const box = await p.evaluate(sel => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
     // arm: watch frames for pressed look and the result
     await p.evaluate(([sel, done]) => {
@@ -68,8 +68,11 @@ async function run(vp) {
   const screen = s => `document.getElementById('home').dataset.screen==='${s}'&&!document.getElementById('home').hidden`;
   await tap('Home → Levels', '#btn-levels', `${screen('levels')}`);
   await tap('Levels → Zurück', '#btn-home', `${screen('home')}`);
-  await tap('Home → Regeln', '#btn-rules', `${screen('rules')}`);
-  await tap('Regeln → Zurück', '#home-screen .aw-btn.aw-slate', `${screen('home')}`);
+  await tap('Home → Statistik (Tab)', '#tab-stats', `${screen('stats')}`);
+  await tap('Statistik → Start (Tab)', '#tab-home', `${screen('home')}`);
+  await tap('Zahnrad → Einstellungen', '#btn-settings', `!document.getElementById('sheet-veil').hidden`);
+  await tap('Einstellungen → Regeln', '#btn-rules', `${screen('rules')}&&document.getElementById('sheet-veil').hidden`);
+  await tap('Regeln → Zurück', '#btn-rules-back', `${screen('home')}`);
   await tap('Home → Spielen (1st 3D setup)', '#btn-play', `!document.getElementById('game').hidden&&document.getElementById('lvl-num').textContent==='4'`, { settle: 1500 });
   await tap('Regel-Chip', '.sd-rb-chip[data-rule="touch"]', `document.querySelector('.sd-rb-chip[data-rule="touch"]').classList.contains('is-demo')`);
   await tap('Regeln einklappen', '.sd-rb-toggle', `document.getElementById('rulesbar').classList.contains('is-collapsed')`);
@@ -79,7 +82,9 @@ async function run(vp) {
   await p.evaluate(() => { window.__s0 = SquishDoku.state; });
   await tap('Neustart', '#btn-reset', `SquishDoku.state!==window.__s0&&!document.getElementById('game').hidden`, { settle: 1500 });
   await tap('Zurück (Spiel → Levels)', '#btn-back', `${screen('levels')}&&document.getElementById('game').hidden`);
-  await tap('Level-Kachel 12', '.aw-tile[data-level="12"]', `!document.getElementById('game').hidden&&SquishDoku.state.id===12`, { settle: 1500 });
+  await tap('Levels: Größe 6×6', '.nn-seg [data-n="6"]', `document.querySelector('.nn-seg [data-n="6"]').classList.contains('is-on')`);
+  await tap('Levels: Größe 5×5', '.nn-seg [data-n="5"]', `!document.querySelector('.nn-lv-grid[data-n="5"]').hidden`);
+  await tap('Level-Kachel 12', '.nn-tile[data-level="12"]', `!document.getElementById('game').hidden&&SquishDoku.state.id===12`, { settle: 1500 });
   // win dialog: solve by setting glows through the real hold path is slow; use the solution with real holds
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   const S = await p.evaluate(() => ({ N: SquishDoku.state.N, sol: SquishDoku.state.L.solution }));
@@ -88,12 +93,13 @@ async function run(vp) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: RATE });
   await tap('Sieg → Weiter', '#btn-next', `document.getElementById('veil').hidden&&SquishDoku.state.id===13`, { settle: 1500 });
   await tap('Zurück (Spiel → Levels)', '#btn-back', `${screen('levels')}`);
-  await tap('Level-Kachel 1 (Mission)', '.aw-tile[data-level="1"]', `!document.getElementById('game').hidden&&SquishDoku.state.id===1`, { settle: 1500 });
+  await tap('Level-Kachel 1 (Mission)', '.nn-tile[data-level="1"]', `!document.getElementById('game').hidden&&SquishDoku.state.id===1`, { settle: 1500 });
   await p.evaluate(() => { window.__tx = document.querySelector('.sd-tut-text').textContent; });
   await tap('Anleitungs-Blase Weiter', '#tut-next', `document.querySelector('.sd-tut-text').textContent!==window.__tx`);
   await tap('Zurück (Mission → Levels)', '#btn-back', `${screen('levels')}`);
+  await tap('Tab Optionen → Sheet', '#tab-settings', `!document.getElementById('sheet-veil').hidden`);
   await p.evaluate(() => { window.__snd = document.getElementById('sound-toggle').getAttribute('aria-pressed'); });
-  await tap('Ton-Knopf', '#sound-toggle', `document.getElementById('sound-toggle').getAttribute('aria-pressed')!==window.__snd`);
+  await tap('Ton-Schalter', '#sound-toggle', `document.getElementById('sound-toggle').getAttribute('aria-pressed')!==window.__snd`);
   if (errors.length) { console.log('  page errors:', errors.slice(0, 5)); failures++; }
   await b.close();
 }

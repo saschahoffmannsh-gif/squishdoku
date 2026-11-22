@@ -1,4 +1,4 @@
-// SquishDoku feature tests: Tagesrätsel + Serie, Sterne & Zeit, Rückgängig, Vibration.
+// SquishDoku feature tests: Tagesrätsel + Serie, Sterne & Zeit, Rückgängig, Vibration, Optionen & Statistik.
 // Real touch events via CDP, mobile viewports, CPU throttling (THROTTLE env, default 4).
 // Usage: node tests/features-e2e.js [baseUrl] [--shots]
 const { chromium } = require('playwright-core');
@@ -55,6 +55,8 @@ async function run(vp) {
   const ready = async () => { await p.waitForFunction(() => document.documentElement.dataset.ready === '1', null, { timeout: 30000 }); await p.evaluate(() => { SquishDoku.adPacing.takeInterstitial = () => false; }); };
   // solve the current board quickly: all solution cells via the game's own hold action (input itself is tested elsewhere)
   async function solveRest(skipFirst = 0) { const s = await st(); for (let r = skipFirst; r < s.N; r++) if (s.grid[r][s.sol[r]] !== 'glow') await p.evaluate(([r, c]) => SquishDoku.act.hold(r, c), [r, s.sol[r]]); }
+  // the settings sheet slides up: wait until it rests before measuring / tapping its rows
+  const sheetReady = () => waitFor(() => !document.getElementById('sheet-veil').hidden && document.getElementById('sheet').getAnimations().length === 0);
   const tooBig = async () => { const d = await rect('#dialog'); return !d || d.top < 0 || d.bottom > vp.height + 1; };
 
   // ---------- 1. Speicher-Migration v2 → v3 ----------
@@ -65,7 +67,7 @@ async function run(vp) {
   const mig = await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-v1')));
   ok(mig.v === 3 && mig.unlocked === 6 && JSON.stringify(mig.stars) === JSON.stringify({ 1: 3, 2: 3, 3: 2, 4: 1, 5: 3 }) && mig.revealed[5] === 2 && mig.rulesCollapsed === true, 'v2 save migrated to v3 without losing stars/unlock/reveals');
   ok(JSON.stringify(mig.times) === '{}' && mig.daily && mig.daily.streak === 0 && JSON.stringify(mig.daily.done) === '{}' && mig.settings.vibration === true, 'v3 adds times, daily (streak 0) and settings (vibration on)');
-  ok((await p.textContent('#home-stars b')) === '12/150', 'total stars shown in the top bar (12/150)');
+  ok((await p.textContent('#home-stars')) === '12/150' && (await p.textContent('#home-stars b')) === '12', 'total stars shown in the top pill (12/150)');
 
   // ---------- 2. Startseite: Tagesrätsel-Karte ----------
   console.log('Tagesrätsel');
@@ -75,10 +77,11 @@ async function run(vp) {
   // fixed test days: Mo 2026-11-23 (5×5), Do 2026-11-26
   await p.evaluate(() => { const s = SquishDoku.store; s.daily = { done: {}, streak: 4, best: 6, last: '2026-11-22' }; localStorage.setItem('squishdoku-v1', JSON.stringify(s)); SquishDoku.reload(); SquishDoku.today = '2026-11-23'; SquishDoku.showHome('home'); });
   await sleep(600);
-  const card = await p.evaluate(() => { const b = document.getElementById('btn-daily'); return b && { text: b.textContent.replace(/\s+/g, ' ').trim(), status: b.dataset.status, flame: b.querySelector('.sd-daily-flame b').textContent }; });
-  ok(card && card.text.includes('Tagesrätsel') && card.text.includes('MO') && card.text.includes('23') && card.text.includes('5×5') && card.text.includes('NEU') && card.status === 'new', `daily card on the start screen: date, size, "NEU" (${card && card.text})`);
-  ok(card && card.flame === '4', 'streak flame shows the running streak (4, yesterday solved)');
-  const hr = { play: await rect('#btn-play'), daily: await rect('#btn-daily'), levels: await rect('#btn-levels'), rules: await rect('#btn-rules'), top: await rect('.sd-topbar'), tag: await rect('#tagline') };
+  const card = await p.evaluate(() => { const b = document.getElementById('btn-daily'); return b && { text: b.textContent.replace(/\s+/g, ' ').trim(), status: b.dataset.status, flame: document.querySelector('#home-streak b').textContent, week: [...b.querySelectorAll('.nn-week span')].map(d => d.className).join(' ') }; });
+  ok(card && card.text.includes('Tagesrätsel') && card.text.includes('Mo., 23. November') && card.text.includes('5×5') && card.text.includes('Rekord 6 Tage') && card.text.includes('Spielen') && card.status === 'new', `daily card on the start screen: date, size, record, "Spielen" (${card && card.text})`);
+  ok(card && card.flame === '4', 'streak pill shows the running streak (4, yesterday solved)');
+  ok(card && card.week.startsWith('is-today is-future'), `week row Mo–So: Monday = today (${card && card.week})`);
+  const hr = { play: await rect('#btn-play'), daily: await rect('#btn-daily'), levels: await rect('#btn-levels'), gear: await rect('#btn-settings'), top: await rect('#home-stars'), streak: await rect('#home-streak'), tag: await rect('#tagline'), tabs: await rect('#tab-home') };
   const list = Object.values(hr);
   ok(list.every(r => r && r.top >= 0 && r.bottom <= vp.height && r.left >= 0 && r.right <= vp.width), 'start screen: all items inside the viewport');
   ok(!list.some((a, i) => list.some((b, j) => j > i && overlap(a, b))), 'start screen: nothing overlaps');
@@ -104,8 +107,8 @@ async function run(vp) {
   ok(!(await tooBig()), 'daily win dialog fits the screen');
   await shot('02-daily-win');
   await tapEl('#btn-daily-ok'); await sleep(900);
-  const card2 = await p.evaluate(() => { const b = document.getElementById('btn-daily'); return { status: b.dataset.status, flame: b.querySelector('.sd-daily-flame b').textContent, stars: b.querySelectorAll('.sd-daily-stars span:not(.off)').length, text: b.textContent }; });
-  ok(card2.status === 'solved' && card2.flame === '5' && card2.stars === 3 && /\d:\d\d/.test(card2.text), 'card shows today\'s result (stars + time) and streak 5');
+  const card2 = await p.evaluate(() => { const b = document.getElementById('btn-daily'); return { status: b.dataset.status, flame: document.querySelector('#home-streak b').textContent, stars: b.querySelectorAll('.nn-dstars i.on').length, text: b.textContent, today: b.querySelector('.nn-week .is-today').classList.contains('is-done') }; });
+  ok(card2.status === 'solved' && card2.flame === '5' && card2.stars === 3 && /Gelöst in \d:\d\d/.test(card2.text) && card2.today, 'card shows today\'s result (stars + time), today lit in the week row, streak 5');
   await shot('03-home-solved');
   await tapEl('#btn-daily'); await sleep(700);
   const dd = await p.evaluate(() => ({ kind: document.getElementById('dialog').dataset.kind, txt: document.getElementById('dialog').textContent }));
@@ -120,8 +123,9 @@ async function run(vp) {
   ok(rep.streak === 5 && rep.done['2026-11-23'].stars === 3, 'daily replay: best result kept, streak unchanged');
   // missed days reset the streak
   await p.evaluate(() => { SquishDoku.today = '2026-11-26'; SquishDoku.showHome('home'); }); await sleep(500);
-  const card3 = await p.evaluate(() => { const b = document.getElementById('btn-daily'); return { status: b.dataset.status, flame: b.querySelector('.sd-daily-flame b').textContent, out: b.querySelector('.sd-daily-flame').classList.contains('is-out') }; });
-  ok(card3.status === 'new' && card3.flame === '0' && card3.out, 'two days missed → flame shows 0 (grey)');
+  const card3 = await p.evaluate(() => { const b = document.getElementById('btn-daily'); return { status: b.dataset.status, flame: document.querySelector('#home-streak b').textContent, out: document.getElementById('home-streak').classList.contains('is-out'), week: [...b.querySelectorAll('.nn-week span')].map(d => d.className.split(' ')[0]).join(' ') }; });
+  ok(card3.status === 'new' && card3.flame === '0' && card3.out, 'two days missed → streak pill shows 0 (grey)');
+  ok(card3.week === 'is-on is-off is-off is-today is-future is-future is-future', `week row: Mo solved, Di+Mi missed, Do today (${card3.week})`);
   await tapEl('#btn-daily'); await waitFor(() => SquishDoku.state?.L?.daily === '2026-11-26'); await sleep(600);
   s = await st(); ok(s.N === 7 && JSON.stringify(s.regions) === JSON.stringify(DAILY['2026-11-26'].regions), 'Thursday daily is 7×7 from the table');
   await solveRest(); await waitFor(() => document.getElementById('dialog').dataset.kind === 'win' && !document.getElementById('veil').hidden); await sleep(300);
@@ -183,9 +187,9 @@ async function run(vp) {
   ok(w3.t < w1.times[5] && w3.txt.includes('Neue Bestzeit'), `faster replay → "Neue Bestzeit!" (${w3.t} ms < ${w1.times[5]} ms)`);
   await shot('07-newbest');
   await tapEl('#btn-to-levels'); await sleep(900);
-  const tiles = await p.evaluate(() => ({ l5: document.querySelectorAll('[data-level="5"] .sd-lv-stars span:not(.off)').length, l4: document.querySelectorAll('[data-level="4"] .sd-lv-stars span:not(.off)').length, aria: document.querySelector('[data-level="5"]').getAttribute('aria-label'), prog: document.querySelector('.sd-lv-progress').textContent }));
-  ok(tiles.l5 === 3 && tiles.l4 === 1 && tiles.aria.includes('Bestzeit'), 'level tiles show best stars (and best time for screen readers)');
-  ok(tiles.prog.includes('12 / 150'), `level list shows the total star count (${tiles.prog})`);
+  const tiles = await p.evaluate(() => ({ l5: document.querySelectorAll('[data-level="5"] .nn-ts i.on').length, l4: document.querySelectorAll('[data-level="4"] .nn-ts i.on').length, aria: document.querySelector('[data-level="5"]').getAttribute('aria-label'), time: document.querySelector('[data-level="5"] small').textContent, perfect: document.querySelector('[data-level="5"]').classList.contains('is-perfect'), prog: document.getElementById('home-stars').textContent }));
+  ok(tiles.l5 === 3 && tiles.l4 === 1 && tiles.aria.includes('Bestzeit') && /^\d:\d\d$/.test(tiles.time) && tiles.perfect, `level tiles show best stars, best time (${tiles.time}) and the 3-star dot`);
+  ok(tiles.prog === '12/150', `levels header shows the total star count (${tiles.prog})`);
   await shot('08-levels');
 
   // ---------- 4. Rückgängig ----------
@@ -242,9 +246,11 @@ async function run(vp) {
   v = await vib(async () => { await solveRest(); await waitFor(() => document.getElementById('dialog').dataset.kind === 'win' && !document.getElementById('veil').hidden); await sleep(1200); });
   ok(v.includes(JSON.stringify(P.win)), `win → ${JSON.stringify(P.win)}`);
   await p.evaluate(() => SquishDoku.showHome('home')); await sleep(500);
-  ok(await p.evaluate(() => !document.getElementById('vibe-toggle').hidden && document.getElementById('vibe-toggle').getAttribute('aria-pressed') === 'true'), 'vibration toggle in the top bar (on)');
-  const tb = [await rect('#home-stars'), await rect('#vibe-toggle'), await rect('#sound-toggle')];
-  ok(!tb.some((a, i) => tb.some((b, j) => j > i && overlap(a, b))), 'top bar: stars, vibration, sound don\'t overlap');
+  await tapEl('#tab-settings'); await sheetReady();
+  ok(await p.evaluate(() => !document.getElementById('sheet-veil').hidden && document.getElementById('tab-settings').classList.contains('is-on')), 'tab "Optionen" opens the settings sheet');
+  ok(await p.evaluate(() => !document.getElementById('vibe-toggle').hidden && document.getElementById('vibe-toggle').getAttribute('aria-pressed') === 'true'), 'vibration switch in the sheet (on)');
+  const tb = ['#sheet-stats', '#sound-toggle', '#vibe-toggle', '#time-toggle', '#btn-rules', '#btn-share', '#btn-wipe']; const tbr = []; for (const q of tb) tbr.push(await rect(q));
+  ok(tbr.every(r => r && r.top >= 0 && r.bottom <= vp.height) && !tbr.some((a, i) => tbr.some((b, j) => j > i && overlap(a, b))), 'sheet: chips + all rows inside the screen, nothing overlaps');
   await tapEl('#vibe-toggle'); await sleep(300);
   ok(await p.evaluate(() => document.getElementById('vibe-toggle').getAttribute('aria-pressed') === 'false' && JSON.parse(localStorage.getItem('squishdoku-v1')).settings.vibration === false), 'toggle off → saved');
   await p.evaluate(() => SquishDoku.startLevel(8)); await waitFor(() => SquishDoku.state?.id === 8 && document.getElementById('veil').hidden); await sleep(600);
@@ -254,6 +260,44 @@ async function run(vp) {
   await p.reload(); await ready();
   ok(await p.evaluate(() => document.getElementById('vibe-toggle').getAttribute('aria-pressed') === 'false'), 'setting survives a reload');
   await shot('10-topbar');
+
+  // ---------- Optionen: Zeit anzeigen, Statistik, Teilen, Zurücksetzen ----------
+  console.log('Optionen & Statistik');
+  await tapEl('#btn-settings'); await sheetReady();
+  ok(await p.evaluate(() => !document.getElementById('sheet-veil').hidden), 'gear on the start screen opens the settings sheet');
+  await shot('11-sheet');
+  await tapEl('#time-toggle'); await sleep(200);
+  ok(await p.evaluate(() => document.getElementById('time-toggle').getAttribute('aria-pressed') === 'false' && JSON.parse(localStorage.getItem('squishdoku-v1')).settings.showTime === false), '"Zeit anzeigen" off → saved');
+  await tapEl('#sheet-close'); await sleep(400);
+  ok(await p.evaluate(() => document.getElementById('sheet-veil').hidden), 'sheet closes (✕)');
+  await p.evaluate(() => SquishDoku.startLevel(6)); await waitFor(() => SquishDoku.state?.id === 6 && !SquishDoku.state.locked && document.getElementById('veil').hidden); await sleep(1500);
+  ok(await p.evaluate(() => getComputedStyle(document.getElementById('timer')).display === 'none' && SquishDoku.state.ms > 500), 'timer hidden in the HUD, time still counts (for stars)');
+  await p.evaluate(() => SquishDoku.showHome('home')); await sleep(300);
+  await tapEl('#tab-settings'); await sheetReady(); await tapEl('#time-toggle'); await sleep(200); await tapEl('#sheet-close'); await sleep(400);
+  await p.evaluate(() => SquishDoku.startLevel(6)); await waitFor(() => SquishDoku.state?.id === 6 && document.getElementById('veil').hidden); await sleep(500);
+  ok(await p.evaluate(() => getComputedStyle(document.getElementById('timer')).display !== 'none'), 'switched on again → timer back');
+  await p.evaluate(() => SquishDoku.showHome('home')); await sleep(300);
+  await tapEl('#tab-stats'); await sleep(600);
+  const stx = await p.evaluate(() => ({ txt: document.getElementById('home-screen').textContent.replace(/\s+/g, ' '), on: document.getElementById('tab-stats').classList.contains('is-on'), solved: Object.keys(SquishDoku.store.stars).length, stars: Object.values(SquishDoku.store.stars).reduce((a, b) => a + b, 0) }));
+  ok(stx.on && stx.txt.includes(`${stx.stars} / 150`) && stx.txt.includes(`${stx.solved}/50Gelöst`) && stx.txt.includes('Ø Zeit') && stx.txt.includes('Beste Serie') && stx.txt.includes('Tagesrätsel gelöst'), `Statistik screen with real numbers (${stx.txt.slice(0, 120)}…)`);
+  ok(!(await p.evaluate(() => { const v = document.querySelector('.nn-scroll').getBoundingClientRect(), t = document.getElementById('tabs').getBoundingClientRect(); return v.bottom > t.top + 1; })), 'Statistik scrolls above the tab bar');
+  await shot('12-stats');
+  // share: Web Share API when there is one, else copy the link
+  await p.evaluate(() => { navigator.share = d => { window.__share = d; return Promise.resolve(); }; });
+  await tapEl('#tab-settings'); await sheetReady(); await tapEl('#btn-share'); await sleep(300);
+  ok(await p.evaluate(() => window.__share?.url === 'https://saschahoffmannsh-gif.github.io/squishdoku/' && /SquishDoku/.test(window.__share.text)), 'Freunde einladen → Web Share with the game link');
+  await p.evaluate(() => { navigator.share = undefined; navigator.clipboard.writeText = t => { window.__copied = t; return Promise.resolve(); }; });
+  await tapEl('#btn-share'); await sleep(400);
+  ok(await p.evaluate(() => window.__copied === 'https://saschahoffmannsh-gif.github.io/squishdoku/' && !document.getElementById('toast').hidden && /Link kopiert/.test(document.getElementById('toast').textContent)), 'no Web Share → link copied + toast');
+  // reset with confirmation
+  await tapEl('#btn-wipe'); await sleep(500);
+  ok(await dialog() === 'confirm' && await p.evaluate(() => document.getElementById('sheet-veil').hidden), 'Fortschritt zurücksetzen → confirmation dialog');
+  await shot('13-confirm');
+  await tapEl('#btn-wipe-no'); await sheetReady();
+  ok(await dialog() === null && await p.evaluate(() => !document.getElementById('sheet-veil').hidden && Object.keys(SquishDoku.store.stars).length > 0), '"Abbrechen" keeps everything, back to the sheet');
+  await tapEl('#btn-wipe'); await sleep(500); await tapEl('#btn-wipe-yes'); await sleep(700);
+  const wiped = await p.evaluate(() => ({ s: JSON.parse(localStorage.getItem('squishdoku-v1')), pill: document.getElementById('home-stars').textContent, screen: document.getElementById('home').dataset.screen }));
+  ok(JSON.stringify(wiped.s.stars) === '{}' && JSON.stringify(wiped.s.times) === '{}' && wiped.s.unlocked === 1 && wiped.s.daily.streak === 0 && wiped.s.settings.vibration === false && wiped.pill === '0/150' && wiped.screen === 'home', 'confirmed → progress wiped (settings kept), start screen shows 0/150');
   // iOS-like: no navigator.vibrate → toggle hidden, no errors
   const p2 = await ctx.newPage(); await p2.addInitScript(() => { delete Navigator.prototype.vibrate; delete navigator.vibrate; });
   await p2.goto(BASE); await p2.waitForFunction(() => document.documentElement.dataset.ready === '1');

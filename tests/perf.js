@@ -15,7 +15,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await p.reload(); await p.waitForFunction(() => document.documentElement.dataset.ready === '1');
   const lv = +(process.env.LV || 1);
   await p.evaluate(lv => SquishDoku.startLevel(lv), lv); await sleep(1500);
-  if (await p.isVisible('#veil')) { await p.click('#dialog .aw-btn'); await sleep(500); }
+  if (await p.isVisible('#veil')) { await p.click('#dialog .nn-btn'); await sleep(500); }
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
   // instrument: wall interval between rendered frames + JS time inside each animation frame
   await p.evaluate(() => {

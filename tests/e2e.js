@@ -39,6 +39,13 @@ async function run(vp, dpr) {
   const st = () => p.evaluate(() => { const S = SquishDoku.state; return { id: S.id, N: S.N, hearts: S.hearts, glow: S.glow, grid: S.state.map(r => r.slice()), sol: S.L.solution, regions: S.L.regions, locked: S.locked }; });
   const dialog = () => p.evaluate(() => { const v = document.getElementById('veil'); return v.hidden ? null : document.getElementById('dialog').dataset.kind; });
   const shot = async name => { if (SHOTS) await p.screenshot({ path: `${OUT}/${name}-${vp.width}x${vp.height}.png` }); };
+  // level tiles live in one pane per board size: open the right size tab, then tap the tile
+  async function pickLevel(lvl, shotIt) {
+    const n = await p.evaluate(l => document.querySelector(`.nn-tile[data-level="${l}"]`).closest('.nn-lv-grid').dataset.n, lvl);
+    if (!(await p.evaluate(n => document.querySelector(`.nn-seg [data-n="${n}"]`).classList.contains('is-on'), n))) { await p.click(`.nn-seg [data-n="${n}"]`); await sleep(250); }
+    await p.locator(`.nn-tile[data-level="${lvl}"]`).scrollIntoViewIfNeeded(); await sleep(150); if (shotIt) await shot(`08-levels-${lvl}`);
+    await p.click(`.nn-tile[data-level="${lvl}"]`);
+  }
   const noScroll = () => p.evaluate(() => document.scrollingElement.scrollHeight <= innerHeight + 1 && document.scrollingElement.scrollWidth <= innerWidth + 1);
 
   await p.goto(BASE); await p.evaluate(() => localStorage.clear()); await p.reload();
@@ -48,17 +55,25 @@ async function run(vp, dpr) {
   ok(await p.isVisible('#btn-play') && await p.isVisible('#btn-levels'), 'home: menu buttons visible');
   ok((await p.title()) === 'SquishDoku', 'title is SquishDoku');
   await p.click('#btn-levels'); await sleep(700); await shot('02-levels');
-  ok(await p.locator('.sd-levels .aw-tile').count() === 50, 'level select: 50 levels');
-  ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 49, 'level select: levels 2-50 locked');
+  ok(await p.locator('.nn-lv-grid .nn-tile').count() === 50, 'level select: 50 levels');
+  ok(await p.locator('.nn-lv-grid .nn-tile.is-locked').count() === 49, 'level select: levels 2-50 locked');
+  ok(await p.evaluate(() => [...document.querySelectorAll('.nn-seg button')].map(b => b.textContent + (b.classList.contains('is-on') ? '*' : '')).join(' ') === '5×5* 6×6 7×7 8×8'), 'levels: size tabs 5×5–8×8, 5×5 open for a new player');
+  ok(await p.evaluate(() => { const g = document.querySelector('.nn-lv-grid:not([hidden])'); return g.dataset.n === '5' && g.querySelector('[data-level="1"]').classList.contains('is-current') && g.querySelectorAll('.nn-tile').length === 14; }), 'levels: Kapitel 1 = Mission 1 (4×4) + the 5×5 levels, L1 marked current');
+  ok((await p.textContent('.nn-chap h3')) === 'Kapitel 1 · 5×5', 'levels: chapter card');
+  await p.click('.nn-seg [data-n="7"]'); await sleep(250);
+  ok(await p.evaluate(() => document.querySelector('.nn-lv-grid:not([hidden])').dataset.n === '7' && document.querySelector('.nn-chap h3').textContent === 'Kapitel 3 · 7×7'), 'levels: switching the size tab shows chapter 3');
+  await p.click('.nn-seg [data-n="5"]'); await sleep(250);
   ok(await noScroll(), 'levels: page itself does not scroll');
-  ok(await p.evaluate(() => { const sc = document.querySelector('.sd-levels-scroll'), r = sc.getBoundingClientRect(); return sc.scrollHeight > sc.clientHeight && r.bottom <= innerHeight && r.top >= 0; }), 'levels: list scrolls inside its card, card fits the screen');
+  ok(await p.evaluate(() => { const sc = document.querySelector('.nn-lv-scroll'), r = sc.getBoundingClientRect(), t = document.getElementById('tabs').getBoundingClientRect(); return getComputedStyle(sc).overflowY === 'auto' && r.top >= 0 && r.bottom <= t.top + 1; }), 'levels: tile list scrolls in its own box above the tab bar');
   ok(await p.evaluate(() => { const b = document.querySelector('#btn-home').getBoundingClientRect(); return b.bottom <= innerHeight && b.top > 0; }), 'levels: back button visible');
   // ---------- Missions 1–2 with guidance: follow the hand, the player does every action ----------
   await p.click('#btn-home'); await sleep(400);
   ok(!(await p.isVisible('#btn-tutorial')), 'home: no separate "Tutorial" button any more');
+  ok(await p.isVisible('#tabs') && await p.evaluate(() => document.querySelector('#tab-home').classList.contains('is-on')), 'home: tab bar with "Start" active');
   await p.click('#btn-play');
   await p.waitForFunction(() => SquishDoku.board && SquishDoku.board.stats.frames > 1, null, { timeout: 30000 });
   await sleep(900);
+  ok(!(await p.isVisible('#tabs')), 'in-game: tab bar hidden');
   ok(await dialog() === null, 'L1: no rules dialog – the guide explains instead');
   const tut = () => p.evaluate(() => { const t = SquishDoku.tutorial; return { active: t.active, blocking: t.blocking, step: t.step, text: document.querySelector('.sd-tut-text').textContent, kicker: document.querySelector('.sd-tut-kicker').textContent, next: !document.getElementById('tut-next').hidden, marks: document.querySelectorAll('.sd-tut-mark').length, hand: document.querySelector('.sd-tut-hand').classList.contains('is-on') }; });
   const bar = () => p.evaluate(() => [...document.querySelectorAll('.sd-rb-chip')].map(c => (c.classList.contains('is-locked') || c.disabled ? 'L' : 'o')).join(''));
@@ -198,8 +213,7 @@ async function run(vp, dpr) {
   ok(await p.evaluate(() => SquishDoku.adPacing.wins === 5 && SquishDoku.adPacing.interstitialDue), 'ads: 5 wins -> interstitial due');
   ok(await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-ad-pacing-v1')).wins === 5), 'ads: interstitial counter saved in localStorage');
   for (const lvl of [41, 50]) {
-    await p.locator(`[data-level="${lvl}"]`).scrollIntoViewIfNeeded(); await sleep(200); await shot(`08-levels-${lvl}`);
-    await p.click(`[data-level="${lvl}"]`); await sleep(400);
+    await pickLevel(lvl, true); await sleep(400);
     if (lvl === 41) {
       ok(await p.isVisible('#ad-interstitial') && await p.isDisabled('#ad-continue'), 'ads: interstitial shown between levels, "Weiter" waits for the countdown');
       await shot('08-interstitial');
@@ -220,9 +234,9 @@ async function run(vp, dpr) {
   }
   // 8) lose flow
   await p.click('#btn-to-levels'); await sleep(700);
-  ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 0, 'all levels unlocked');
+  ok(await p.locator('.nn-tile.is-locked').count() === 0, 'all levels unlocked');
   ok((await p.textContent('.sd-lv-progress')).startsWith('9 / 50'), 'level select shows solved count');
-  await p.click('[data-level="5"]'); await sleep(1500);
+  await pickLevel(5); await sleep(1500);
   s = await st(); let n = 0;
   for (let r = 0; r < s.N && n < 3; r++) for (let c = 0; c < s.N && n < 3; c++) if (s.sol[r] !== c && Math.abs(s.sol[r] - c) > 0) { await hold(r, c); n++; await sleep(150); break; }
   await sleep(1300);
@@ -235,7 +249,7 @@ async function run(vp, dpr) {
   await p.click('#btn-reset'); await sleep(1000);
   ok((await st()).glow === 0, 'reset button restarts level');
   await p.click('#btn-back'); await sleep(600);
-  ok(await p.isVisible('.sd-levels'), 'back button -> level select');
+  ok(await p.isVisible('.nn-lv-grid') && await p.isVisible('#tabs'), 'back button -> level select (with tab bar)');
   // 10) Tipp per Werbung: each watched (dummy) ad reveals one more solution squish, as often as wanted
   await p.evaluate(() => SquishDoku.startLevel(6)); await sleep(1600);
   s = await st();
@@ -272,7 +286,7 @@ async function run(vp, dpr) {
     await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 }); await sleep(1200); }
   ok(await p.evaluate(() => SquishDoku.adPacing.interstitialDue), 'ads: 15 wins -> interstitial due');
   await p.evaluate(() => SquishDoku.showHome('levels')); await sleep(600);
-  await p.locator('[data-level="2"]').scrollIntoViewIfNeeded(); await p.click('[data-level="2"]'); await sleep(1500);
+  await pickLevel(2); await sleep(1500);
   ok(!(await p.isVisible('#ad-interstitial')) && (await st()).id === 2 && await p.evaluate(() => SquishDoku.tutorial.active), 'mission 2 replays from the level list with its guide, without an ad');
   await p.evaluate(() => SquishDoku.showHome('rules')); await sleep(500);
   ok(!(await p.isVisible('#btn-rules-tutorial')) && !/Tutorial/.test(await p.textContent('#home-screen')), 'rules screen: no "Tutorial spielen" any more');
@@ -282,7 +296,7 @@ async function run(vp, dpr) {
   const mig = await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-v1')));
   ok(mig.v === 3 && mig.unlocked === 5 && JSON.stringify(mig.stars) === JSON.stringify({ 1: 2, 3: 1, 4: 3 }) && mig.revealed[4] === 2 && mig.rulesCollapsed === true, `old save migrated: old L3 → L1, old L4-5 → L3-4, unlocked 6 → 5 (${JSON.stringify(mig)})`);
   await p.evaluate(() => SquishDoku.showHome('levels')); await sleep(600);
-  ok(await p.locator('.sd-levels .aw-tile.is-locked').count() === 45, 'migrated save: L1-5 open (incl. the new mission 2), L6-50 locked');
+  ok(await p.locator('.nn-tile.is-locked').count() === 45, 'migrated save: L1-5 open (incl. the new mission 2), L6-50 locked');
   ok(errors.length === 0, 'no console errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
   if (warnings.length) console.log('  (warnings: ' + [...new Set(warnings)].join(' | ') + ')');
   await b.close();
