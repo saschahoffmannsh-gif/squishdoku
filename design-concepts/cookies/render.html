@@ -11,6 +11,7 @@ const q = new URLSearchParams(location.search), SET = q.get('set') || 'A', VIEW 
 const host = document.getElementById('host');
 const ready = () => document.documentElement.dataset.ready = '1';
 window.onerror = e => { document.documentElement.dataset.error = String(e); };
+if (VIEW === 'board') globalThis.PRINT_SAT = +(q.get('psat') || 1.5);
 if (SET === 'F') await (await import('./cookies-f.mjs')).loadArt();
 globalThis.COOKIE_N = +(q.get('n') || (VIEW === 'board' ? 640 : 1024));
 if (VIEW === 'board') {

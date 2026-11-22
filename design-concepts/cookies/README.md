@@ -29,9 +29,15 @@ Gelb bleibt die Leuchtfarbe.
   - Augen im Pixar-Stil mit Blickrichtung (`S.look`).
   - Nahaufnahmen: `view=closeups&keys=2,7,9`.
 
+- **F · Bedruckte Kekse** (`cookies-f.mjs`, `art/`): echter 3D-Mürbeteig-Keks in der Silhouette des Tiers, mit Backrand. Das Pixar-Motiv ist flach aufgedruckt, mit ganz leichtem Glanz und ohne Relief.
+  - `art/prepare.py` stellt die Original-JPGs in `art/src/` frei und entfernt gezeichnete Keksränder.
+  - Es schiebt die Farben in Richtung der Regionsfarben (Fuchs → Rot, Schwein → Pink, Frosch → Grün, Eule → Lila).
+  - Es schreibt Texturen mit 512 px (`*.webp` für Mobilgeräte, `*.png`) und `outlines.json` (Umriss = Motiv + Backrand).
+  - Vor `buildCookie('F', …)` muss `await loadArt()` laufen.
+
 ## Dateien
 - `cookies.mjs`: die Bibliothek, mit dem `three` aus `vendor/squish-attack`, also dieselbe Version wie im Spiel. Mit `buildCookie(set, farbe, {state, size})` bekommst du eine `THREE.Group`, die sich direkt ins Spiel setzen lässt.
-  - `set`: `'A' | 'B' | 'C' | 'D' | 'E'`
+  - `set`: `'A' | 'B' | 'C' | 'D' | 'E' | 'F'`
   - `state`: `'normal' | 'lit' | 'crumbled'`
   - Prozedural erzeugt: Teig-Textur, Bräunung über Vertex-Farben, Guss als Höhenfeld aus gezeichneten Gesichtern (`FACES`), Umrisse (`SILHOUETTE`), Bruchstücke und Krümel.
 - `render.html?set=A&view=lineup|board|single[&key=2&state=lit]`: die Render-Seite.

@@ -29,7 +29,7 @@ export function designF(P) {
     const bump = doughMaterial().bumpMap.clone(); bump.repeat.set(2.2, 2.2); bump.needsUpdate = true;
     const print = new THREE.MeshPhysicalMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2,
       roughness: .52, clearcoat: .35, clearcoatRoughness: .32, bumpMap: bump, bumpScale: .5 });
-    saturate(print, 1.12);
+    saturate(print, globalThis.PRINT_SAT || 1.12);
     const quad = new THREE.PlaneGeometry(2 * sc, 2 * sc); quad.rotateX(-Math.PI / 2); quad.translate(-cx * sc, topY + .002, cy * sc);
     // for the crumbled state: the art on baked dough, with the same mapping as the body's shape coordinates
     const N = art.width, d = art.getContext('2d').getImageData(0, 0, N, N).data, M = new Uint8Array(N * N);
