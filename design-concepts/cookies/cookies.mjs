@@ -240,7 +240,7 @@ export function buildCookie(set, key, { state = 'normal', size = 1, seed = key }
   if (!entry) { const d = DESIGN[set](P); entry = { def: d, parts: d.build() }; CACHE.set(ck, entry); }
   const { def, parts } = entry;
   if (state === 'crumbled') { g.add(crumbs(def, P, seed)); g.scale.setScalar(size); return g; }
-  for (const [geo, mat] of parts) { const m = new THREE.Mesh(geo, mat); m.castShadow = m.receiveShadow = true; g.add(m); }
+  for (const [geo, mat] of parts) { const m = new THREE.Mesh(geo, mat); m.castShadow = !mat.transparent; m.receiveShadow = true; g.add(m); }
   if (state === 'lit') addGlow(g, def, P);
   g.scale.setScalar(size);
   return g;
@@ -252,11 +252,14 @@ function icingMaterial(tex, alphaMap) {
 
 export { canvas, heightMesh, crumbleGeometry, bodyGeometry, shapeFrom, polar };
 import { designD } from './cookies-d.mjs';
+import { designF } from './cookies-f.mjs';
 export const DESIGN = {
   // D: natürlicher Tier-Ausstecher mit mehrlagigem Royal Icing (siehe cookies-d.mjs)
   D: P => designD(P),
   // E: wie D, aber mit wechselnden Posen (Profil, Dreiviertel, Blickrichtung, Zwinkern)
   E: P => designD(P, 'E'),
+  // F: echter 3D-Keks in Tierform, Pixar-Motiv flach aufgedruckt (siehe cookies-f.mjs)
+  F: P => designF(P),
   // A: runder Mürbeteig-Keks, oben glänzender Zuckerguss, Gesicht gespritzt
   A: P => ({ top: .3, build() {
     const pts = polar((x, y) => Math.hypot(x, y) <= .93, 160);
