@@ -119,7 +119,7 @@ export function releaseSlot(s){if(s)s.busy=false;}
 // of the spot they came from, sides = dough). They burst up and toward the viewer, spin, and fall with
 // gravity out of the screen, then their slot is recycled. Two preallocated InstancedMeshes, one draw
 // call each, no allocation per pop.
-export function createCrumbs(scene,camera,{crumbs=480,bits=320}={}){
+export function createCrumbs(scene,camera,{crumbs=1400,bits=560,dust=4800}={}){
   const S=shared();
   const bitGeo=new THREE.BoxGeometry(1,.42,1,1,1,1),bp=bitGeo.attributes.position,mask=new Float32Array(bp.count*3);
   for(let i=0;i<bp.count;i++){const top=bp.getY(i)>.2?1:0;mask[i*3]=mask[i*3+1]=mask[i*3+2]=top;bp.setXYZ(i,bp.getX(i)*(1+.25*hash3(i,1,2)),bp.getY(i),bp.getZ(i)*(1+.25*hash3(i,3,4)));}
@@ -142,36 +142,64 @@ export function createCrumbs(scene,camera,{crumbs=480,bits=320}={}){
     const a=Math.atan2(z-P.cz,x-P.cx)+(rnd()-.5)*.9,out=(soft?.15+rnd()*.6:1.1+rnd()*2.2)*size;
     P.p.set([x,y,z],i*3);P.v.set([Math.cos(a)*out,(soft?.3+rnd()*1.3:2.4+rnd()*2.8)*size,Math.sin(a)*out+(soft?.4+rnd()*1.1:1.4+rnd()*2.4)*size],i*3);
     P.r.set([rnd()*6,rnd()*6,rnd()*6],i*3);P.w.set([(rnd()-.5)*14,(rnd()-.5)*10,(rnd()-.5)*14],i*3);P.sc.set([sx,sy,sz],i*3);P.age[i]=0;
-    P.mesh.setColorAt(i,c);P.mesh.count=Math.max(P.mesh.count,i+1);
+    P.mesh.setColorAt(i,c);P.mesh.count=Math.max(P.mesh.count,i+1);stat.spawned++;
   }
+  // dust: fine grains as one Points draw (position + colour only, no matrices) for the dense trickle
+  const dot=(()=>{const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d'),g=x.createRadialGradient(16,16,0,16,16,16);g.addColorStop(0,'#fff');g.addColorStop(.55,'#fff');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,32,32);return new THREE.CanvasTexture(c);})();
+  const D={n:dust,p:new Float32Array(dust*3),v:new Float32Array(dust*3),age:new Float32Array(dust),alive:new Uint8Array(dust),next:0,live:0,top:0};
+  D.p.fill(-1e4);
+  const dGeo=new THREE.BufferGeometry();D.pos=new THREE.BufferAttribute(D.p,3).setUsage(THREE.DynamicDrawUsage);D.col=new THREE.BufferAttribute(new Float32Array(dust*3),3).setUsage(THREE.DynamicDrawUsage);
+  dGeo.setAttribute('position',D.pos);dGeo.setAttribute('color',D.col);dGeo.setDrawRange(0,0);
+  const dMat=new THREE.PointsMaterial({size:.2,map:dot,alphaTest:.35,vertexColors:true,sizeAttenuation:true});
+  const dPts=new THREE.Points(dGeo,dMat);dPts.frustumCulled=false;dPts.renderOrder=6;scene.add(dPts);
+  function grain(x,y,z,size,c){
+    const i=D.next;D.next=(i+1)%D.n;if(!D.alive[i]){D.alive[i]=1;D.live++;}const o=i*3,a=rnd()*6.283,out=(.04+rnd()*.4)*size;
+    D.p[o]=x;D.p[o+1]=y;D.p[o+2]=z;D.v[o]=Math.cos(a)*out;D.v[o+1]=(rnd()*.9-.1)*size;D.v[o+2]=Math.sin(a)*out+(.1+rnd()*.6)*size;D.age[i]=0;
+    D.col.array[o]=c.r;D.col.array[o+1]=c.g;D.col.array[o+2]=c.b;if(i+1>D.top)D.top=i+1;stat.spawned++;stat.dust++;
+  }
+  const stat={spawned:0,dust:0};
+  const VP=new THREE.Matrix4();
   return {
     pools,
-    get alive(){return pools[0].live+pools[1].live;},
+    stat,dust:dPts,
+    get alive(){return pools[0].live+pools[1].live+D.live;},
     // ck: the cookie (its group gives position, yaw and size)
     // z0/z1 (cookie-local z band): only crumbs from that strip (the moving crumble edge), trickling down softly
     emit(ck,{amount=1,z0=-9,z1=9}={}){
       const g=ck.group;g.updateMatrixWorld(true);const size=g.scale.x,top=COOKIE_TOP,sw=swatches(ck.K),soft=z0>-9;
       const i0=lowerZ(sw,z0),i1=Math.max(i0,lowerZ(sw,z1)),pick=()=>sw[i1>i0?i0+((rnd()*(i1-i0))|0):Math.min(sw.length-1,i0)];if(!sw.length)return;
       for(const P of pools){P.cx=g.position.x;P.cz=g.position.z;}
-      const nb=Math.floor(34*amount+rnd()),nc=Math.floor(44*amount+rnd()); // fractional amounts: stochastic rounding
+      // per cookie (amount 1): 40 chunks with print, 100 dough crumbs, 320 dust grains  (fractional amounts: stochastic rounding)
+      const nb=Math.floor(40*amount+rnd()),nc=Math.floor(100*amount+rnd()),nd=Math.floor(320*amount+rnd());
       for(let k=0;k<nb;k++){const s0=pick();pr.set(s0.x,top*(.75+rnd()*.25),s0.z).applyMatrix4(g.matrixWorld);
         const b=size*(.1+rnd()*.12);spawn(pools[1],pr.x,pr.y,pr.z,size,s0.col,b,b*(.8+rnd()*.6),b*(.7+rnd()*.6),soft);}
       for(let k=0;k<nc;k++){const s0=pick();pr.set(s0.x*(.9+rnd()*.2),top*rnd(),s0.z).applyMatrix4(g.matrixWorld);
-        const b=size*(.045+rnd()*.07);col.copy(tones[(rnd()*tones.length)|0]);spawn(pools[0],pr.x,pr.y,pr.z,size,col,b,b*.8,b,soft);}
+        const b=size*(rnd()<.7?.02+rnd()*.03:.05+rnd()*.06);col.copy(tones[(rnd()*tones.length)|0]);spawn(pools[0],pr.x,pr.y,pr.z,size,col,b,b*.8,b,soft);}
+      for(let k=0;k<nd;k++){const s0=pick();pr.set(s0.x+(rnd()-.5)*.06,top*rnd(),s0.z+(rnd()-.5)*.04).applyMatrix4(g.matrixWorld);
+        grain(pr.x,pr.y,pr.z,size,rnd()<.4?s0.col:tones[(rnd()*tones.length)|0]);}
+      if(nd){D.col.needsUpdate=true;}
       for(const P of pools)P.mesh.instanceColor.needsUpdate=true;
     },
     update(dt){
-      if(!this.alive)return 0;const G=26;
+      if(!this.alive)return 0;const G=26,drag=Math.exp(-dt*.6);
+      VP.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);const m=VP.elements;
+      // off screen (below / beside) or old → recycle. ndc = clip.xy / clip.w from the view-projection rows
+      const gone=(x,y,z,age)=>{const w=m[3]*x+m[7]*y+m[11]*z+m[15],cy=(m[1]*x+m[5]*y+m[9]*z+m[13])/w,cx=(m[0]*x+m[4]*y+m[8]*z+m[12])/w;return age>4||cy<-1.1||cx<-1.25||cx>1.25;};
+      if(D.live){let top=0;const p=D.p,v=D.v;
+        for(let i=0;i<D.top;i++){if(!D.alive[i])continue;const o=i*3;D.age[i]+=dt;v[o+1]-=G*.8*dt;v[o]*=drag;v[o+2]*=drag;
+          p[o]+=v[o]*dt;p[o+1]+=v[o+1]*dt;p[o+2]+=v[o+2]*dt;
+          if(gone(p[o],p[o+1],p[o+2],D.age[i])){D.alive[i]=0;D.live--;p[o+1]=-1e4;}else top=i+1;}
+        D.top=top;dGeo.setDrawRange(0,top);D.pos.needsUpdate=true;}
       for(const P of pools){
         if(!P.live)continue;let top=0;
         for(let i=0;i<P.mesh.count;i++){
           const o=i*3;
           if(P.alive[i]){
-            P.age[i]+=dt;P.v[o+1]-=G*dt;const drag=Math.exp(-dt*.6);P.v[o]*=drag;P.v[o+2]*=drag;
+            P.age[i]+=dt;P.v[o+1]-=G*dt;P.v[o]*=drag;P.v[o+2]*=drag;
             P.p[o]+=P.v[o]*dt;P.p[o+1]+=P.v[o+1]*dt;P.p[o+2]+=P.v[o+2]*dt;
             for(let a=0;a<3;a++)P.r[o+a]+=P.w[o+a]*dt;
-            pos.set(P.p[o],P.p[o+1],P.p[o+2]);pr.copy(pos).project(camera);
-            if(P.age[i]>4||pr.y<-1.15||Math.abs(pr.x)>1.3){P.alive[i]=0;P.live--;}
+            pos.set(P.p[o],P.p[o+1],P.p[o+2]);
+            if(gone(P.p[o],P.p[o+1],P.p[o+2],P.age[i])){P.alive[i]=0;P.live--;}
           }
           if(P.alive[i]){top=i+1;e.set(P.r[o],P.r[o+1],P.r[o+2]);q.setFromEuler(e);scl.set(P.sc[o],P.sc[o+1],P.sc[o+2]);m4.compose(pos,q,scl);}
           else m4.makeScale(0,0,0);
@@ -181,7 +209,7 @@ export function createCrumbs(scene,camera,{crumbs=480,bits=320}={}){
       }
       return this.alive;
     },
-    clear(){for(const P of pools){P.alive.fill(0);P.live=0;P.mesh.count=0;}},
+    clear(){for(const P of pools){P.alive.fill(0);P.live=0;P.mesh.count=0;}D.alive.fill(0);D.live=0;D.top=0;D.p.fill(-1e4);dGeo.setDrawRange(0,0);},
   };
 }
 // a hidden set (one cookie in each look) so every program/texture is linked at level load

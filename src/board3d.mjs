@@ -244,7 +244,7 @@ export function createBoard3D(host){
     },done);
   }
   const api={
-    graphics,fusion,SEQ,get N(){return N;},get cells(){return cells;},
+    graphics,fusion,crumbs,SEQ,get N(){return N;},get cells(){return cells;},
     build,clear,pick,worldOf,screenOf,boardRect,frameRect,cellAt,requestFrame,
     press(r,c){const cl=cellAt(r,c);if(cl.state==='popped')return;press(cl.s);requestFrame();},
     drag(r,c,x,z){const cl=cellAt(r,c);drag(cl.s,x/k,z/k);requestFrame();},
