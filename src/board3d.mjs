@@ -15,7 +15,7 @@ import {createContactSolver} from '../vendor/squish-attack/game/dense-contacts.m
 import {configureRenderQuality} from '../vendor/squish-attack/game/render-quality.mjs?v=launch-26';
 import {installCleanScreen} from '../vendor/squish-attack/game/clean-screen.mjs?v=launch-26';
 import {createFusion} from '../vendor/squish-attack/game/fusion.mjs?v=launch-26';
-import {makeCookie,createCrumbs,warmSet,COOKIE_TOP} from './cookies3d.mjs';
+import {makeCookie,createCrumbs,warmSet,cutSlot,releaseSlot,COOKIE_TOP} from './cookies3d.mjs';
 
 const P=PARAMETERS;
 // Same press/drag/release/wobble springs as squish-graphics.js (Vh/Gh/Wh/bl),
@@ -91,6 +91,8 @@ export function createBoard3D(host){
   // shared per-animal material variants (normal / golden lit / red wrong): a swap, no per-cell materials
   function setBodyTone(cell,mode){cell.s.ck.tone(mode==='popped'?'normal':mode);requestFrame();}
   // cookie motion: press squash, lean along the finger, spring back with a little wobble (replaces the gel solver)
+  const CRUMBLE_T=.55; // s for the crumble edge to cross a cookie
+  function endCrumble(cl){const sl=cl.dissolve;if(!sl)return;cl.dissolve=null;releaseSlot(sl);const ck=cl.s.ck;ck.inner.visible=false;ck.body.castShadow=true;ck.tone('normal');requestFrame({shadows:true});}
   // a crumbled cookie has nothing left to wobble: stop its springs so idle frames end with the crumble
   function calm(s){const p=s.press,t=s.tilt;s.amplitude=0;p.held=p.releaseQueued=false;p.compression=p.velocity=0;t.x=t.z=t.vx=t.vz=0;s.ck.inner.scale.set(1,1,1);s.ck.inner.rotation.set(0,0,0);}
   function cookieLive(s){const p=s.press,t=s.tilt;return s.amplitude>.02||p.held||p.releaseQueued||p.compression!==0||p.velocity!==0||t.x!==0||t.z!==0||t.vx!==0||t.vz!==0;}
@@ -157,6 +159,7 @@ export function createBoard3D(host){
   // level start relink all squish/glow/splat programs (the bulk of a level start on a phone).
   function clear(keep=false){
     jobs.splice(0).forEach(j=>j.cancel?.());fusion.clear();crumbs.clear();
+    for(const cl of cells)if(cl.dissolve){cl.anim=null;endCrumble(cl);}
     const old=cells;cells=[];
     if(keep){for(const cell of old){cell.s.group.visible=cell.halo.visible=cell.spark.visible=cell.splat.visible=false;}}
     else disposeCells(old);
@@ -256,8 +259,15 @@ export function createBoard3D(host){
       cl.state='popped';cl.s.press.held=false;cl.s.press.releaseQueued=false;
       setBodyTone(cl,'popped');cl.s.value=cl.value;
       cl.halo.visible=false;cl.spark.visible=false;
-      // the cookie shatters into crumbs that fall out of the screen; the cell is empty glass, tap brings it back
-      const ck=cl.s.ck;calm(cl.s);setScale(cl,1,1);try{crumbs.emit(ck,{amount:Math.max(.6,Math.min(1.4,amount||1))});}catch(e){console.warn('crumbs',e);}ck.inner.visible=false;requestFrame({shadows:true});
+      // the cookie crumbles away from the top (far side) down to the bottom edge: a clip edge moves over it
+      // and sheds crumbs along the way, which trickle down out of the screen; then the cell is empty glass
+      const ck=cl.s.ck,amt=Math.max(.6,Math.min(1.4,amount||1)),slot=cutSlot();calm(cl.s);setScale(cl,1,1);
+      if(!slot){try{crumbs.emit(ck,{amount:amt});}catch(e){console.warn('crumbs',e);}ck.inner.visible=false;requestFrame({shadows:true});return true;}
+      slot.print.map=ck.K.map;ck.body.material=slot.dough;ck.print.material=slot.print;ck.body.castShadow=false;cl.dissolve=slot;
+      const bb=ck.K.bodyGeo.boundingBox,z0=bb.min.z-.02,z1=bb.max.z+.02;let prev=z0;
+      slot.dough.userData.cut.value=slot.print.userData.cut.value=z0;requestFrame({shadows:true});
+      animate(cl,CRUMBLE_T,t=>{const z=z0+(z1-z0)*t;slot.dough.userData.cut.value=slot.print.userData.cut.value=z;
+        try{crumbs.emit(ck,{amount:amt*(z-prev)/(z1-z0),z0:prev,z1:z});}catch(e){}prev=z;},()=>endCrumble(cl));
       return true;
     },
     // Tap/swipe pop (Sascha's sequence): 1 squash flat under the finger, 2 spring back up with a
@@ -279,11 +289,12 @@ export function createBoard3D(host){
       return true;
     },
     // start state "already popped" (tutorial): empty glass without the burst
-    vanish(r,c){const cl=cellAt(r,c);cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;cl.anim=null;const ck=cl.s.ck;calm(cl.s);ck.inner.visible=false;setScale(cl,1,1);requestFrame({shadows:true});},
+    vanish(r,c){const cl=cellAt(r,c);if(cl.dissolve){cl.anim=null;endCrumble(cl);}cl.state='popped';setBodyTone(cl,'popped');cl.halo.visible=false;cl.spark.visible=false;cl.anim=null;const ck=cl.s.ck;calm(cl.s);ck.inner.visible=false;setScale(cl,1,1);requestFrame({shadows:true});},
     restore(r,c){
       const cl=cellAt(r,c);
       if(cl.state==='popping'){cl.anim=null;cl.state='normal';setScale(cl,1,1);wobble(cl.s,.4);requestFrame();return;}
       if(cl.state!=='popped')return;
+      if(cl.dissolve){cl.anim=null;endCrumble(cl);}
       cl.state='normal';setBodyTone(cl,'normal');cl.s.value=cl.value;cl.anim=null;cl.s.ck.inner.visible=true;cl.s.group.visible=true;setScale(cl,.25,.25);
       animate(cl,.3,t=>{const e=backOut(t);setScale(cl,.25+.75*e,.25+.75*e);},()=>{setScale(cl,1,1);wobble(cl.s,.6);});requestFrame({shadows:true});
     },

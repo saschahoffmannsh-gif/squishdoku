@@ -80,8 +80,9 @@ function swatches(K){
   const d=x.getImageData(0,0,n,n).data,out=[];
   for(let j=0;j<n;j++)for(let i=0;i<n;i++){const o=(j*n+i)*4;if(d[o+3]<200)continue;
     const ax=(i+.5)/n*2-1,ay=1-(j+.5)/n*2;out.push({x:(ax-K.uv.cx)*K.uv.sc,z:-(ay-K.uv.cy)*K.uv.sc,col:new THREE.Color().setRGB(d[o]/255,d[o+1]/255,d[o+2]/255,THREE.SRGBColorSpace)});}
-  return K.sw=out;
+  out.sort((a,b)=>a.z-b.z);return K.sw=out;
 }
+const lowerZ=(sw,z)=>{let lo=0,hi=sw.length;while(lo<hi){const m=(lo+hi)>>1;if(sw[m].z<z)lo=m+1;else hi=m;}return lo;};
 // ---------- one cookie instance ----------
 // group (position/anim scale) > inner (press/wobble/tilt) > body + print
 export function makeCookie(v){
@@ -91,6 +92,28 @@ export function makeCookie(v){
   inner.add(b,pr);
   return {group,inner,body:b,print:pr,K,tone(mode){b.material=mode==='glow'?S.doughLit:S.dough;pr.material=mode==='glow'?K.printLit:mode==='wrong'?K.printWrong:K.print;}};
 }
+// ---------- crumble edge: pooled clip materials ----------
+// While a cookie crumbles, its body and print draw with a clone that discards everything behind the
+// moving edge (cookie-local z: back/top of the screen first, then down toward the viewer) and browns
+// the fresh break. Slots are pooled and never freed, so the shared programs stay linked.
+function cutMat(base,sat){
+  const m=base.clone(),u={value:-9};m.userData.cut=u;
+  m.onBeforeCompile=sh=>{sh.uniforms.uCut=u;
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying float vCutZ;').replace('#include <begin_vertex>','#include <begin_vertex>\nvCutZ=position.z;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vCutZ;uniform float uCut;').replace('#include <color_fragment>',`#include <color_fragment>
+      if(vCutZ<uCut)discard;
+      diffuseColor.rgb=max(mix(vec3(dot(diffuseColor.rgb,vec3(.299,.587,.114))),diffuseColor.rgb,${sat.toFixed(2)}),0.);
+      diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.42,.22,.08),(1.-smoothstep(0.,.09,vCutZ-uCut))*.75);`);};
+  m.customProgramCacheKey=()=>'cut'+sat;return m;
+}
+const SLOTS=[];
+export function cutSlot(){
+  let s=SLOTS.find(x=>!x.busy);
+  if(!s){if(SLOTS.length>=16)return null;const S=shared(),anyK=KIT[Object.keys(KIT)[0]];s={dough:cutMat(S.dough,1.05),print:cutMat(anyK.print,1.3),busy:false};SLOTS.push(s);}
+  s.busy=true;return s;
+}
+export function releaseSlot(s){if(s)s.busy=false;}
+// geometry is built in the XY plane and rotated (-90° about X): the shader's position.z is the cookie's z already
 // ---------- crumble: pooled instanced particles ----------
 // A popped cookie shatters into many small pieces: dough crumbs and icing bits (top = the print colour
 // of the spot they came from, sides = dough). They burst up and toward the viewer, spin, and fall with
@@ -114,10 +137,10 @@ export function createCrumbs(scene,camera,{crumbs=480,bits=320}={}){
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),pos=new THREE.Vector3(),scl=new THREE.Vector3(),pr=new THREE.Vector3(),col=new THREE.Color();
   const tones=['#f2cf98','#e3ad66','#d18f45','#b8733a','#f6dcb0'].map(c=>new THREE.Color(c));
   let rs=12345;const rnd=()=>(rs=(rs*16807)%2147483647)/2147483647;
-  function spawn(P,x,y,z,size,c,sx,sy,sz){
+  function spawn(P,x,y,z,size,c,sx,sy,sz,soft){
     let i=P.next;P.next=(i+1)%P.n;if(!P.alive[i]){P.alive[i]=1;P.live++;} // ring buffer: the oldest piece gives its slot
-    const a=Math.atan2(z-P.cz,x-P.cx)+(rnd()-.5)*.9,out=(1.1+rnd()*2.2)*size;
-    P.p.set([x,y,z],i*3);P.v.set([Math.cos(a)*out,(2.4+rnd()*2.8)*size,Math.sin(a)*out+(1.4+rnd()*2.4)*size],i*3);
+    const a=Math.atan2(z-P.cz,x-P.cx)+(rnd()-.5)*.9,out=(soft?.15+rnd()*.6:1.1+rnd()*2.2)*size;
+    P.p.set([x,y,z],i*3);P.v.set([Math.cos(a)*out,(soft?.3+rnd()*1.3:2.4+rnd()*2.8)*size,Math.sin(a)*out+(soft?.4+rnd()*1.1:1.4+rnd()*2.4)*size],i*3);
     P.r.set([rnd()*6,rnd()*6,rnd()*6],i*3);P.w.set([(rnd()-.5)*14,(rnd()-.5)*10,(rnd()-.5)*14],i*3);P.sc.set([sx,sy,sz],i*3);P.age[i]=0;
     P.mesh.setColorAt(i,c);P.mesh.count=Math.max(P.mesh.count,i+1);
   }
@@ -125,14 +148,16 @@ export function createCrumbs(scene,camera,{crumbs=480,bits=320}={}){
     pools,
     get alive(){return pools[0].live+pools[1].live;},
     // ck: the cookie (its group gives position, yaw and size)
-    emit(ck,{amount=1}={}){
-      const g=ck.group;g.updateMatrixWorld(true);const size=g.scale.x,top=COOKIE_TOP,sw=swatches(ck.K);
+    // z0/z1 (cookie-local z band): only crumbs from that strip (the moving crumble edge), trickling down softly
+    emit(ck,{amount=1,z0=-9,z1=9}={}){
+      const g=ck.group;g.updateMatrixWorld(true);const size=g.scale.x,top=COOKIE_TOP,sw=swatches(ck.K),soft=z0>-9;
+      const i0=lowerZ(sw,z0),i1=Math.max(i0,lowerZ(sw,z1)),pick=()=>sw[i1>i0?i0+((rnd()*(i1-i0))|0):Math.min(sw.length-1,i0)];if(!sw.length)return;
       for(const P of pools){P.cx=g.position.x;P.cz=g.position.z;}
-      const nb=Math.round(34*amount),nc=Math.round(44*amount);
-      for(let k=0;k<nb;k++){const s0=sw[(rnd()*sw.length)|0];pr.set(s0.x,top*(.75+rnd()*.25),s0.z).applyMatrix4(g.matrixWorld);
-        const b=size*(.12+rnd()*.13);spawn(pools[1],pr.x,pr.y,pr.z,size,s0.col,b,b*(.8+rnd()*.6),b*(.7+rnd()*.6));}
-      for(let k=0;k<nc;k++){const s0=sw[(rnd()*sw.length)|0];pr.set(s0.x*(.9+rnd()*.2),top*rnd(),s0.z*(.9+rnd()*.2)).applyMatrix4(g.matrixWorld);
-        const b=size*(.045+rnd()*.07);col.copy(tones[(rnd()*tones.length)|0]);spawn(pools[0],pr.x,pr.y,pr.z,size,col,b,b*.8,b);}
+      const nb=Math.floor(34*amount+rnd()),nc=Math.floor(44*amount+rnd()); // fractional amounts: stochastic rounding
+      for(let k=0;k<nb;k++){const s0=pick();pr.set(s0.x,top*(.75+rnd()*.25),s0.z).applyMatrix4(g.matrixWorld);
+        const b=size*(.1+rnd()*.12);spawn(pools[1],pr.x,pr.y,pr.z,size,s0.col,b,b*(.8+rnd()*.6),b*(.7+rnd()*.6),soft);}
+      for(let k=0;k<nc;k++){const s0=pick();pr.set(s0.x*(.9+rnd()*.2),top*rnd(),s0.z).applyMatrix4(g.matrixWorld);
+        const b=size*(.045+rnd()*.07);col.copy(tones[(rnd()*tones.length)|0]);spawn(pools[0],pr.x,pr.y,pr.z,size,col,b,b*.8,b,soft);}
       for(const P of pools)P.mesh.instanceColor.needsUpdate=true;
     },
     update(dt){
@@ -163,6 +188,8 @@ export function createCrumbs(scene,camera,{crumbs=480,bits=320}={}){
 export function warmSet(values){
   const g=new THREE.Group();g.position.set(0,-80,0);
   for(const v of values){for(const mode of ['normal','glow','wrong']){const c=makeCookie(v);c.tone(mode);g.add(c.group);}}
+  // the crumble-edge clip materials (one pooled slot)
+  const sl=cutSlot();if(sl){const c=makeCookie(values[0]);sl.print.map=c.K.map;c.body.material=sl.dough;c.print.material=sl.print;g.add(c.group);releaseSlot(sl);}
   g.traverse(o=>{o.frustumCulled=false;});return g;
 }
 // After the textures are in, build every animal's cookie + crumble pieces in idle time (one animal per idle
