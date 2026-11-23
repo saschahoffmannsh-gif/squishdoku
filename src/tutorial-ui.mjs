@@ -1,4 +1,4 @@
-// SquishDoku – Missionen mit Anleitung (Level 1–2) und Regel-Leiste über dem Brett.
+// SquishDoku – Missionen mit Anleitung (Level 1–6, je ein Lösungs-Trick) und Regel-Leiste über dem Brett.
 // Die Hand zeigt nur, was als Nächstes sinnvoll ist; spielen (halten, wischen) muss man selbst.
 // Logik: src/tutorial.js (window.SquishTutorial) berechnet den nächsten Schritt aus dem Brett.
 const T = window.SquishTutorial;
@@ -65,6 +65,62 @@ const TXT = {
     done: 'Stark! Den <b>Reihen-Trick</b> brauchst du ab jetzt öfter – halte immer Ausschau nach Farben, die nur in einer Reihe oder Spalte liegen.',
   },
 };
+// Missionen 3–6: dieselben Grundschritte, kurz – plus je ein neuer Trick
+const BASICS = {
+  hold_reg: ['Diese <b>Farbe</b> hat nur noch <b>einen</b> Keks – <b>halte ihn gedrückt!</b>', 'Nur noch <b>ein</b> Keks in dieser Farbe – <b>halten!</b>'],
+  pop_touch: ['Rund um den Leuchter darf keiner leuchten – auch <b>schräg</b> nicht. <b>Wisch</b> die Nachbarn weg!', 'Wieder die <b>Nachbarn</b> – weg damit!'],
+  pop_known: ['<b>Reihe</b>, <b>Spalte</b> und <b>Farbe</b> des Leuchters sind besetzt – <b>wisch</b> die anderen dort weg!', 'Und wieder: <b>Reihe</b>, <b>Spalte</b>, <b>Farbe</b> weg!'],
+  hold_row: ['In dieser <b>Reihe</b> ist nur noch <b>ein</b> Keks übrig – <b>halte ihn!</b>'],
+  hold_col: ['In dieser <b>Spalte</b> ist nur noch <b>ein</b> Keks übrig – <b>halte ihn!</b>'],
+  pop_claim_row: ['<b>Reihen-Trick:</b> Die goldene Farbe liegt nur in <b>dieser Reihe</b> – die Reihe gehört ihr. Die <b>anderen</b> dort können weg!'],
+  pop_claim_col: ['<b>Reihen-Trick:</b> Die goldene Farbe liegt nur in <b>dieser Spalte</b> – die Spalte gehört ihr. Die <b>anderen</b> dort können weg!'],
+  pop_shared: ['<b>Kreuzfeuer:</b> Jeder Keks der goldenen Farbe würde die markierten blockieren – <b>weg damit!</b>'],
+  pop_pair_row: ['<b>Doppel-Trick:</b> Zwei goldene Farben, nur <b>zwei Reihen</b> – die gehören ihnen. Rest dort <b>weg!</b>'],
+  pop_pair_col: ['<b>Doppel-Trick:</b> Zwei goldene Farben, nur <b>zwei Spalten</b> – die gehören ihnen. Rest dort <b>weg!</b>'],
+};
+const whatif = what => ['Was wäre, wenn <b>dieser</b> Keks leuchtet? Er würde alle Kekse ' + what + ' blockieren – dann gäbe es dort <b>keinen</b> Leuchter. Also: <b>weg damit!</b>',
+  '<b>Was wäre wenn?</b> Dieser Keks würde ' + what + ' alles nehmen – <b>weg!</b>'];
+Object.assign(TXT, {
+  // Mission 3: der ganze Lösungsweg in vier Schritten (Einzel-Keks → ausräumen → Reihen-Trick → letzter Keks)
+  recap: { ...BASICS,
+    intro: ['Mission 3: Jetzt zeig ich dir den <b>ganzen Lösungsweg</b>. So gehst du ab jetzt jedes Level an!',
+      '<b>1.</b> Einzel-Keks halten. <b>2.</b> Alles wegwischen, was er blockiert. <b>3.</b> Reihen-Trick. <b>4.</b> Letzten Keks halten.'],
+    hold_reg: ['<b>Schritt 1:</b> Such den <b>Einzel-Keks</b> – diese Farbe hat nur <b>ein</b> Feld. Der <b>muss</b> leuchten: <b>halte ihn!</b>', '<b>Letzter Keks</b> seiner Farbe – <b>halten!</b>'],
+    pop_touch: ['<b>Schritt 2:</b> Ausräumen! Erst die <b>Nachbarn</b> – auch die schrägen. <b>Weg damit!</b>', 'Wieder die <b>Nachbarn</b> – weg damit!'],
+    pop_known: ['Dann seine <b>Reihe</b>, <b>Spalte</b> und <b>Farbe</b> – da leuchtet sonst keiner. <b>Wegwischen!</b>', 'Und wieder: <b>Reihe</b>, <b>Spalte</b>, <b>Farbe</b> weg!'],
+    pop_claim_row: ['<b>Schritt 3:</b> Kein Einzel-Keks mehr? Die goldene Farbe liegt nur in <b>einer Reihe</b> – die gehört ihr. Rest dort <b>weg!</b>'],
+    pop_claim_col: ['<b>Schritt 3:</b> Kein Einzel-Keks mehr? Die goldene Farbe liegt nur in <b>einer Spalte</b> – die gehört ihr. Rest dort <b>weg!</b>'],
+    hold_row: ['<b>Schritt 4:</b> In dieser <b>Reihe</b> ist nur noch <b>ein</b> Keks übrig – <b>halte ihn!</b>'],
+    hold_col: ['<b>Schritt 4:</b> In dieser <b>Spalte</b> ist nur noch <b>ein</b> Keks übrig – <b>halte ihn!</b>'],
+    done: 'Super! Das ist der Weg: <b>Einzel-Keks → ausräumen → Reihen-Trick → letzter Keks</b>.',
+  },
+  // Mission 4: Kreuzfeuer – was ALLE Kekse einer Farbe blockieren, kann weg
+  shared: { ...BASICS,
+    intro: ['Mission 4: das <b>Kreuzfeuer</b>! Du kannst Kekse wegwischen, auch wenn du noch nicht weißt, wo der Leuchter sitzt.'],
+    pop_shared: ['Die <b>goldene</b> Farbe bekommt sicher einen Leuchter – und <b>jeder</b> ihrer Kekse würde die markierten blockieren. Also: <b>weg damit!</b>',
+      'Wieder <b>Kreuzfeuer</b>: Alle goldenen Kekse blockieren die markierten – <b>wegwischen!</b>'],
+    hold_reg: ['Siehst du? Jetzt hat diese Farbe nur noch <b>einen</b> Keks – <b>halte ihn!</b>', 'Nur noch <b>ein</b> Keks in dieser Farbe – <b>halten!</b>'],
+    done: 'Stark! <b>Kreuzfeuer:</b> Was <b>alle</b> Kekse einer Farbe blockieren, kann immer weg.',
+  },
+  // Mission 5: Doppel-Trick – zwei Farben in denselben zwei Reihen (Spalten)
+  pair: { ...BASICS,
+    intro: ['Mission 5: der <b>Doppel-Trick</b> – wie der Reihen-Trick, nur mit <b>zwei</b> Farben und <b>zwei</b> Reihen.'],
+    pop_pair_row: ['Die zwei <b>goldenen</b> Farben liegen nur in <b>diesen zwei Reihen</b>. Zwei Farben = zwei Leuchter – beide Reihen sind voll. Rest dort: <b>weg!</b>',
+      'Wieder <b>zwei Farben in zwei Reihen</b> – die anderen dort können weg!'],
+    pop_pair_col: ['Die zwei <b>goldenen</b> Farben liegen nur in <b>diesen zwei Spalten</b>. Zwei Farben = zwei Leuchter – beide Spalten sind voll. Rest dort: <b>weg!</b>',
+      'Wieder <b>zwei Farben in zwei Spalten</b> – die anderen dort können weg!'],
+    hold_reg: ['Siehst du? Jetzt hat diese Farbe nur noch <b>einen</b> Keks – <b>halte ihn!</b>', 'Nur noch <b>ein</b> Keks in dieser Farbe – <b>halten!</b>'],
+    done: 'Klasse! Zwei Farben in <b>zwei Reihen</b> (oder Spalten)? Dann gehören die nur ihnen.',
+  },
+  // Mission 6: Was wäre wenn – ein Keks, der eine ganze Farbe/Reihe/Spalte auslöschen würde, kann weg
+  whatif: { ...BASICS,
+    intro: ['Letzte Mission: <b>Was wäre wenn?</b> Stell dir vor, ein Keks leuchtet – und schau, was dann übrig bliebe.', 'Erst räumen wir mit den bekannten Tricks auf. Folge der Hand!'],
+    pop_whatif_row: whatif('der <b>goldenen Reihe</b>'), pop_whatif_col: whatif('der <b>goldenen Spalte</b>'), pop_whatif_reg: whatif('der <b>goldenen Farbe</b>'),
+    done: 'Geschafft – du kennst jetzt <b>alle Tricks</b>! Ab jetzt löst du allein.',
+  },
+});
+// Kicker über der Sprechblase
+const KICK = { touch: 'Anleitung', claim: 'Profi-Trick', recap: 'Lösungsweg', shared: 'Kreuzfeuer', pair: 'Doppel-Trick', whatif: 'Was wäre wenn' };
 const FALLBACK = 'Halte den Keks, auf den ich zeige.';
 const OUCH = 'Autsch! Der durfte nicht – das kostet ein <b>Herz</b>. Folge der Hand!';
 
@@ -106,14 +162,17 @@ export function createTutorial({ stage, board, getS }) {
       if (st.hearts) { const h = document.getElementById('hearts').getBoundingClientRect(); const m = document.createElement('i'); m.className = 'sd-tut-mark is-hearts'; Object.assign(m.style, { left: `${h.left - sr.left + h.width / 2}px`, top: `${h.top - sr.top + h.height / 2}px`, width: `${h.width + 18}px`, height: `${h.height + 14}px` }); layer.append(m); }
       return;
     }
-    if (st.rule === 'claim') {
-      // the line this colour claims (band) and the colour's own squishes (gold): the reason for the wipe
-      const N = run.L.N, ends = st.line.kind === 'row' ? [[st.line.idx, 0], [st.line.idx, N - 1]] : [[0, st.line.idx], [N - 1, st.line.idx]];
+    // the reason for the wipe: the line(s) a colour claims (band) and the squishes that force it (gold)
+    const N = run.L.N, bandOf = (kind, idx) => {
+      const ends = kind === 'row' ? [[idx, 0], [idx, N - 1]] : [[0, idx], [N - 1, idx]];
       const a = at(ends[0]), b = at(ends[1]), band = document.createElement('i'); band.className = 'sd-tut-mark is-band';
       Object.assign(band.style, { left: `${(a.x + b.x) / 2}px`, top: `${(a.y + b.y) / 2}px`, width: `${Math.hypot(b.x - a.x, b.y - a.y) + (a.s + b.s) / 2 * 1.15}px`, height: `${(a.s + b.s) / 2 * 1.2}px`, transform: `translate(-50%,-50%) rotate(${Math.atan2(b.y - a.y, b.x - a.x)}rad)` });
       layer.append(band);
-      for (const cell of st.area) { const p = at(cell), m = document.createElement('i'); m.className = 'sd-tut-mark is-claim'; Object.assign(m.style, { left: `${p.x}px`, top: `${p.y}px`, width: `${p.s * 1.12}px`, height: `${p.s * 1.12}px` }); layer.append(m); }
-    }
+    };
+    if (st.line) bandOf(st.line.kind, st.line.idx);
+    if (st.lines) st.lines.idx.forEach(i => bandOf(st.lines.kind, i));
+    if (st.group && st.group.kind !== 'reg') bandOf(st.group.kind, st.group.idx);
+    if (st.area) for (const cell of st.area) { const p = at(cell), m = document.createElement('i'); m.className = 'sd-tut-mark is-claim'; Object.assign(m.style, { left: `${p.x}px`, top: `${p.y}px`, width: `${p.s * 1.12}px`, height: `${p.s * 1.12}px` }); layer.append(m); }
     const cells = st.type === 'hold' ? [st.cell] : st.cells;
     for (const cell of cells) { const p = at(cell), m = document.createElement('i'); m.className = 'sd-tut-mark ' + (st.type === 'hold' ? 'is-hold' : 'is-pop'); Object.assign(m.style, { left: `${p.x}px`, top: `${p.y}px`, width: `${p.s * (st.type === 'hold' ? 1.35 : 1.05)}px`, height: `${p.s * (st.type === 'hold' ? 1.35 : 1.05)}px` }); layer.append(m); }
     const pts = (st.type === 'hold' ? [st.cell] : st.path).map(at); hand.classList.add('is-on');
@@ -135,7 +194,7 @@ export function createTutorial({ stage, board, getS }) {
     const L = run.L, intros = TXT[L.guide].intro;
     let st, key;
     if (run.intro < intros.length) { st = { type: 'intro', hearts: L.guide === 'touch' && run.intro === 1 }; key = 'intro'; }
-    else { st = T.nextStep(L, S.state, opts(L)); if (st.type === 'pop') st.path = strokes(st.cells, st.from)[0]; key = st.type === 'pop' ? 'pop_' + st.rule + (st.line ? '_' + st.line.kind : '') : st.type === 'hold' ? 'hold_' + st.kind : st.type; }
+    else { st = T.nextStep(L, S.state, opts(L)); if (st.type === 'pop') st.path = strokes(st.cells, st.from)[0]; const sub = st.line?.kind || st.lines?.kind || st.group?.kind; key = st.type === 'pop' ? 'pop_' + st.rule + (sub ? '_' + sub : '') : st.type === 'hold' ? 'hold_' + st.kind : st.type; }
     const sig = JSON.stringify(st) + run.intro;
     if (sig === run.sig && !force) return;
     // a finished step counts once, so the next one of the same kind gets the shorter text
@@ -156,7 +215,7 @@ export function createTutorial({ stage, board, getS }) {
     get step() { return run?.step || null; },
     start(S) {
       run = { S, L: S.L, intro: 0, count: {}, sig: '', key: '' };
-      kicker.textContent = S.L.guide === 'claim' ? 'Mission 2 · Profi-Trick' : 'Mission 1 · Anleitung';
+      kicker.textContent = `Mission ${S.L.id} · ${KICK[S.L.guide] || 'Anleitung'}`;
       stage.classList.add('is-tut'); bubble.hidden = false; layer.hidden = false; update(true);
     },
     stop() { run = null; clearMarks(); stage.classList.remove('is-tut'); bubble.hidden = true; layer.hidden = true; },

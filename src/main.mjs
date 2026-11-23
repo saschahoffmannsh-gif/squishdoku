@@ -11,7 +11,7 @@ import {I as NI} from './icons.mjs';
 import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=launch-26';
 import {createAdPacing} from '../vendor/squish-attack/game/ad-pacing.mjs';
 import {createAdUI,AD_ICON_SVG} from './ad-ui.mjs';
-import {createRulesBar,createTutorial} from './tutorial-ui.mjs';
+import {createRulesBar,createTutorial} from './tutorial-ui.mjs?v=ck8';
 import * as P from './progress.mjs';
 const {starsFor,targetMs,fmtTime,HEARTS}=P;
 
@@ -25,6 +25,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 // v2 (missions): the separate tutorial is gone. Old saves: old L1–2 dropped, old L3 → L1, old L4–10 → L3–9,
 // L11+ unchanged (tools/missions.js). New L2 and L10 just appear unlocked if you were past them.
 const mapOldId=id=>id<=2?0:id===3?1:id<=10?id-1:id;
+const mapV4=id=>({4:7,5:8,6:4,7:5,8:6})[id]||id;
 // v3 (daily / stars+time / settings): adds times:{id:ms}, daily:{done,streak,best,last}, settings:{vibration}.
 // Stars from v2 (= hearts left) stay as the best stars of each level; best times start empty.
 function migrate(d){
@@ -34,9 +35,17 @@ function migrate(d){
     d={...d,v:2,stars:remap(d.stars),revealed:remap(d.revealed),unlocked:u<=3?1:u<=10?u-1:u};
   }
   if(d.v<3)d={...d,v:3,times:d.times||{}};
+  // v4 (strategy missions 3–6): old L4 → L7, L5 → L8; stars of the dropped old L6–8 go to missions 4–6
+  // (same spot in the list), their best times are dropped (different puzzles); L9+ unchanged
+  if(d.v<4){
+    const mv=o=>{const n={};for(const [k,v] of Object.entries(o||{}))n[mapV4(+k)]=v;return n;};
+    const t={};for(const [k,v] of Object.entries(d.times||{})){const o=+k;if(o<6||o>8)t[mapV4(o)]=v;}
+    const u=+d.unlocked||1;
+    d={...d,v:4,stars:mv(d.stars),revealed:mv(d.revealed),times:t,unlocked:u<=3?u:u<=5?mapV4(u):u<=8?9:u};
+  }
   return d;
 }
-const baseStore=()=>({v:3,unlocked:1,stars:{},times:{},seenRules:false,revealed:{},rulesCollapsed:false,daily:{done:{},streak:0,best:0,last:null},settings:{vibration:true,showTime:true}});
+const baseStore=()=>({v:4,unlocked:1,stars:{},times:{},seenRules:false,revealed:{},rulesCollapsed:false,daily:{done:{},streak:0,best:0,last:null},settings:{vibration:true,showTime:true}});
 function load(){
   const base=baseStore();
   try{const raw=localStorage.getItem(STORE);if(!raw)return base;const o=JSON.parse(raw),d=migrate(o);
@@ -111,7 +120,7 @@ addEventListener('scroll',()=>{if(scrollX||scrollY)scrollTo(0,0);},{passive:true
 fitViewport();
 
 // ---------- Level ----------
-const levels=await (await fetch('src/levels.json')).json();
+const levels=await (await fetch('src/levels.json?v=ck8')).json();
 if(TUBE){store.unlocked=levels.length;} // Vorschau: alle Level offen
 const HINTS=[
   'Halte einen Keks kurz <b>gedrückt</b> – richtig gewählt, <b>leuchtet</b> er!',
@@ -122,7 +131,7 @@ const HINTS=[
 ];
 // Meilenstein-Tipps für die 50er-Rampe; dazwischen wechseln die Grundregeln
 const MILESTONES={
-  3:'Jetzt allein: Jedes Level hier hat einen <b>Einzel-Keks</b> – eine Farbe aus nur einem Feld. Fang dort an!',
+  7:'Jetzt allein! Wie in Mission 3: <b>Einzel-Keks</b> halten, ausräumen, Reihen-Trick, letzter Keks.',
   11:'Ab jetzt gibt es <b>kein Einzelfeld</b> mehr: Such eine kleine Farbe, die nur in <b>einer Reihe</b> liegt.',
   15:'Neu: <b>6×6</b>! Liegt eine Farbe nur in einer Spalte, gehört diese Spalte ihr.',
   21:'Prüf auch: Würde ein Keks hier eine Farbe <b>komplett blockieren</b>? Dann kann er nicht leuchten.',
@@ -131,6 +140,9 @@ const MILESTONES={
   41:'Neu: <b>8×8</b> mit acht Farben. Du schaffst das – Schritt für Schritt!',
   50:'Das letzte Level – zeig, was du gelernt hast!',
 };
+// Missionen 1–6: je ein Lösungs-Trick (tools/missions.js)
+const MISSION_SUB={touch:'Halten, ploppen, nicht berühren',claim:'Reihen-Trick: Farben abhaken',recap:'Der ganze Lösungsweg',shared:'Kreuzfeuer: was alle blockieren',pair:'Doppel-Trick: 2 Farben, 2 Reihen',whatif:'Was wäre wenn?'};
+const MISSION_WIN={touch:'Mission 1 geschafft – du kennst jetzt alle Regeln!',claim:'Mission 2 geschafft – den Reihen-Trick brauchst du ab jetzt öfter!',recap:'Mission 3 geschafft – so löst du jedes Level!',shared:'Mission 4 geschafft – Kreuzfeuer sitzt!',pair:'Mission 5 geschafft – der Doppel-Trick hilft bei großen Brettern!',whatif:'Alle Missionen geschafft – du kennst jetzt jeden Trick!'};
 const DAILY_HINTS=['Tagesrätsel: Heute für alle gleich – schaffst du es <b>ohne Fehler</b>?','Jeden Tag ein neues Rätsel. Halte deine <b>Serie</b> am Leben!','Kein Raten nötig: Alles lässt sich <b>logisch</b> lösen.'];
 const hintFor=id=>typeof id!=='number'?DAILY_HINTS[(SquishDaily.dayNum(S?.L?.daily||todayKey()))%DAILY_HINTS.length]:MILESTONES[id]||HINTS[id-1]||HINTS[2+(id%3)];
 
@@ -324,7 +336,7 @@ function rulesScreen(){
   const T=P.TARGET_S,tips=el('div','nn-grp nn-pad nn-tips',`<h3>Sterne &amp; Zeit</h3><p><b>3 Sterne:</b> ohne Fehler und unter der Zielzeit (5×5 ${fmtTime(T[5]*1000)}, 6×6 ${fmtTime(T[6]*1000)}, 7×7 ${fmtTime(T[7]*1000)}, 8×8 ${fmtTime(T[8]*1000)}).</p><p><b>Rückgängig</b> nimmt Züge zurück – verlorene Herzen bleiben weg.</p><p><b>Tagesrätsel:</b> Jeden Tag eins, für alle gleich. Löse es täglich für deine Serie.</p>`);
   const ms=el('div','nn-grp nn-missions');
   for(const l of levels.filter(x=>x.guide)){
-    const open=l.id<=store.unlocked,r=el('button','nn-row'+(open?'':' is-locked'),`<span class="nn-ic" style="--c:#ffcf5a;--b:#ffcf5a26">${open?NI.play():NI.lock()}</span><span class="nn-row-t">Mission ${l.id} spielen<small>${l.guide==='touch'?'Halten, ploppen, nicht berühren':'Reihen-Trick: Farben abhaken'}</small></span><small aria-hidden="true">›</small>`);
+    const open=l.id<=store.unlocked,r=el('button','nn-row'+(open?'':' is-locked'),`<span class="nn-ic" style="--c:#ffcf5a;--b:#ffcf5a26">${open?NI.play():NI.lock()}</span><span class="nn-row-t">Mission ${l.id} spielen<small>${MISSION_SUB[l.guide]||''}</small></span><small aria-hidden="true">›</small>`);
     r.type='button';r.disabled=!open;r.addEventListener('click',()=>{tap();startLevel(l.id);});ms.append(r);
   }
   const wrap=el('div','nn-scroll');wrap.append(card,tips,ms);
@@ -654,7 +666,7 @@ async function win(){
   items.push(tm);
   if(daily)items.push(streakBox(curStreak(),store.daily.best||0,dailyRes.grew));
   const p=document.createElement('p');p.className='sd-center';
-  p.innerHTML=L.guide==='touch'?'Mission 1 geschafft – du kennst jetzt alle Regeln!':L.guide==='claim'?'Mission 2 geschafft – den Reihen-Trick brauchst du ab jetzt öfter!':last?`Alle ${levels.length} Level gelöst – du bist ein SquishDoku-Profi!`
+  p.innerHTML=L.guide?MISSION_WIN[L.guide]:last?`Alle ${levels.length} Level gelöst – du bist ein SquishDoku-Profi!`
     :stars===3?(daily?'Perfekt – ohne Fehler und flott! Morgen wartet das nächste.':`Level ${id}: perfekt – ohne Fehler und flott!`)
     :`${daily?'Gelöst!':`Level ${id} gelöst.`} Für 3 Sterne: ${P.missingFor3(L,S.hearts,ms)}.`;
   items.push(p);

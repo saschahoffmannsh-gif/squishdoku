@@ -65,7 +65,7 @@ async function run(vp) {
   await p.evaluate(() => localStorage.setItem('squishdoku-v1', JSON.stringify({ v: 2, unlocked: 6, stars: { 1: 3, 2: 3, 3: 2, 4: 1, 5: 3 }, revealed: { 5: 2 }, seenRules: true, rulesCollapsed: true })));
   await p.reload(); await ready();
   const mig = await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-v1')));
-  ok(mig.v === 3 && mig.unlocked === 6 && JSON.stringify(mig.stars) === JSON.stringify({ 1: 3, 2: 3, 3: 2, 4: 1, 5: 3 }) && mig.revealed[5] === 2 && mig.rulesCollapsed === true, 'v2 save migrated to v3 without losing stars/unlock/reveals');
+  ok(mig.v === 4 && mig.unlocked === 9 && JSON.stringify(mig.stars) === JSON.stringify({ 1: 3, 2: 3, 3: 2, 7: 1, 8: 3 }) && mig.revealed[8] === 2 && mig.rulesCollapsed === true, `v2 save migrated to v4 without losing stars/unlock/reveals (old L4-5 → L7-8) ${JSON.stringify(mig.stars)}`);
   ok(JSON.stringify(mig.times) === '{}' && mig.daily && mig.daily.streak === 0 && JSON.stringify(mig.daily.done) === '{}' && mig.settings.vibration === true, 'v3 adds times, daily (streak 0) and settings (vibration on)');
   ok((await p.textContent('#home-stars')) === '12/150' && (await p.textContent('#home-stars b')) === '12', 'total stars shown in the top pill (12/150)');
 
@@ -148,7 +148,7 @@ async function run(vp) {
   const th = await p.evaluate(() => { const f = (N, h, s) => SquishDoku.starsFor({ N }, h, s * 1000), g = (h) => SquishDoku.starsFor({ N: 5, guide: 'touch' }, h, 999999);
     return [f(5, 3, 59), f(5, 3, 61), f(5, 2, 100), f(5, 2, 121), f(5, 1, 30), f(7, 3, 119), f(7, 3, 500), f(8, 2, 299), f(8, 2, 301), g(3), g(2), g(1)].join(''); });
   ok(th === '322113221321', `star thresholds (${th})`);
-  await p.evaluate(() => SquishDoku.startLevel(5)); await waitFor(() => SquishDoku.state?.id === 5 && document.getElementById('veil').hidden); await waitFor(() => SquishDoku.state.ms > 600, null, 20000);
+  await p.evaluate(() => SquishDoku.startLevel(8)); await waitFor(() => SquishDoku.state?.id === 8 && document.getElementById('veil').hidden); await waitFor(() => SquishDoku.state.ms > 600, null, 20000);
   const t1 = await p.evaluate(() => SquishDoku.state.ms);
   ok(t1 > 600, `timer runs while playing (${Math.round(t1)} ms)`);
   ok(/^\d:\d\d$/.test(await p.textContent('#timer-text')), 'timer shown in the HUD (m:ss)');
@@ -172,22 +172,22 @@ async function run(vp) {
   await shot('05-hud');
   await solveRest(); await waitFor(() => document.getElementById('dialog').dataset.kind === 'win' && !document.getElementById('veil').hidden); await sleep(1800);
   const w1 = await p.evaluate(() => ({ on: document.querySelectorAll('.sd-stars i.on').length, time: document.getElementById('win-time')?.textContent, times: SquishDoku.store.times, stars: SquishDoku.store.stars }));
-  ok(w1.on === 3 && /\d:\d\d/.test(w1.time) && w1.times[5] > 0 && w1.stars[5] === 3, `fast, no mistakes → 3 animated stars, time on the win screen (${w1.time})`);
+  ok(w1.on === 3 && /\d:\d\d/.test(w1.time) && w1.times[8] > 0 && w1.stars[8] === 3, `fast, no mistakes → 3 animated stars, time on the win screen (${w1.time})`);
   ok(!(await tooBig()), 'level win dialog fits the screen');
   await shot('06-win');
   // slow replay: 2 stars, best (3 stars + time) kept
-  await tapEl('#btn-again'); await waitFor(() => SquishDoku.state?.id === 5 && !SquishDoku.state.locked && document.getElementById('veil').hidden); await sleep(400);
+  await tapEl('#btn-again'); await waitFor(() => SquishDoku.state?.id === 8 && !SquishDoku.state.locked && document.getElementById('veil').hidden); await sleep(400);
   await p.evaluate(() => { SquishDoku.state.ms = 10 * 60 * 1000; }); await solveRest(); await waitFor(() => document.getElementById('dialog').dataset.kind === 'win' && !document.getElementById('veil').hidden); await sleep(1800);
-  const w2 = await p.evaluate(() => ({ on: document.querySelectorAll('.sd-stars i.on').length, txt: document.getElementById('dialog').textContent, t: SquishDoku.store.times[5], s: SquishDoku.store.stars[5] }));
-  ok(w2.on === 2 && w2.s === 3 && w2.t === w1.times[5] && w2.txt.includes('Bestzeit') && w2.txt.includes('Für 3 Sterne') && w2.txt.includes('unter 1:00'), `slow replay → 2 stars, best stars + best time kept, tells you how to get 3 (${JSON.stringify({ ...w2, txt: w2.txt.slice(0, 160), dlg: await dialog(), s: await st().then(x => ({ id: x.id, glow: x.glow, locked: x.locked, ms: x.ms })) })})`);
+  const w2 = await p.evaluate(() => ({ on: document.querySelectorAll('.sd-stars i.on').length, txt: document.getElementById('dialog').textContent, t: SquishDoku.store.times[8], s: SquishDoku.store.stars[8] }));
+  ok(w2.on === 2 && w2.s === 3 && w2.t === w1.times[8] && w2.txt.includes('Bestzeit') && w2.txt.includes('Für 3 Sterne') && w2.txt.includes('unter 1:00'), `slow replay → 2 stars, best stars + best time kept, tells you how to get 3 (${JSON.stringify({ ...w2, txt: w2.txt.slice(0, 160), dlg: await dialog(), s: await st().then(x => ({ id: x.id, glow: x.glow, locked: x.locked, ms: x.ms })) })})`);
   // faster replay → new best time
-  await tapEl('#btn-again'); await waitFor(() => SquishDoku.state?.id === 5 && !SquishDoku.state.locked && document.getElementById('veil').hidden); await sleep(200);
+  await tapEl('#btn-again'); await waitFor(() => SquishDoku.state?.id === 8 && !SquishDoku.state.locked && document.getElementById('veil').hidden); await sleep(200);
   await solveRest(); await waitFor(() => document.getElementById('dialog').dataset.kind === 'win' && !document.getElementById('veil').hidden); await sleep(1500);
-  const w3 = await p.evaluate(() => ({ txt: document.getElementById('dialog').textContent, t: SquishDoku.store.times[5] }));
-  ok(w3.t < w1.times[5] && w3.txt.includes('Neue Bestzeit'), `faster replay → "Neue Bestzeit!" (${w3.t} ms < ${w1.times[5]} ms)`);
+  const w3 = await p.evaluate(() => ({ txt: document.getElementById('dialog').textContent, t: SquishDoku.store.times[8] }));
+  ok(w3.t < w1.times[8] && w3.txt.includes('Neue Bestzeit'), `faster replay → "Neue Bestzeit!" (${w3.t} ms < ${w1.times[8]} ms)`);
   await shot('07-newbest');
   await tapEl('#btn-to-levels'); await sleep(900);
-  const tiles = await p.evaluate(() => ({ l5: document.querySelectorAll('[data-level="5"] .nn-ts i.on').length, l4: document.querySelectorAll('[data-level="4"] .nn-ts i.on').length, aria: document.querySelector('[data-level="5"]').getAttribute('aria-label'), time: document.querySelector('[data-level="5"] small').textContent, perfect: document.querySelector('[data-level="5"]').classList.contains('is-perfect'), prog: document.getElementById('home-stars').textContent }));
+  const tiles = await p.evaluate(() => ({ l5: document.querySelectorAll('[data-level="8"] .nn-ts i.on').length, l4: document.querySelectorAll('[data-level="7"] .nn-ts i.on').length, aria: document.querySelector('[data-level="8"]').getAttribute('aria-label'), time: document.querySelector('[data-level="8"] small').textContent, perfect: document.querySelector('[data-level="8"]').classList.contains('is-perfect'), prog: document.getElementById('home-stars').textContent }));
   ok(tiles.l5 === 3 && tiles.l4 === 1 && tiles.aria.includes('Bestzeit') && /^\d:\d\d$/.test(tiles.time) && tiles.perfect, `level tiles show best stars, best time (${tiles.time}) and the 3-star dot`);
   ok(tiles.prog === '12/150', `levels header shows the total star count (${tiles.prog})`);
   ok(await p.evaluate(() => { const sc = document.querySelector('.nn-lv-scroll'), t = sc.querySelector('.nn-tile.is-current') || sc.querySelector('.nn-tile:not(.is-locked):last-of-type'), a = sc.getBoundingClientRect(), r = t.getBoundingClientRect(); return r.top >= a.top && r.bottom <= a.bottom; }), 'levels open scrolled to the current level');
@@ -196,7 +196,7 @@ async function run(vp) {
 
   // ---------- 4. Rückgängig ----------
   console.log('Rückgängig');
-  await p.evaluate(() => SquishDoku.startLevel(6)); await waitFor(() => SquishDoku.state?.id === 6 && document.getElementById('veil').hidden); await sleep(700);
+  await p.evaluate(() => SquishDoku.startLevel(9)); await waitFor(() => SquishDoku.state?.id === 9 && document.getElementById('veil').hidden); await sleep(700);
   ok(await p.evaluate(() => document.getElementById('btn-undo').disabled), 'undo disabled at the start (nothing to undo)');
   s = await st();
   await hold(0, s.sol[0]); s = await st();
@@ -234,7 +234,7 @@ async function run(vp) {
 
   // ---------- 5. Vibration ----------
   console.log('Vibration');
-  await p.evaluate(() => SquishDoku.startLevel(7)); await waitFor(() => SquishDoku.state?.id === 7 && document.getElementById('veil').hidden); await sleep(700);
+  await p.evaluate(() => SquishDoku.startLevel(10)); await waitFor(() => SquishDoku.state?.id === 10 && document.getElementById('veil').hidden); await sleep(700);
   const P = await p.evaluate(() => SquishDoku.haptics.PATTERNS);
   const vib = async fn => { await p.evaluate(() => { window.__vib = []; }); await fn(); await sleep(700); return p.evaluate(() => window.__vib); };
   s = await st();
@@ -255,7 +255,7 @@ async function run(vp) {
   ok(tbr.every(r => r && r.top >= 0 && r.bottom <= vp.height) && !tbr.some((a, i) => tbr.some((b, j) => j > i && overlap(a, b))), 'sheet: chips + all rows inside the screen, nothing overlaps');
   await tapEl('#vibe-toggle'); await sleep(300);
   ok(await p.evaluate(() => document.getElementById('vibe-toggle').getAttribute('aria-pressed') === 'false' && JSON.parse(localStorage.getItem('squishdoku-v1')).settings.vibration === false), 'toggle off → saved');
-  await p.evaluate(() => SquishDoku.startLevel(8)); await waitFor(() => SquishDoku.state?.id === 8 && document.getElementById('veil').hidden); await sleep(600);
+  await p.evaluate(() => SquishDoku.startLevel(11)); await waitFor(() => SquishDoku.state?.id === 11 && document.getElementById('veil').hidden); await sleep(600);
   s = await st();
   v = await vib(async () => { await hold(0, s.sol[0]); await hold(1, [0, 1, 2, 3, 4, 5, 6].find(c => c !== s.sol[1])); });
   ok(v.length === 0, `vibration off → no vibration at all (${v.length})`);
@@ -272,11 +272,11 @@ async function run(vp) {
   ok(await p.evaluate(() => document.getElementById('time-toggle').getAttribute('aria-pressed') === 'false' && JSON.parse(localStorage.getItem('squishdoku-v1')).settings.showTime === false), '"Zeit anzeigen" off → saved');
   await tapEl('#sheet-close'); await sleep(400);
   ok(await p.evaluate(() => document.getElementById('sheet-veil').hidden), 'sheet closes (✕)');
-  await p.evaluate(() => SquishDoku.startLevel(6)); await waitFor(() => SquishDoku.state?.id === 6 && !SquishDoku.state.locked && document.getElementById('veil').hidden); await sleep(1500);
+  await p.evaluate(() => SquishDoku.startLevel(9)); await waitFor(() => SquishDoku.state?.id === 9 && !SquishDoku.state.locked && document.getElementById('veil').hidden); await sleep(1500);
   ok(await p.evaluate(() => getComputedStyle(document.getElementById('timer')).display === 'none' && SquishDoku.state.ms > 500), 'timer hidden in the HUD, time still counts (for stars)');
   await p.evaluate(() => SquishDoku.showHome('home')); await sleep(300);
   await tapEl('#tab-settings'); await sheetReady(); await tapEl('#time-toggle'); await sleep(200); await tapEl('#sheet-close'); await sleep(400);
-  await p.evaluate(() => SquishDoku.startLevel(6)); await waitFor(() => SquishDoku.state?.id === 6 && document.getElementById('veil').hidden); await sleep(500);
+  await p.evaluate(() => SquishDoku.startLevel(9)); await waitFor(() => SquishDoku.state?.id === 9 && document.getElementById('veil').hidden); await sleep(500);
   ok(await p.evaluate(() => getComputedStyle(document.getElementById('timer')).display !== 'none'), 'switched on again → timer back');
   await p.evaluate(() => SquishDoku.showHome('home')); await sleep(300);
   await tapEl('#tab-stats'); await sleep(600);
