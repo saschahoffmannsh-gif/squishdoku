@@ -6,6 +6,7 @@ const LOOK=window.SD_LOOK||'squish',TUBE=LOOK==='tube';
 const createBoard3D=TUBE?(await import('./tube3d.mjs')).createTubeBoard:createSquishBoard;
 import {createGameSound} from '../vendor/squish-attack/game/sound.mjs?v=launch-26';
 import {createSdHaptics} from './haptics.mjs';
+import {createCrumbleSound} from './crumble-sound.mjs?v=ck8';
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
 import {I as NI} from './icons.mjs';
 import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=launch-26';
@@ -62,8 +63,10 @@ const soundProxy=document.createElement('button');soundProxy.hidden=true;documen
 const sound=createGameSound(soundProxy);
 const haptics=createSdHaptics({isEnabled:()=>store.settings?.vibration!==false});
 const confetti=createConfetti();
-const POP_DETUNE=[1,1.1,.95,1.15,.9,1.05,.85]; // each pop of a swipe sounds a little different
 const sfx=(kind,...a)=>{try{sound.play(kind,...a);}catch{}};
+// Zerbröseln: nur ein leises Rieseln (kein Plopp), folgt dem Ton-Schalter; startet mit der ersten Berührung
+const crumble=createCrumbleSound({isOn:()=>{try{return sound.enabled;}catch{return false;}}});
+document.addEventListener('pointerdown',()=>crumble.unlock(),{capture:true});
 const buzz=k=>{try{haptics.pulse(k);}catch{}};
 
 // ---------- Icons ----------
@@ -431,7 +434,7 @@ function placePlate(){if(!board||game.hidden||!$('plate'))return;const r=board.f
 
 // ---------- Werbung (wie Squish Attack: ad-pacing + native-ads; im Browser Dummy) ----------
 const adPacing=createAdPacing();
-const adUI=createAdUI({sound,haptics,onAdStart:()=>{try{sound.pause();}catch{}},onAdEnd:()=>{try{sound.resume();}catch{}}});
+const adUI=createAdUI({sound,haptics,onAdStart:()=>{try{sound.pause();crumble.stop();}catch{}},onAdEnd:()=>{try{sound.resume();}catch{}}});
 let starting=false;
 // Zwischenwerbung nur zwischen zwei Leveln: fällig nach jedem 5. Sieg, gezeigt beim Start des nächsten Levels.
 // Das Tagesrätsel läuft im selben Takt wie ein normales Level (Sieg zählt, Zwischenwerbung nur beim Start).
@@ -571,8 +574,8 @@ function swipeCell(r,c,stroke){
   // wobble -> swell -> pop (the pop sound and buzz land on the actual burst)
   if(S.state[r][c]!=='normal')return;S.state[r][c]='popped';tut.changed();
   (stroke.step||=pushStep({t:'pop',cells:[]})).cells.push([r,c]); // the whole swipe is one undo step
-  sfx('squish');buzz('tap');
-  board.popSequence(r,c,{onPop:i=>{if(TUBE)sfx('land');else sfx('pop',1,{detune:POP_DETUNE[i%POP_DETUNE.length]});buzz('pop');}});
+  if(TUBE)sfx('squish');buzz('tap');
+  board.popSequence(r,c,{onPop:()=>{if(TUBE)sfx('land');else crumble.play();buzz('pop');}});
 }
 function holdFire(r,c){
   const st=S.state[r][c];
@@ -699,7 +702,7 @@ $('btn-back').addEventListener('click',()=>{tap();tut?.stop();showHome(S?.L?.dai
 $('btn-reset').addEventListener('click',()=>{tap();restart();});
 
 // ---------- Test-/Debug-Zugriff ----------
-window.SquishDoku={act:{hold:(r,c)=>holdFire(r,c),swipe:(r,c)=>swipeCell(r,c,{wrong:new Set(),seen:new Set()}),tap:(r,c)=>{if(S.state[r][c]==='popped')restoreAt(r,c);}},adUI,adPacing,get tutorial(){return tut;},get rulesBar(){return rulesBar;},get state(){return S;},get board(){return board;},levels,startLevel,startDaily,dailyPuzzle,showHome,undo,starsFor,targetMs,haptics,get today(){return todayKey();},set today(v){todayOverride=v;},curStreak,get store(){return store;},get holdMs(){return HOLD_MS;},set holdMs(v){HOLD_MS=v;},TAP_MS,
+window.SquishDoku={crumble,act:{hold:(r,c)=>holdFire(r,c),swipe:(r,c)=>swipeCell(r,c,{wrong:new Set(),seen:new Set()}),tap:(r,c)=>{if(S.state[r][c]==='popped')restoreAt(r,c);}},adUI,adPacing,get tutorial(){return tut;},get rulesBar(){return rulesBar;},get state(){return S;},get board(){return board;},levels,startLevel,startDaily,dailyPuzzle,showHome,undo,starsFor,targetMs,haptics,get today(){return todayKey();},set today(v){todayOverride=v;},curStreak,get store(){return store;},get holdMs(){return HOLD_MS;},set holdMs(v){HOLD_MS=v;},TAP_MS,
   reset(){localStorage.removeItem(STORE);store=load();},reload(){store=load();}};
 const startAt=+new URLSearchParams(location.search).get('level');
 if(startAt>=1&&startAt<=levels.length)startLevel(startAt);else showHome('home');
