@@ -6,13 +6,13 @@ const LOOK=window.SD_LOOK||'squish',TUBE=LOOK==='tube';
 const createBoard3D=TUBE?(await import('./tube3d.mjs')).createTubeBoard:createSquishBoard;
 import {createGameSound} from '../vendor/squish-attack/game/sound.mjs?v=launch-26';
 import {createSdHaptics} from './haptics.mjs';
-import {createCrumbleSound} from './crumble-sound.mjs?v=ck8';
+import {createCrumbleSound} from './crumble-sound.mjs?v=ck9';
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
 import {I as NI} from './icons.mjs';
 import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=launch-26';
 import {createAdPacing} from '../vendor/squish-attack/game/ad-pacing.mjs';
 import {createAdUI,AD_ICON_SVG} from './ad-ui.mjs';
-import {createRulesBar,createTutorial} from './tutorial-ui.mjs?v=ck8';
+import {createRulesBar,createTutorial} from './tutorial-ui.mjs?v=ck9';
 import * as P from './progress.mjs';
 const {starsFor,targetMs,fmtTime,HEARTS}=P;
 
@@ -123,7 +123,7 @@ addEventListener('scroll',()=>{if(scrollX||scrollY)scrollTo(0,0);},{passive:true
 fitViewport();
 
 // ---------- Level ----------
-const levels=await (await fetch('src/levels.json?v=ck8')).json();
+const levels=await (await fetch('src/levels.json?v=ck9')).json();
 if(TUBE){store.unlocked=levels.length;} // Vorschau: alle Level offen
 const HINTS=[
   'Halte einen Keks kurz <b>gedrückt</b> – richtig gewählt, <b>leuchtet</b> er!',
