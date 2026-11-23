@@ -103,7 +103,7 @@ async function run(vp) {
   const dw = await p.evaluate(() => ({ txt: document.getElementById('dialog').textContent, stars: document.querySelectorAll('.sd-stars i.on').length, D: SquishDoku.store.daily, wins: SquishDoku.adPacing.wins }));
   ok(dw.txt.includes('5 Tage') && dw.txt.includes('in Folge') && dw.txt.includes('Rekord: 6'), 'win dialog shows the grown streak (5 Tage in Folge, Rekord 6)');
   ok(dw.D.streak === 5 && dw.D.last === '2026-11-23' && dw.D.best === 6 && dw.D.done['2026-11-23'] && dw.D.done['2026-11-23'].stars === 3, 'daily result + streak saved');
-  ok(dw.wins === winsBefore + 1, 'daily win counts once for the ad rhythm, like a level');
+  ok(dw.wins === winsBefore + 1, 'daily win counts once in the wins (it never makes an interstitial due itself – no level number)');
   ok(!(await tooBig()), 'daily win dialog fits the screen');
   await shot('02-daily-win');
   await tapEl('#btn-daily-ok'); await sleep(900);

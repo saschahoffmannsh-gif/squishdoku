@@ -37,6 +37,9 @@ async function run(vp, dpr) {
     await touch('touchEnd'); await sleep(200);
   }
   const st = () => p.evaluate(() => { const S = SquishDoku.state; return { id: S.id, N: S.N, hearts: S.hearts, glow: S.glow, grid: S.state.map(r => r.slice()), sol: S.L.solution, regions: S.L.regions, locked: S.locked }; });
+  // the interstitial (if one is shown now): check it, wait for the countdown and continue
+  const skipAd = async () => { if (!(await p.isVisible('#ad-interstitial'))) return false; await p.waitForFunction(() => !document.getElementById('ad-continue').disabled, null, { timeout: 8000 }); await p.click('#ad-continue'); await sleep(1500); return true; };
+  const solveNow = async () => { const t = await st(); for (let r = 0; r < t.N; r++) { await hold(r, t.sol[r]); await sleep(200); } await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 }); await sleep(1200); };
   const dialog = () => p.evaluate(() => { const v = document.getElementById('veil'); return v.hidden ? null : document.getElementById('dialog').dataset.kind; });
   const shot = async name => { if (SHOTS) await p.screenshot({ path: `${OUT}/${name}-${vp.width}x${vp.height}.png` }); };
   // level tiles: scroll the tile into view inside the list, then tap it
@@ -150,6 +153,7 @@ async function run(vp, dpr) {
   const LESSON = { 3: ['recap', 'Lösungsweg', 'pop:claim', 'Mission 3 geschafft'], 4: ['shared', 'Kreuzfeuer', 'pop:shared', 'Mission 4 geschafft'], 5: ['pair', 'Doppel-Trick', 'pop:pair', 'Mission 5 geschafft'], 6: ['whatif', 'Was wäre wenn', 'pop:whatif', 'Alle Missionen geschafft'] };
   for (let m = 3; m <= 6; m++) {
     const [guide, kick, rule, win] = LESSON[m];
+    ok(!(await p.isVisible('#ad-interstitial')), `M${m}: no interstitial before a mission`);
     s = await st(); t = await tut();
     ok(s.id === m && s.N === 5 && t.active && t.kicker === `Mission ${m} · ${kick}` && !(await p.isVisible('#btn-adtip')), `M${m} (${guide}): guided, kicker "${t.kicker}", no ad button ("${t.text.slice(0, 44)}…")`);
     seen = await followTutorial(m, { shotAt: { intro: `07-m${m}-intro`, [rule]: `07-m${m}-${guide}` } });
@@ -159,7 +163,8 @@ async function run(vp, dpr) {
     await p.click('#btn-next'); await sleep(1500);
   }
   ok(maxBubble > 0 && maxBubble < vp.height * .25, `speech bubble stays small (max ${maxBubble.toFixed(0)} px of ${vp.height})`);
-  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 0), 'missions 1–6 do not count for ads');
+  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 0), 'missions 1–6 do not count as wins');
+  ok(await skipAd(), 'ads: first interstitial is due after level 5 and shown before L7 (never inside a mission)');
 
   // ---------- Level 7: first regular 5x5 (gestures) ----------
   await shot('08-L3');
@@ -227,6 +232,7 @@ async function run(vp, dpr) {
   const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-v1')));
   ok(saved.v === 4 && saved.unlocked === 8 && saved.stars[7] === 1 && [2, 3, 4, 5, 6].every(i => saved.stars[i] === 3) && saved.stars[1] >= 1, `progress saved in localStorage (missions count) ${JSON.stringify(saved.stars)}`);
   await p.click('#btn-next'); await sleep(1500);
+  ok(!(await skipAd()), 'ads: no interstitial after L7');
   // 7) L8-L11: solve by holds only
   for (let lvl = 8; lvl <= 11; lvl++) {
     s = await st();
@@ -235,12 +241,12 @@ async function run(vp, dpr) {
     await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 });
     await sleep(1600);
     ok(await dialog() === 'win' && (await st()).hearts === 3, `level ${lvl} won with 3 hearts`);
-    if (lvl < 11) await p.click('#btn-next'), await sleep(1500);
+    if (lvl < 11) { await p.click('#btn-next'); await sleep(1500); const ad = await skipAd(); ok(ad === (lvl === 8), `ads: ${ad ? 'interstitial' : 'no ad'} after L${lvl} (rhythm 5, 8, 11, 14 …)`); }
   }
   // 7b) unlock everything, pick an 8x8 (L41) and the final level (L50) from the scrolling list and win them
   await p.click('#btn-to-levels'); await sleep(700);
   await p.evaluate(() => { SquishDoku.store.unlocked = 50; SquishDoku.showHome('levels'); }); await sleep(700);
-  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 5 && SquishDoku.adPacing.interstitialDue), 'ads: 5 wins -> interstitial due');
+  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 5 && SquishDoku.adPacing.interstitialDue), 'ads: L11 won → interstitial due (5 wins counted)');
   ok(await p.evaluate(() => JSON.parse(localStorage.getItem('squishdoku-ad-pacing-v1')).wins === 5), 'ads: interstitial counter saved in localStorage');
   for (const lvl of [41, 50]) {
     await pickLevel(lvl, true); await sleep(400);
@@ -250,7 +256,7 @@ async function run(vp, dpr) {
       ok(await p.evaluate(() => !SquishDoku.state || SquishDoku.state.id !== 41), 'ads: next level starts only after the ad');
       await p.waitForFunction(() => !document.getElementById('ad-continue').disabled, null, { timeout: 8000 });
       await p.click('#ad-continue');
-    } else ok(!(await p.isVisible('#ad-interstitial')), 'ads: no interstitial on the 6th win');
+    } else { ok(await p.isVisible('#ad-interstitial'), 'ads: L41 won (5 + 3·12) → interstitial before L50'); await skipAd(); }
     await sleep(1800);
     s = await st(); ok(s.id === lvl && s.N === 8, `level ${lvl} started (${s.N}x${s.N})`);
     ok(await noScroll(), `L${lvl} 8x8: no scrolling`);
@@ -266,7 +272,8 @@ async function run(vp, dpr) {
   await p.click('#btn-to-levels'); await sleep(700);
   ok(await p.locator('.nn-tile.is-locked').count() === 0, 'all levels unlocked');
   ok((await p.textContent('.sd-lv-progress')).startsWith('13 / 50'), 'level select shows solved count');
-  await pickLevel(12); await sleep(1500);
+  await pickLevel(12); await sleep(400);
+  ok(await skipAd(), 'ads: L50 won (5 + 3·15) → interstitial before the next level');
   s = await st(); let n = 0;
   for (let r = 0; r < s.N && n < 3; r++) for (let c = 0; c < s.N && n < 3; c++) if (s.sol[r] !== c && Math.abs(s.sol[r] - c) > 0) { await hold(r, c); n++; await sleep(150); break; }
   await sleep(1300);
@@ -299,22 +306,17 @@ async function run(vp, dpr) {
   ok(await dialog() === 'win', 'reveal: all squishes revealed -> level won');
   ok(await p.evaluate(() => document.getElementById('btn-adtip').disabled), 'reveal: button disabled once all squishes glow');
   ok(await p.evaluate(n => JSON.parse(localStorage.getItem('squishdoku-v1')).revealed[13] === n, s.N), 'reveal: used reveals saved per level in localStorage');
-  // 11) cadence: wins 9 and 10 -> next start shows the interstitial again
-  for (const lvl of [14, 15]) {
-    await p.evaluate(l => SquishDoku.startLevel(l), lvl); await sleep(1500);
-    const t = await st(); for (let r = 0; r < t.N; r++) { await hold(r, t.sol[r]); await sleep(200); }
-    await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 }); await sleep(1200);
-  }
-  ok(await p.evaluate(() => SquishDoku.adPacing.wins === 10 && SquishDoku.adPacing.interstitialDue), 'ads: 10 wins -> interstitial due again');
+  // 11) rhythm by level number: L13 makes nothing due, L14 (= 5 + 3·3) does – and a replay of L14 does it again
+  await p.evaluate(() => SquishDoku.startLevel(14)); await sleep(1500);
+  ok(!(await p.isVisible('#ad-interstitial')) && (await st()).id === 14, 'ads: L13 won → no interstitial (not in the rhythm)');
+  await solveNow();
+  ok(await p.evaluate(() => SquishDoku.adPacing.interstitialDue), 'ads: L14 won → interstitial due');
   await p.click('#btn-again'); await sleep(400);
-  ok(await p.isVisible('#ad-interstitial'), 'ads: interstitial after every 5th win');
-  await p.waitForFunction(() => !document.getElementById('ad-continue').disabled, null, { timeout: 8000 }); await p.click('#ad-continue'); await sleep(1500);
-  ok((await st()).id === 15 && !(await p.evaluate(() => SquishDoku.adPacing.interstitialDue)), 'ads: level starts after the interstitial, counter cleared');
+  ok(await skipAd(), 'ads: interstitial shown before the next round (replay of L14)');
+  ok((await st()).id === 14 && !(await p.evaluate(() => SquishDoku.adPacing.interstitialDue)), 'ads: level starts after the interstitial, flag cleared');
+  await solveNow();
+  ok(await p.evaluate(() => SquishDoku.adPacing.interstitialDue), 'ads: replaying L14 makes it due again (by level number, deterministic)');
   // 12) the guided missions can be replayed from the level list and never show ads, even when one is due
-  for (let lvl = 15; lvl <= 19; lvl++) { if (lvl > 15) { await p.evaluate(l => SquishDoku.startLevel(l), lvl); await sleep(1500); }
-    const t = await st(); for (let r = 0; r < t.N; r++) { await hold(r, t.sol[r]); await sleep(200); }
-    await p.waitForFunction(() => !document.getElementById('veil').hidden, null, { timeout: 20000 }); await sleep(1200); }
-  ok(await p.evaluate(() => SquishDoku.adPacing.interstitialDue), 'ads: 15 wins -> interstitial due');
   await p.evaluate(() => SquishDoku.showHome('levels')); await sleep(600);
   await pickLevel(2); await sleep(1500);
   ok(!(await p.isVisible('#ad-interstitial')) && (await st()).id === 2 && await p.evaluate(() => SquishDoku.tutorial.active), 'mission 2 replays from the level list with its guide, without an ad');

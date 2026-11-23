@@ -10,7 +10,7 @@ import {createCrumbleSound} from './crumble-sound.mjs?v=ck10';
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
 import {I as NI} from './icons.mjs';
 import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=launch-26';
-import {createAdPacing} from '../vendor/squish-attack/game/ad-pacing.mjs';
+import {createAdRhythm} from './ad-rhythm.mjs?v=ck10';
 import {createAdUI,AD_ICON_SVG} from './ad-ui.mjs';
 import {createRulesBar,createTutorial} from './tutorial-ui.mjs?v=ck10';
 import * as P from './progress.mjs';
@@ -434,14 +434,14 @@ function ensureBoard(){if(!board){board=createBoard3D($('host'));bindInput();
 function placePlate(){if(!board||game.hidden||!$('plate'))return;const r=board.frameRect(),p=$('plate'),pad=r.width*.012;Object.assign(p.style,{left:`${r.left-pad}px`,top:`${r.top-pad}px`,width:`${r.width+2*pad}px`,height:`${r.height+2*pad}px`});}
 
 // ---------- Werbung (wie Squish Attack: ad-pacing + native-ads; im Browser Dummy) ----------
-const adPacing=createAdPacing();
+const adPacing=createAdRhythm(); // Zwischenwerbung nach Level 5, 8, 11, … (src/ad-rhythm.mjs)
 const adUI=createAdUI({sound,haptics,onAdStart:()=>{try{sound.pause();crumble.stop();}catch{}},onAdEnd:()=>{try{sound.resume();}catch{}}});
 let starting=false;
-// Zwischenwerbung nur zwischen zwei Leveln: fällig nach jedem 5. Sieg, gezeigt beim Start des nächsten Levels.
+// Zwischenwerbung nur zwischen zwei Runden: fällig nach Level 5, 8, 11, …, gezeigt beim Start der nächsten Runde.
 // Das Tagesrätsel läuft im selben Takt wie ein normales Level (Sieg zählt, Zwischenwerbung nur beim Start).
 async function startLevel(id,L=levels[id-1]){
   if(starting||!L)return;
-  // In den Missionen mit Anleitung (Level 1–2) gibt es keine Werbung
+  // In den Missionen mit Anleitung (Level 1–6) wird nie Werbung gezeigt
   if(!L.guide&&adPacing.takeInterstitial()){starting=true;closeDialog();try{await adUI.interstitial();}catch{}finally{starting=false;}}
   beginLevel(id,L);
 }
@@ -647,7 +647,7 @@ function bindInput(){
 // ---------- Sieg / Niederlage ----------
 async function win(){
   const id=S.id,L=S.L,ms=Math.round(S.ms),stars=starsFor(L,S.hearts,ms),daily=L.daily;
-  if(!L.guide)adPacing.levelWon(); // Werbe-Takt wie Squish Attack: jede 5. gewonnene Runde (Missionen mit Anleitung zählen nicht; das Tagesrätsel zählt wie ein Level)
+  adPacing.levelWon(daily?null:id,!L.guide); // Werbe-Takt nach Levelnummer: fällig nach Level 5, 8, 11, …; Tagesrätsel macht keine fällig
   let prevBest,dailyRes=null;
   if(daily){prevBest=store.daily.done[daily]?.ms;dailyRes=recordDaily(daily,stars,ms,S.hearts);}
   else{prevBest=P.recordLevel(store,id,stars,ms).prevTime;store.unlocked=Math.max(store.unlocked,Math.min(levels.length,id+1));}
