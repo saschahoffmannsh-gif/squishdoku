@@ -135,7 +135,7 @@ Object.assign(TXT, {
   // Mission 4: Kreuzfeuer – was ALLE Kekse einer Farbe blockieren, kann weg
   shared: { ...BASICS,
     intro: ['Mission 4: das <b>Kreuzfeuer</b>! Oft weißt du nicht, <b>wo</b> eine Farbe leuchtet – nur, dass sie <b>irgendwo</b> leuchten muss. Das reicht schon!'],
-    pop_shared: [i => `Er kann also <b>nie</b> leuchten – <b>wisch ihn weg!</b>` + (i.many ? ' Bei den anderen markierten ist es genauso.' : '')],
+    pop_shared: [i => (i.newT ? `Jetzt ${i.many ? 'der Keks mit den Linien' : 'der markierte Keks'}: ${relSentence(i.rel, i.total)} Also blockiert – <b>wisch ihn weg!</b>` + (i.no ? ' Der mit <b>rotem Ring</b> bleibt.' : '') : `Er kann also <b>nie</b> leuchten – <b>wisch ihn weg!</b>` + (i.many ? ' Bei den anderen markierten ist es genauso.' : ''))],
     hold_reg: ['Siehst du? Jetzt hat diese Farbe nur noch <b>einen</b> Keks – <b>halte ihn!</b>', 'Nur noch <b>ein</b> Keks in dieser Farbe – <b>halten!</b>'],
     done: 'Stark! <b>Kreuzfeuer:</b> Was <b>jeder</b> Keks einer Farbe blockiert, kann immer weg.',
   },
@@ -189,7 +189,7 @@ export function createTutorial({ stage, board, getS }) {
       i.no = best;
     } else if (st.rule === 'whatif') {
       const X = st.cells[0], rel = {}; st.area.forEach(g => { const k = relOf(X, g, regOf); rel[k] = (rel[k] || 0) + 1; });
-      Object.assign(i, { rel, total: st.area.length, kind: st.group.kind, links: st.area.map(g => [X, g]) });
+      Object.assign(i, { T: X, rel, total: st.area.length, kind: st.group.kind, links: st.area.map(g => [X, g]) });
     } else if (st.rule === 'pair') {
       Object.assign(i, st.lines.kind === 'row' ? { lineWord: 'Reihen', lineOne: 'Reihe' } : { lineWord: 'Spalten', lineOne: 'Spalte' });
     }
@@ -237,9 +237,10 @@ export function createTutorial({ stage, board, getS }) {
     const info = run.info || {};
     (info.links || []).forEach(([g, t], k) => {
       const a = at(g), b = at(t), d = Math.hypot(b.x - a.x, b.y - a.y), m = document.createElement('i'); m.className = 'sd-tut-mark is-link';
-      Object.assign(m.style, { left: `${(a.x + b.x) / 2}px`, top: `${(a.y + b.y) / 2}px`, width: `${Math.max(0, d - a.s * .5)}px`, transform: `translate(-50%,-50%) rotate(${Math.atan2(b.y - a.y, b.x - a.x)}rad)`, animationDelay: `${k * .55}s`, animationDuration: `${Math.max(1.6, info.links.length * .55 + .6)}s` });
+      Object.assign(m.style, { left: `${(a.x + b.x) / 2}px`, top: `${(a.y + b.y) / 2}px`, width: `${d}px`, transform: `translate(-50%,-50%) rotate(${Math.atan2(b.y - a.y, b.x - a.x)}rad)`, animationDelay: `${k * .55}s`, animationDuration: `${Math.max(1.6, info.links.length * .55 + .6)}s` });
       layer.append(m);
     });
+    if (info.T && info.links) { const p = at(info.T), m = document.createElement('i'); m.className = 'sd-tut-mark is-target'; Object.assign(m.style, { left: `${p.x}px`, top: `${p.y}px`, width: `${p.s * 1.28}px`, height: `${p.s * 1.28}px` }); layer.append(m); }
     if (info.no) { const p = at(info.no), m = document.createElement('i'); m.className = 'sd-tut-mark is-no'; Object.assign(m.style, { left: `${p.x}px`, top: `${p.y}px`, width: `${p.s * 1.05}px`, height: `${p.s * 1.05}px` }); layer.append(m); }
     const cells = st.type === 'hold' ? [st.cell] : st.cells;
     for (const cell of cells) { const p = at(cell), m = document.createElement('i'); m.className = 'sd-tut-mark ' + (st.type === 'hold' ? 'is-hold' : 'is-pop'); Object.assign(m.style, { left: `${p.x}px`, top: `${p.y}px`, width: `${p.s * (st.type === 'hold' ? 1.35 : 1.05)}px`, height: `${p.s * (st.type === 'hold' ? 1.35 : 1.05)}px` }); layer.append(m); }
@@ -272,9 +273,11 @@ export function createTutorial({ stage, board, getS }) {
       if (!run.exDone.has(exId)) {
         if (run.exId !== exId) { run.exId = exId; run.exIdx = run.exDone.size ? EXPLAIN_ONCE[st.rule] || 0 : 0; }
         run.explaining = EXPLAIN[st.rule].length;
+        run.exT = run.info?.T;
         st = { type: 'intro', explain: true, rule: st.rule, base: st, text: EXPLAIN[st.rule][run.exIdx](run.info) }; key = 'explain';
       }
     }
+    if (!st.explain && run.info?.T) run.info.newT = !!run.exT && (run.exT[0] !== run.info.T[0] || run.exT[1] !== run.info.T[1]);
     const sig = JSON.stringify(st) + run.intro;
     if (sig === run.sig && !force) return;
     // a finished step counts once, so the next one of the same kind gets the shorter text

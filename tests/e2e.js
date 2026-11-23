@@ -88,11 +88,14 @@ async function run(vp, dpr) {
   await hold(3, 1); s = await st(); ok(s.glow === 0, 'intro bubble: board waits for "Weiter"');
   await p.click('#tut-next'); await sleep(500);
   // play a tutorial level by following tutorial.step; returns the steps seen
-  let maxBubble = 0;
+  let maxBubble = 0; const exTexts = {};
   async function followTutorial(lvl, { wrongAt = -1, shotAt = {} } = {}) {
     const seen = []; let n = 0;
     for (let guard = 0; guard < 40; guard++) {
       t = await tut();
+      if (t.step && t.step.explain) { (exTexts[t.step.rule] ||= []).push(t.text);
+        const f = await p.evaluate(() => { const b = document.getElementById('tut-bubble').getBoundingClientRect(), z = SquishDoku.board.boardRect(); return b.top >= z.top + z.height - 2 && b.bottom <= innerHeight ? 0 : Math.round(b.height); });
+        if (f) ok(false, `L${lvl} explanation bubble covers the board (${f}px): "${t.text.slice(0, 50)}"`); ok(t.next && t.marks >= 1 && !t.hand, `L${lvl} ${t.step.rule} explained first (Weiter, marks, no hand): "${t.text.slice(0, 60)}…"`); await p.click('#tut-next'); await sleep(400); continue; }
       if (t.step && t.step.type === 'intro') { if (shotAt.intro && !seen.includes('intro')) await shot(shotAt.intro); seen.push('intro'); await p.click('#tut-next'); await sleep(400); continue; }
       if (!t.step || t.step.type === 'done') break;
       const key = t.step.type + ':' + (t.step.rule || t.step.kind);
@@ -108,11 +111,11 @@ async function run(vp, dpr) {
         ok(/nur in dieser (Reihe|Spalte)/.test(t.text) && /muss/.test(t.text) && /keiner/.test(t.text), `L${lvl} claim: the bubble explains why ("${t.text}")`);
       }
       if (['pop:shared', 'pop:pair', 'pop:whatif'].includes(key) && !seen.includes(key)) {
-        const m = await p.evaluate(() => ({ band: document.querySelectorAll('.sd-tut-mark.is-band').length, claim: document.querySelectorAll('.sd-tut-mark.is-claim').length, pop: document.querySelectorAll('.sd-tut-mark.is-pop').length }));
+        const m = await p.evaluate(() => ({ band: document.querySelectorAll('.sd-tut-mark.is-band').length, claim: document.querySelectorAll('.sd-tut-mark.is-claim').length, pop: document.querySelectorAll('.sd-tut-mark.is-pop').length, links: document.querySelectorAll('.sd-tut-mark.is-link').length }));
         const bands = key === 'pop:pair' ? 2 : key === 'pop:whatif' ? (t.step.group.kind === 'reg' ? 0 : 1) : 0;
         ok(m.band === bands && m.claim === t.step.area.length && m.pop === t.step.cells.length, `L${lvl} ${t.step.rule}: reason marked (gold ${m.claim}, lines ${m.band}) and the squishes to wipe (${m.pop})`);
-        const why = { 'pop:shared': /jeder/i, 'pop:pair': /zwei Reihen|zwei Spalten/, 'pop:whatif': /Was wäre, wenn/ }[key];
-        ok(why.test(t.text), `L${lvl} ${t.step.rule}: the bubble explains why ("${t.text}")`);
+        const why = { 'pop:shared': [/muss/, /berühr|seiner (Reihe|Spalte)/, /blockiert/], 'pop:pair': [/nur/, /zwei (Reihen|Spalten)/, /einen/], 'pop:whatif': [/Stell dir vor/, /keinen/] }[key], all = (exTexts[t.step.rule] || []).join(' ') + ' ' + t.text;
+        ok(why.every(re => re.test(all)) && (key !== 'pop:shared' || m.links === t.step.area.length), `L${lvl} ${t.step.rule}: explained concretely (${(exTexts[t.step.rule] || []).length} Weiter-steps, lines ${m.links}): "${all.slice(0, 220)}…"`);
       }
       seen.push(key);
       if (n === wrongAt) { // deliberately hold a wrong squish → heart lost + "Autsch" bubble
