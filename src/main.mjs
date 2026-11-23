@@ -6,13 +6,13 @@ const LOOK=window.SD_LOOK||'squish',TUBE=LOOK==='tube';
 const createBoard3D=TUBE?(await import('./tube3d.mjs')).createTubeBoard:createSquishBoard;
 import {createGameSound} from '../vendor/squish-attack/game/sound.mjs?v=launch-26';
 import {createSdHaptics} from './haptics.mjs';
-import {createCrumbleSound} from './crumble-sound.mjs?v=ck9';
+import {createCrumbleSound} from './crumble-sound.mjs?v=ck10';
 import {createConfetti} from '../vendor/squish-attack/game/confetti.mjs?v=launch-26';
 import {I as NI} from './icons.mjs';
 import {ICONS,TILE_ICONS} from '../vendor/squish-attack/game/aw-icons.mjs?v=launch-26';
 import {createAdPacing} from '../vendor/squish-attack/game/ad-pacing.mjs';
 import {createAdUI,AD_ICON_SVG} from './ad-ui.mjs';
-import {createRulesBar,createTutorial} from './tutorial-ui.mjs?v=ck9';
+import {createRulesBar,createTutorial} from './tutorial-ui.mjs?v=ck10';
 import * as P from './progress.mjs';
 const {starsFor,targetMs,fmtTime,HEARTS}=P;
 
@@ -64,7 +64,8 @@ const sound=createGameSound(soundProxy);
 const haptics=createSdHaptics({isEnabled:()=>store.settings?.vibration!==false});
 const confetti=createConfetti();
 const sfx=(kind,...a)=>{try{sound.play(kind,...a);}catch{}};
-// Zerbröseln: nur ein leises Rieseln (kein Plopp), folgt dem Ton-Schalter; startet mit der ersten Berührung
+// Kekse: das EINZIGE Geräusch ist das Sand-Rieseln beim Zerbröseln (kein Drück-, Plopp-, Leucht- oder Fehler-Ton);
+// Menü-Tipps, Sieg und Sterne behalten ihre Töne. Folgt dem Ton-Schalter; startet mit der ersten Berührung.
 const crumble=createCrumbleSound({isOn:()=>{try{return sound.enabled;}catch{return false;}}});
 document.addEventListener('pointerdown',()=>crumble.unlock(),{capture:true});
 const buzz=k=>{try{haptics.pulse(k);}catch{}};
@@ -123,7 +124,7 @@ addEventListener('scroll',()=>{if(scrollX||scrollY)scrollTo(0,0);},{passive:true
 fitViewport();
 
 // ---------- Level ----------
-const levels=await (await fetch('src/levels.json?v=ck9')).json();
+const levels=await (await fetch('src/levels.json?v=ck10')).json();
 if(TUBE){store.unlocked=levels.length;} // Vorschau: alle Level offen
 const HINTS=[
   'Halte einen Keks kurz <b>gedrückt</b> – richtig gewählt, <b>leuchtet</b> er!',
@@ -513,7 +514,7 @@ function undo(){
   if(a.t==='glow'){if(st(a.r,a.c)==='glow'){S.state[a.r][a.c]='normal';S.glow--;board.glow(a.r,a.c,false);}}
   else if(a.t==='unglow'){if(st(a.r,a.c)==='normal'){S.state[a.r][a.c]='glow';S.glow++;board.glow(a.r,a.c,true);}}
   else if(a.t==='pop'){for(const [r,c] of a.cells.slice().reverse())if(st(r,c)==='popped'&&!S.fixed?.has(r*S.N+c)){S.state[r][c]='normal';board.restore(r,c);}}
-  else if(a.t==='restore'){if(st(a.r,a.c)==='normal'){S.state[a.r][a.c]='popped';board.pop(a.r,a.c,{power:1.6});}}
+  else if(a.t==='restore'){if(st(a.r,a.c)==='normal'){S.state[a.r][a.c]='popped';board.pop(a.r,a.c,{power:1.6});if(!TUBE)crumble.play();}}
   renderProgress();renderUndo();sfx('tap');buzz('undo');tut.changed();
   if(!reduceMotion.matches)undoBtn.animate([{transform:'rotate(0)'},{transform:'rotate(-40deg)'},{transform:'rotate(0)'}],{duration:320,easing:'cubic-bezier(.3,1.6,.5,1)'});
   checkSolved();
@@ -539,7 +540,7 @@ function revealAt(r,c){
   if(S.state[r][c]==='popped')S.state[r][c]='normal',board.restore(r,c);
   const p=board.screenOf(r,c),f=document.createElement('div');f.className='sd-reveal';
   f.style.cssText=`left:${p.x}px;top:${p.y}px;--s:${p.size*2.6}px`;f.innerHTML='<i></i><i></i><b></b>';fx.append(f);setTimeout(()=>f.remove(),1300);
-  board.wobble(r,c,1);sfx('star',3);
+  board.wobble(r,c,1);if(TUBE)sfx('star',3);
   setTimeout(()=>{if(S&&S.state[r][c]!=='glow')glowAt(r,c,false);},260); // a paid hint is no undo step
 }
 const isSol=(r,c)=>S.L.solution[r]===c;
@@ -554,17 +555,17 @@ function loseHeart(r,c){
   buzz('wrong');
   if(S.hearts===0){S.locked=true;renderUndo();setTimeout(showLose,900);}
 }
-function wrongAt(r,c){board.wrong(r,c);sfx('land',2);sfx('squish');loseHeart(r,c);if(tut.active)tut.ouch();}
+function wrongAt(r,c){board.wrong(r,c);if(TUBE){sfx('land',2);sfx('squish');}loseHeart(r,c);if(tut.active)tut.ouch();}
 function popAt(r,c,opts){if(S.state[r][c]!=='normal')return false;S.state[r][c]='popped';board.pop(r,c,opts);return true;}
 function checkSolved(){if(S.glow===S.N&&!S.done){tick();S.done=true;S.locked=true;renderUndo();setTimeout(win,700);}}
 function glowAt(r,c,record=true){
-  S.state[r][c]='glow';S.glow++;board.glow(r,c,true);if(record)pushStep({t:'glow',r,c});renderProgress();sfx('magic');buzz('light');
+  S.state[r][c]='glow';S.glow++;board.glow(r,c,true);if(record)pushStep({t:'glow',r,c});renderProgress();if(TUBE)sfx('magic');buzz('light');
   // Nichts ploppt automatisch: nur der Spieler wischt Squishs weg.
   checkSolved();
   tut.changed();
 }
-function unglowAt(r,c){S.state[r][c]='normal';S.glow--;board.glow(r,c,false);pushStep({t:'unglow',r,c});renderProgress();sfx('tap');buzz('tap');tut.changed();}
-function restoreAt(r,c){if(S.fixed?.has(r*S.N+c))return;S.state[r][c]='normal';pushStep({t:'restore',r,c});tut.changed();board.restore(r,c);sfx('tap');buzz('tap');}
+function unglowAt(r,c){S.state[r][c]='normal';S.glow--;board.glow(r,c,false);pushStep({t:'unglow',r,c});renderProgress();if(TUBE)sfx('tap');buzz('tap');tut.changed();}
+function restoreAt(r,c){if(S.fixed?.has(r*S.N+c))return;S.state[r][c]='normal';pushStep({t:'restore',r,c});tut.changed();board.restore(r,c);if(TUBE)sfx('tap');buzz('tap');}
 
 // Wischen über einen Squish
 function swipeCell(r,c,stroke){
@@ -596,7 +597,7 @@ function bindInput(){
     try{sound.unlock?.();}catch{}
     const {r,c}=hit;
     g={id:e.pointerId,r,c,x:e.clientX,y:e.clientY,t:e.timeStamp,mode:'pending',last:{r,c},lx:e.clientX,ly:e.clientY,stroke:{wrong:new Set(),seen:new Set([r*S.N+c])}};
-    if(S.state[r][c]!=='popped'){board.press(r,c);showRing(r,c);sfx('squish');}
+    if(S.state[r][c]!=='popped'){board.press(r,c);showRing(r,c);if(TUBE)sfx('squish');}
     g.timer=setTimeout(()=>{
       if(!g||g.mode!=='pending')return;
       g.mode='held';hideRing(true);board.release(r,c);holdFire(r,c);
